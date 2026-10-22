@@ -1,0 +1,6 @@
+{
+  "extends": "@StryveForms/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  }
+}

@@ -1,0 +1,3 @@
+{
+  "extends": "@StryveForms/config/tsconfig.base.json"
+}
