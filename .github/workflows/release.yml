@@ -1,6 +1,10 @@
-# Release: push a version tag (git tag v1.0.0 && git push origin v1.0.0) to
-# build the web and server images for linux/amd64 + linux/arm64, publish them
-# to GitHub Container Registry, and create the GitHub Release.
+# Release: bump "version" in package.json and merge to main. This workflow
+# then tags the commit (v<version>), builds the web and server images for
+# linux/amd64 + linux/arm64, publishes them to GitHub Container Registry, and
+# creates the GitHub Release. Pushing a v*.*.* tag by hand works too.
+#
+# Tagging happens here rather than in a separate workflow because tags pushed
+# with GITHUB_TOKEN don't trigger other workflows.
 #
 #   ghcr.io/<owner>/stryveforms-web:<version> | <major>.<minor> | <major> | latest
 #   ghcr.io/<owner>/stryveforms-server:<version> | …
@@ -10,6 +14,11 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
+    # Only the version bump matters on main; path filters don't apply to tags.
+    paths:
+      - package.json
     tags:
       - "v*.*.*"
   workflow_dispatch:
@@ -23,12 +32,11 @@ permissions:
   packages: write
 
 concurrency:
-  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
-  TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   prepare:
@@ -37,25 +45,52 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       owner: ${{ steps.version.outputs.owner }}
+      tag: ${{ steps.version.outputs.tag }}
+      release: ${{ steps.version.outputs.release }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ inputs.tag || github.ref }}
       - id: version
-        name: Tag must match package.json
+        name: Resolve the tag to release
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          tag="${TAG#v}"
           pkg="$(node -p "require('./package.json').version")"
-          if [ "$tag" != "$pkg" ]; then
-            echo "::error::Tag v$tag doesn't match package.json version $pkg. Bump package.json first."
-            exit 1
-          fi
           echo "version=$pkg" >> "$GITHUB_OUTPUT"
           echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+          if [ "$GITHUB_REF_TYPE" = "branch" ] && [ -z "$INPUT_TAG" ]; then
+            # Push to main that touched package.json: release only if the
+            # version is new (other edits to package.json are ignored).
+            tag="v$pkg"
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+              echo "$tag already exists; nothing to release."
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            tag="${INPUT_TAG:-$GITHUB_REF_NAME}"
+            if [ "${tag#v}" != "$pkg" ]; then
+              echo "::error::Tag $tag doesn't match package.json version $pkg. Bump package.json first."
+              exit 1
+            fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create the tag
+        if: steps.version.outputs.release == 'true' && github.ref_type == 'branch' && !inputs.tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "$TAG"
 
   build:
     name: Build ${{ matrix.app }} (${{ matrix.platform }})
     needs: prepare
+    if: needs.prepare.outputs.release == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: true
@@ -70,7 +105,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.prepare.outputs.tag }}
 
       - name: Platform slug
         run: echo "PLATFORM_SLUG=${{ matrix.platform }}" | sed 's#/#-#g' >> "$GITHUB_ENV"
@@ -126,6 +161,7 @@ jobs:
       matrix:
         app: [web, server]
     env:
+      TAG: ${{ needs.prepare.outputs.tag }}
       IMAGE: ghcr.io/${{ needs.prepare.outputs.owner }}/stryveforms-${{ matrix.app }}
     steps:
       - uses: actions/download-artifact@v4
@@ -167,10 +203,12 @@ jobs:
     name: GitHub Release
     needs: [prepare, publish]
     runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.prepare.outputs.tag }}
 
       - name: Release notes
         run: |
