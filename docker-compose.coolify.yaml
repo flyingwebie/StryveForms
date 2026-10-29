@@ -87,6 +87,11 @@ services:
       # Optional integrations
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       OPNFORM_IMPORT_RATE_LIMIT: ${OPNFORM_IMPORT_RATE_LIMIT:-60}
+      # Largest workspace export / instance backup file you can upload (MB).
+      BACKUP_MAX_UPLOAD_MB: ${BACKUP_MAX_UPLOAD_MB:-20480}
+      # Passkeys: leave empty to use your domain's hostname. Only set this if
+      # a proxy rewrites the host (changing it later invalidates passkeys).
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
     volumes:
       - stryveforms-storage:/data/storage
     depends_on:
