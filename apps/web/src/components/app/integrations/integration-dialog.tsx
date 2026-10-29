@@ -2,20 +2,23 @@ import type { FormDto } from "@StryveForms/api/lib/serialize";
 import type { FormField } from "@StryveForms/forms/types";
 import { answerFields } from "@StryveForms/forms/values";
 import { Button } from "@StryveForms/ui/components/button";
-import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@StryveForms/ui/components/dialog";
+import { Label } from "@StryveForms/ui/components/label";
+import { Switch } from "@StryveForms/ui/components/switch";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "@/utils/trpc";
 
+import { DESCRIPTIONS } from "./catalogue";
 import ConditionPicker, {
 	conditionToLogic,
 	logicToCondition,
@@ -154,12 +157,15 @@ export default function IntegrationDialog({
 	existing,
 	form,
 	integrationId,
+	name,
 	onOpenChange,
 	open,
 }: {
 	existing: IntegrationRecord | null;
 	form: FormDto;
 	integrationId: string;
+	/** Display name from the catalogue, e.g. "n8n" — falls back to a capitalized id. */
+	name?: string;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
 }) {
@@ -240,13 +246,18 @@ export default function IntegrationDialog({
 		}
 	};
 
+	const displayName =
+		name ?? `${integrationId.charAt(0).toUpperCase()}${integrationId.slice(1)}`;
+	const description = DESCRIPTIONS[integrationId];
+
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
 			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle className="capitalize">
-						{integrationId} integration
-					</DialogTitle>
+					<DialogTitle>{displayName}</DialogTitle>
+					{description ? (
+						<DialogDescription>{description}</DialogDescription>
+					) : null}
 				</DialogHeader>
 
 				{integrationId === "email" ? null : (
@@ -287,15 +298,16 @@ export default function IntegrationDialog({
 					</div>
 				)}
 
-				<DialogFooter className="items-center justify-between sm:justify-between">
-					<div className="flex items-center gap-2 text-sm">
-						<Checkbox
-							checked={active}
-							id="integration-active"
-							onCheckedChange={(c) => setActive(c === true)}
-						/>
-						<label htmlFor="integration-active">Active</label>
-					</div>
+				<div className="flex items-center justify-between gap-3 border-border border-t pt-4">
+					<Label htmlFor="integration-active">Active</Label>
+					<Switch
+						checked={active}
+						id="integration-active"
+						onCheckedChange={setActive}
+					/>
+				</div>
+
+				<DialogFooter>
 					<Button disabled={isPending} onClick={save}>
 						{isPending ? "Saving…" : "Save"}
 					</Button>

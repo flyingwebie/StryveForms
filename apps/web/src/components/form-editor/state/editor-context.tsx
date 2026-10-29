@@ -22,6 +22,7 @@ import type {
 	CanvasMode,
 	EditorFormMeta,
 	LeftPanelTab,
+	PreviewScheme,
 	PreviewWidth,
 } from "../types";
 import { createFieldFromBlock } from "../utils/create-field";
@@ -78,6 +79,7 @@ interface EditorContextValue {
 	selectedField: FormField | null;
 	setCanvasMode: (mode: CanvasMode) => void;
 	setLeftTab: (tab: LeftPanelTab) => void;
+	setPreviewScheme: (scheme: PreviewScheme) => void;
 	setPreviewWidth: (width: PreviewWidth) => void;
 	state: EditorState;
 	undo: () => void;
@@ -414,6 +416,8 @@ export function EditorProvider({
 			selectedField,
 			setCanvasMode: (mode) => dispatch({ mode, type: "setCanvasMode" }),
 			setLeftTab: (tab) => dispatch({ tab, type: "setLeftTab" }),
+			setPreviewScheme: (scheme) =>
+				dispatch({ scheme, type: "setPreviewScheme" }),
 			setPreviewWidth: (width) => dispatch({ type: "setPreviewWidth", width }),
 			state,
 			undo: () => dispatch({ type: "undo" }),

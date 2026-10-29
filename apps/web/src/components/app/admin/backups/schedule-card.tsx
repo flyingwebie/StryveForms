@@ -1,13 +1,11 @@
 import { Button } from "@StryveForms/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
 import { Input } from "@StryveForms/ui/components/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+	InputGroupText,
+} from "@StryveForms/ui/components/input-group";
 import { Label } from "@StryveForms/ui/components/label";
 import {
 	Select,
@@ -17,17 +15,20 @@ import {
 	SelectValue,
 } from "@StryveForms/ui/components/select";
 import { Switch } from "@StryveForms/ui/components/switch";
+import { Tabs, TabsList, TabsTrigger } from "@StryveForms/ui/components/tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import PasswordInput from "@/components/app/auth/password-input";
 import { formatTrpcError } from "@/lib/format-trpc-error";
 import { useTRPC } from "@/utils/trpc";
 
 const FREQUENCY_OPTIONS = [
-	{ label: "Daily", value: "daily" },
 	{ label: "Weekly", value: "weekly" },
-];
+	{ label: "Daily", value: "daily" },
+] as const;
 
 const WEEKDAY_OPTIONS = [
 	{ label: "Sunday", value: "0" },
@@ -40,8 +41,56 @@ const WEEKDAY_OPTIONS = [
 ];
 
 const MIN_PASSPHRASE_LENGTH = 12;
+const FALLBACK_TIMEZONES = ["UTC"];
 
-/** Automatic backups: on/off, frequency, time, timezone, retention — plus the passphrase scheduled backups run with unattended. */
+function supportedTimezones(): string[] {
+	try {
+		return Intl.supportedValuesOf("timeZone");
+	} catch {
+		return FALLBACK_TIMEZONES;
+	}
+}
+
+/** Label + helper on the left, control on the right, hairline below. */
+function Row({
+	children,
+	description,
+	htmlFor,
+	label,
+}: {
+	children: ReactNode;
+	description: string;
+	htmlFor?: string;
+	label: string;
+}) {
+	return (
+		<div className="flex flex-col gap-3 border-border border-b py-5 first:pt-0 last:border-b-0 last:pb-0 sm:flex-row sm:items-start">
+			<div className="sm:w-70 sm:shrink-0">
+				<Label className="text-[13px]" htmlFor={htmlFor}>
+					{label}
+				</Label>
+				<p className="mt-0.5 text-subtle-foreground text-xs">{description}</p>
+			</div>
+			<div className="min-w-0 flex-1">{children}</div>
+		</div>
+	);
+}
+
+interface ScheduleState {
+	destinationId: string | null;
+	enabled: boolean;
+	frequency: "daily" | "weekly";
+	keepLast: number;
+	time: string;
+	timezone: string;
+	weekday: string;
+}
+
+/**
+ * Scheduled backups (destination, frequency, day/time, timezone, retention)
+ * and the unattended passphrase scheduled/safety backups run with — one
+ * settings section with a single Discard/Save changes footer.
+ */
 export default function ScheduleCard() {
 	const trpc = useTRPC();
 	const queryClient = useQueryClient();
@@ -53,27 +102,40 @@ export default function ScheduleCard() {
 		trpc.backupAdmin.passphrase.status.queryOptions()
 	);
 
-	const [enabled, setEnabled] = useState(false);
-	const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
-	const [weekday, setWeekday] = useState("0");
-	const [time, setTime] = useState("03:00");
-	const [timezone, setTimezone] = useState("UTC");
-	const [destinationId, setDestinationId] = useState<string | null>(null);
-	const [keepLast, setKeepLast] = useState(7);
+	const timezones = useMemo(supportedTimezones, []);
+
+	const [state, setState] = useState<ScheduleState>({
+		destinationId: null,
+		enabled: false,
+		frequency: "weekly",
+		keepLast: 7,
+		time: "03:00",
+		timezone: "UTC",
+		weekday: "0",
+	});
 	const [passphrase, setPassphrase] = useState("");
 
+	const original = useMemo<ScheduleState | null>(
+		() =>
+			settings.data
+				? {
+						destinationId: settings.data.schedule.destinationId,
+						enabled: settings.data.schedule.enabled,
+						frequency: settings.data.schedule.frequency,
+						keepLast: settings.data.retention.keepLast,
+						time: settings.data.schedule.time,
+						timezone: settings.data.schedule.timezone,
+						weekday: String(settings.data.schedule.weekday),
+					}
+				: null,
+		[settings.data]
+	);
+
 	useEffect(() => {
-		if (!settings.data) {
-			return;
+		if (original) {
+			setState(original);
 		}
-		setEnabled(settings.data.schedule.enabled);
-		setFrequency(settings.data.schedule.frequency);
-		setWeekday(String(settings.data.schedule.weekday));
-		setTime(settings.data.schedule.time);
-		setTimezone(settings.data.schedule.timezone);
-		setDestinationId(settings.data.schedule.destinationId);
-		setKeepLast(settings.data.retention.keepLast);
-	}, [settings.data]);
+	}, [original]);
 
 	const saveSchedule = useMutation(
 		trpc.backupAdmin.schedule.set.mutationOptions({
@@ -82,7 +144,6 @@ export default function ScheduleCard() {
 				await queryClient.invalidateQueries({
 					queryKey: trpc.backupAdmin.schedule.get.queryKey(),
 				});
-				toast.success("Schedule saved");
 			},
 		})
 	);
@@ -95,76 +156,111 @@ export default function ScheduleCard() {
 				await queryClient.invalidateQueries({
 					queryKey: trpc.backupAdmin.passphrase.status.queryKey(),
 				});
-				toast.success("Backup passphrase saved");
 			},
 		})
 	);
 
-	function handleSaveSchedule() {
-		saveSchedule.mutate({
-			retention: { keepLast },
-			schedule: {
-				destinationId,
-				enabled,
-				frequency,
-				time,
-				timezone,
-				weekday: Number(weekday),
-			},
-		});
+	const scheduleDirty =
+		original !== null && JSON.stringify(original) !== JSON.stringify(state);
+	const passphraseTooShort =
+		passphrase.length > 0 && passphrase.length < MIN_PASSPHRASE_LENGTH;
+	const dirty = scheduleDirty || passphrase.length > 0;
+	const saving = saveSchedule.isPending || savePassphrase.isPending;
+
+	function discard() {
+		if (original) {
+			setState(original);
+		}
+		setPassphrase("");
+	}
+
+	function save() {
+		if (passphraseTooShort) {
+			return;
+		}
+		if (scheduleDirty) {
+			saveSchedule.mutate({
+				retention: { keepLast: state.keepLast },
+				schedule: {
+					destinationId: state.destinationId,
+					enabled: state.enabled,
+					frequency: state.frequency,
+					time: state.time,
+					timezone: state.timezone,
+					weekday: Number(state.weekday),
+				},
+			});
+		}
+		if (passphrase.length >= MIN_PASSPHRASE_LENGTH) {
+			savePassphrase.mutate({ passphrase });
+		}
+		toast.success("Backup schedule saved");
 	}
 
 	return (
-		<Card className="rounded-xl">
-			<CardHeader>
-				<CardTitle>Scheduled backups</CardTitle>
-				<CardDescription>
-					Take a full instance backup automatically, on a daily or weekly
-					schedule, in the instance's own timezone.
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
-					<span className="space-y-0.5">
-						<Label className="text-sm">Turn on scheduled backups</Label>
-						<p className="text-muted-foreground text-xs">
-							Needs at least one destination and a saved passphrase below.
-						</p>
-					</span>
-					<Switch checked={enabled} onCheckedChange={setEnabled} />
-				</div>
+		<section className="space-y-1">
+			<div>
+				<h3 className="font-semibold text-base">Scheduled backups</h3>
+				<p className="text-[13px] text-subtle-foreground">
+					Automatic full-instance backups, and the passphrase they're encrypted
+					with when no one's around to type one in.
+				</p>
+			</div>
 
-				<div className="grid grid-cols-2 gap-3">
-					<div className="space-y-2">
-						<Label htmlFor="schedule-frequency">Frequency</Label>
-						<Select
-							items={FREQUENCY_OPTIONS}
-							onValueChange={(value) =>
-								setFrequency(value as "daily" | "weekly")
-							}
-							value={frequency}
-						>
-							<SelectTrigger className="w-full" id="schedule-frequency">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{FREQUENCY_OPTIONS.map((option) => (
-									<SelectItem key={option.value} value={option.value}>
-										{option.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					{frequency === "weekly" ? (
-						<div className="space-y-2">
-							<Label htmlFor="schedule-weekday">Day</Label>
+			<div className="mt-4">
+				<Row
+					description="Needs at least one destination and a saved passphrase below."
+					htmlFor="schedule-enabled"
+					label="Scheduled backups"
+				>
+					<Switch
+						checked={state.enabled}
+						id="schedule-enabled"
+						onCheckedChange={(enabled) =>
+							setState((prev) => ({ ...prev, enabled }))
+						}
+					/>
+				</Row>
+
+				<Row description="How often scheduled backups run." label="Frequency">
+					<Tabs
+						onValueChange={(value) =>
+							value &&
+							setState((prev) => ({
+								...prev,
+								frequency: value as "daily" | "weekly",
+							}))
+						}
+						value={state.frequency}
+					>
+						<TabsList>
+							{FREQUENCY_OPTIONS.map((option) => (
+								<TabsTrigger key={option.value} value={option.value}>
+									{option.label}
+								</TabsTrigger>
+							))}
+						</TabsList>
+					</Tabs>
+				</Row>
+
+				<Row
+					description={
+						state.frequency === "weekly"
+							? "When the weekly backup starts."
+							: "When the daily backup starts."
+					}
+					label={state.frequency === "weekly" ? "Day & time" : "Time"}
+				>
+					<div className="flex flex-wrap items-center gap-2">
+						{state.frequency === "weekly" ? (
 							<Select
 								items={WEEKDAY_OPTIONS}
-								onValueChange={(value) => value && setWeekday(value)}
-								value={weekday}
+								onValueChange={(value) =>
+									value && setState((prev) => ({ ...prev, weekday: value }))
+								}
+								value={state.weekday}
 							>
-								<SelectTrigger className="w-full" id="schedule-weekday">
+								<SelectTrigger aria-label="Day of the week">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -175,42 +271,55 @@ export default function ScheduleCard() {
 									))}
 								</SelectContent>
 							</Select>
-						</div>
-					) : null}
-					<div className="space-y-2">
-						<Label htmlFor="schedule-time">Time</Label>
+						) : null}
 						<Input
-							id="schedule-time"
-							onChange={(event) => setTime(event.target.value)}
+							aria-label="Time"
+							className="w-32 font-mono"
+							onChange={(event) =>
+								setState((prev) => ({ ...prev, time: event.target.value }))
+							}
 							type="time"
-							value={time}
+							value={state.time}
 						/>
 					</div>
-					<div className="space-y-2">
-						<Label htmlFor="schedule-timezone">Timezone</Label>
-						<Input
-							id="schedule-timezone"
-							onChange={(event) => setTimezone(event.target.value)}
-							placeholder="UTC"
-							value={timezone}
-						/>
-						<p className="text-muted-foreground text-xs">
-							An IANA name, e.g. "Europe/Dublin" or "America/New_York".
-						</p>
-					</div>
-				</div>
+				</Row>
 
-				<div className="space-y-2">
-					<Label htmlFor="schedule-destination">Destination</Label>
+				<Row description="Used to schedule the backup window." label="Timezone">
+					<Select
+						items={timezones.map((tz) => ({ label: tz, value: tz }))}
+						onValueChange={(value) =>
+							value && setState((prev) => ({ ...prev, timezone: value }))
+						}
+						value={state.timezone}
+					>
+						<SelectTrigger className="w-full sm:w-64">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{timezones.map((tz) => (
+								<SelectItem key={tz} value={tz}>
+									{tz}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</Row>
+
+				<Row
+					description="Where scheduled backups are sent."
+					label="Destination"
+				>
 					<Select
 						items={(destinations.data ?? []).map((d) => ({
 							label: d.label,
 							value: d.id,
 						}))}
-						onValueChange={setDestinationId}
-						value={destinationId ?? undefined}
+						onValueChange={(value) =>
+							setState((prev) => ({ ...prev, destinationId: value }))
+						}
+						value={state.destinationId ?? undefined}
 					>
-						<SelectTrigger className="w-full" id="schedule-destination">
+						<SelectTrigger className="w-full sm:w-64">
 							<SelectValue placeholder="Choose a destination" />
 						</SelectTrigger>
 						<SelectContent>
@@ -221,77 +330,76 @@ export default function ScheduleCard() {
 							))}
 						</SelectContent>
 					</Select>
-				</div>
+				</Row>
 
-				<div className="space-y-2">
-					<Label htmlFor="schedule-retention">Keep the last</Label>
-					<Input
-						id="schedule-retention"
-						max={365}
-						min={1}
-						onChange={(event) => setKeepLast(Number(event.target.value) || 1)}
-						type="number"
-						value={keepLast}
+				<Row
+					description="Older backups beyond this count are deleted."
+					htmlFor="schedule-retention"
+					label="Keep last"
+				>
+					<InputGroup className="w-40">
+						<InputGroupInput
+							id="schedule-retention"
+							max={365}
+							min={1}
+							onChange={(event) =>
+								setState((prev) => ({
+									...prev,
+									keepLast: Number(event.target.value) || 1,
+								}))
+							}
+							type="number"
+							value={state.keepLast}
+						/>
+						<InputGroupAddon align="inline-end">
+							<InputGroupText>backups</InputGroupText>
+						</InputGroupAddon>
+					</InputGroup>
+				</Row>
+
+				<Row
+					description="Encrypts scheduled backups without prompting you."
+					htmlFor="backup-passphrase"
+					label="Unattended passphrase"
+				>
+					<PasswordInput
+						autoComplete="new-password"
+						id="backup-passphrase"
+						onChange={setPassphrase}
+						placeholder={
+							passphraseStatus.data?.isSet
+								? "Leave empty to keep the current one"
+								: `At least ${MIN_PASSPHRASE_LENGTH} characters`
+						}
+						value={passphrase}
 					/>
-					<p className="text-muted-foreground text-xs">
-						Older backups at this destination are deleted automatically after
-						each successful run.
-					</p>
-				</div>
-			</CardContent>
-			<CardFooter>
-				<Button
-					disabled={saveSchedule.isPending}
-					onClick={handleSaveSchedule}
-					type="button"
-				>
-					{saveSchedule.isPending ? "Saving…" : "Save schedule"}
-				</Button>
-			</CardFooter>
+					{passphraseTooShort ? (
+						<p className="mt-1.5 text-destructive text-xs">
+							At least {MIN_PASSPHRASE_LENGTH} characters.
+						</p>
+					) : (
+						<p className="mt-1.5 text-subtle-foreground text-xs">
+							If you lose this passphrase, backups made with it can't be opened.
+							We can't recover it for you — store it somewhere safe.
+						</p>
+					)}
+				</Row>
+			</div>
 
-			<CardHeader className="border-t pt-6">
-				<CardTitle>Unattended backup passphrase</CardTitle>
-				<CardDescription>
-					Scheduled and automatic safety backups run with no one around to type
-					a passphrase, so one is saved here instead (encrypted, the same way as
-					other instance secrets). Manual backups can use this one or a one-off
-					passphrase.
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-2">
-				<Label htmlFor="backup-passphrase">
-					{passphraseStatus.data?.isSet
-						? "Replace the saved passphrase"
-						: "Set a passphrase"}
-				</Label>
-				<Input
-					id="backup-passphrase"
-					onChange={(event) => setPassphrase(event.target.value)}
-					placeholder={
-						passphraseStatus.data?.isSet
-							? "Leave empty to keep the current one"
-							: `At least ${MIN_PASSPHRASE_LENGTH} characters`
-					}
-					type="password"
-					value={passphrase}
-				/>
-				<p className="text-destructive text-xs">
-					If you lose this passphrase, backups made with it can't be opened. We
-					can't recover it for you — store it somewhere safe.
-				</p>
-			</CardContent>
-			<CardFooter>
-				<Button
-					disabled={
-						passphrase.length < MIN_PASSPHRASE_LENGTH ||
-						savePassphrase.isPending
-					}
-					onClick={() => savePassphrase.mutate({ passphrase })}
-					type="button"
-				>
-					{savePassphrase.isPending ? "Saving…" : "Save passphrase"}
-				</Button>
-			</CardFooter>
-		</Card>
+			{dirty ? (
+				<div className="flex items-center justify-end gap-2 border-border border-t pt-5">
+					<Button onClick={discard} type="button" variant="outline">
+						Discard
+					</Button>
+					<Button
+						disabled={saving || passphraseTooShort}
+						onClick={save}
+						type="button"
+					>
+						{saving ? "Saving…" : "Save changes"}
+					</Button>
+				</div>
+			) : null}
+		</section>
 	);
 }

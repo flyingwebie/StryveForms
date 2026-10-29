@@ -9,14 +9,9 @@ import {
 } from "@StryveForms/ui/components/combobox";
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@StryveForms/ui/components/select";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckIcon, TrashIcon, ZapIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -34,39 +29,88 @@ type Provider =
 	| "openai_compatible"
 	| "ollama";
 
-const PROVIDERS: { description: string; label: string; value: Provider }[] = [
+const PROVIDERS: {
+	description: string;
+	initial: string;
+	label: string;
+	value: Provider;
+}[] = [
 	{
-		description: "Get a key at platform.openai.com/api-keys",
+		description: "GPT-4o, o3, o3-mini",
+		initial: "O",
 		label: "OpenAI",
 		value: "openai",
 	},
 	{
-		description: "Get a key at console.anthropic.com/settings/keys",
+		description: "Claude Opus, Sonnet, Haiku",
+		initial: "A",
 		label: "Anthropic",
 		value: "anthropic",
 	},
 	{
-		description: "Get a key at aistudio.google.com/apikey",
-		label: "Google Gemini",
+		description: "Gemini 2.5 Pro, Flash",
+		initial: "G",
+		label: "Gemini",
 		value: "gemini",
 	},
 	{
-		description: "Get a key at openrouter.ai/keys — one key, 300+ models",
+		description: "100+ hosted models",
+		initial: "R",
 		label: "OpenRouter",
 		value: "openrouter",
 	},
 	{
-		description:
-			"Any OpenAI-compatible endpoint (self-hosted gateway, proxy, etc.) — needs a base URL",
-		label: "OpenAI-compatible (custom base URL)",
+		description: "Custom base URL",
+		initial: "C",
+		label: "OpenAI-compatible",
 		value: "openai_compatible",
 	},
 	{
-		description: "A local Ollama server — no key needed, just its address",
-		label: "Ollama (local)",
+		description: "Local models",
+		initial: "L",
+		label: "Ollama",
 		value: "ollama",
 	},
 ];
+
+/** One provider tile in the picker grid — icon letter, name and short description. */
+function ProviderTile({
+	onSelect,
+	provider,
+	selected,
+}: {
+	onSelect: () => void;
+	provider: (typeof PROVIDERS)[number];
+	selected: boolean;
+}) {
+	return (
+		<button
+			aria-pressed={selected}
+			className={cn(
+				"relative flex flex-col items-start gap-2 rounded-lg border p-3 text-left transition-colors",
+				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+				selected
+					? "border-primary bg-primary-soft"
+					: "border-border hover:border-foreground/40 hover:bg-muted/40"
+			)}
+			onClick={onSelect}
+			type="button"
+		>
+			{selected ? (
+				<CheckIcon className="absolute top-3 right-3 size-4 text-primary" />
+			) : null}
+			<span className="flex size-8 items-center justify-center rounded-lg bg-primary-soft font-semibold text-primary-soft-foreground text-sm">
+				{provider.initial}
+			</span>
+			<span className="space-y-0.5">
+				<span className="block font-medium text-sm">{provider.label}</span>
+				<span className="block text-subtle-foreground text-xs">
+					{provider.description}
+				</span>
+			</span>
+		</button>
+	);
+}
 
 const NEEDS_BASE_URL: readonly Provider[] = ["openai_compatible", "ollama"];
 const NEEDS_KEY: readonly Provider[] = [
@@ -75,6 +119,17 @@ const NEEDS_KEY: readonly Provider[] = [
 	"gemini",
 	"openrouter",
 ];
+
+/** Where to get a key/address for each provider, shown under the picker. */
+const PROVIDER_HINTS: Record<Provider, string> = {
+	anthropic: "Get a key at console.anthropic.com/settings/keys",
+	gemini: "Get a key at aistudio.google.com/apikey",
+	ollama: "A local Ollama server — no key needed, just its address",
+	openai: "Get a key at platform.openai.com/api-keys",
+	openai_compatible:
+		"Any OpenAI-compatible endpoint (self-hosted gateway, proxy, etc.) — needs a base URL",
+	openrouter: "Get a key at openrouter.ai/keys — one key, 300+ models",
+};
 
 function providerLabel(provider: string): string {
 	return PROVIDERS.find((p) => p.value === provider)?.label ?? provider;
@@ -508,9 +563,7 @@ function AiProviderForm({
 
 	const needsBaseUrl = NEEDS_BASE_URL.includes(provider);
 	const needsKey = NEEDS_KEY.includes(provider);
-	const activeDescription = PROVIDERS.find(
-		(p) => p.value === provider
-	)?.description;
+	const activeHint = PROVIDER_HINTS[provider];
 
 	const fetchedModels = useModelOptions({
 		apiKey,
@@ -543,42 +596,30 @@ function AiProviderForm({
 	})();
 
 	return (
-		<div className="max-w-lg space-y-6">
-			<div className="space-y-1">
-				<h3 className="font-medium text-sm">AI assistant</h3>
-				<p className="text-muted-foreground text-sm">
-					Bring your own API key so the workspace's assistant (
-					<span className="font-medium">Dashboard → Assistant</span>) can build
-					forms and answer questions about responses. The key is encrypted at
-					rest and never shown again after saving.
-				</p>
-			</div>
+		<div className="max-w-2xl space-y-6">
+			<p className="text-muted-foreground text-sm">
+				Connect a provider to power Ask AI, form generation, and summaries
+				across this workspace. The key is encrypted at rest and never shown
+				again after saving.
+			</p>
 
 			<div className="space-y-2">
-				<Label htmlFor="ai-provider">Provider</Label>
-				<Select
-					items={PROVIDERS.map((p) => ({ label: p.label, value: p.value }))}
-					onValueChange={(value) => {
-						const next = value as Provider;
-						setProvider(next);
-						setModel(defaultModels.data?.[next] ?? "");
-						setTestResult(null);
-					}}
-					value={provider}
-				>
-					<SelectTrigger className="w-full" id="ai-provider">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{PROVIDERS.map((p) => (
-							<SelectItem key={p.value} value={p.value}>
-								{p.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				{activeDescription ? (
-					<p className="text-muted-foreground text-xs">{activeDescription}</p>
+				<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+					{PROVIDERS.map((p) => (
+						<ProviderTile
+							key={p.value}
+							onSelect={() => {
+								setProvider(p.value);
+								setModel(defaultModels.data?.[p.value] ?? "");
+								setTestResult(null);
+							}}
+							provider={p}
+							selected={provider === p.value}
+						/>
+					))}
+				</div>
+				{activeHint ? (
+					<p className="text-muted-foreground text-xs">{activeHint}</p>
 				) : null}
 			</div>
 
@@ -609,58 +650,59 @@ function AiProviderForm({
 			{testResult ? (
 				<p
 					className={
-						testResult.ok
-							? "text-green-600 text-sm dark:text-green-400"
-							: "text-destructive text-sm"
+						testResult.ok ? "text-sm text-success" : "text-destructive text-sm"
 					}
 				>
 					{testResult.message}
 				</p>
 			) : null}
 
-			<div className="flex flex-wrap gap-2">
-				<Button
-					disabled={save.isPending || !model.trim()}
-					onClick={() =>
-						save.mutate(
-							credentialInput({
-								apiKey,
-								baseUrl,
-								model,
-								needsBaseUrl,
-								provider,
-								workspaceId: workspace.id,
-							})
-						)
-					}
-				>
-					{save.isPending ? "Saving…" : "Save"}
-				</Button>
-				<Button
-					disabled={test.isPending || !model.trim()}
-					onClick={() =>
-						test.mutate(
-							credentialInput({
-								apiKey,
-								baseUrl,
-								model,
-								needsBaseUrl,
-								provider,
-								workspaceId: workspace.id,
-							})
-						)
-					}
-					variant="outline"
-				>
-					{test.isPending ? "Testing…" : "Test connection"}
-				</Button>
+			<div className="flex flex-wrap items-center justify-between gap-3 border-border border-t pt-5">
+				<div className="flex flex-wrap gap-2">
+					<Button
+						disabled={test.isPending || !model.trim()}
+						onClick={() =>
+							test.mutate(
+								credentialInput({
+									apiKey,
+									baseUrl,
+									model,
+									needsBaseUrl,
+									provider,
+									workspaceId: workspace.id,
+								})
+							)
+						}
+						variant="outline"
+					>
+						<ZapIcon /> {test.isPending ? "Testing…" : "Test connection"}
+					</Button>
+					<Button
+						disabled={save.isPending || !model.trim()}
+						onClick={() =>
+							save.mutate(
+								credentialInput({
+									apiKey,
+									baseUrl,
+									model,
+									needsBaseUrl,
+									provider,
+									workspaceId: workspace.id,
+								})
+							)
+						}
+					>
+						{save.isPending ? "Saving…" : "Save"}
+					</Button>
+				</div>
 				{credential.data?.hasKey ? (
 					<Button
+						className="text-destructive hover:bg-destructive/10 hover:text-destructive"
 						disabled={remove.isPending}
 						onClick={() => remove.mutate({ workspaceId: workspace.id })}
 						variant="ghost"
 					>
-						Remove key
+						<TrashIcon /> Remove key
 					</Button>
 				) : null}
 			</div>

@@ -1,15 +1,32 @@
-import { Button } from "@StryveForms/ui/components/button";
+import { Badge } from "@StryveForms/ui/components/badge";
 import { Input } from "@StryveForms/ui/components/input";
-import { Label } from "@StryveForms/ui/components/label";
-import { Textarea } from "@StryveForms/ui/components/textarea";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { formatTrpcError } from "@/lib/format-trpc-error";
 import { useTRPC } from "@/utils/trpc";
 
-const DOMAIN_SPLIT = /[\n,]/;
+import { SettingsFooter, SettingsRow } from "./settings-row";
+
+const DOMAIN_SPLIT = /[\n,\s]/;
+
+const MODES = [
+	{
+		description:
+			"Anyone with an account on this instance can sign up and create a workspace.",
+		title: "Open",
+		value: "open" as const,
+	},
+	{
+		description:
+			"Only admins can invite new members. Sign-up is disabled for everyone else.",
+		title: "Invite-only",
+		value: "closed" as const,
+	},
+];
 
 export default function AdminAccessTab() {
 	const trpc = useTRPC();
@@ -19,7 +36,8 @@ export default function AdminAccessTab() {
 	const [registrationMode, setRegistrationMode] = useState<"open" | "closed">(
 		"open"
 	);
-	const [domains, setDomains] = useState("");
+	const [domains, setDomains] = useState<string[]>([]);
+	const [domainDraft, setDomainDraft] = useState("");
 	const [supportEmail, setSupportEmail] = useState("");
 
 	useEffect(() => {
@@ -27,9 +45,35 @@ export default function AdminAccessTab() {
 			return;
 		}
 		setRegistrationMode(settings.data.registrationMode);
-		setDomains(settings.data.allowedEmailDomains.join("\n"));
+		setDomains(settings.data.allowedEmailDomains);
 		setSupportEmail(settings.data.supportEmail ?? "");
 	}, [settings.data]);
+
+	const isDirty =
+		settings.data !== undefined &&
+		(registrationMode !== settings.data.registrationMode ||
+			domains.join() !== settings.data.allowedEmailDomains.join() ||
+			supportEmail !== (settings.data.supportEmail ?? ""));
+
+	const discard = () => {
+		if (!settings.data) {
+			return;
+		}
+		setRegistrationMode(settings.data.registrationMode);
+		setDomains(settings.data.allowedEmailDomains);
+		setSupportEmail(settings.data.supportEmail ?? "");
+	};
+
+	const addDomains = (raw: string) => {
+		const next = raw
+			.split(DOMAIN_SPLIT)
+			.map((d) => d.trim().toLowerCase())
+			.filter(Boolean);
+		if (next.length > 0) {
+			setDomains((current) => [...new Set([...current, ...next])]);
+		}
+		setDomainDraft("");
+	};
 
 	const update = useMutation(
 		trpc.instance.update.mutationOptions({
@@ -49,81 +93,105 @@ export default function AdminAccessTab() {
 	);
 
 	return (
-		<div className="max-w-lg space-y-6">
-			<fieldset className="space-y-2">
-				<Label>Who can create an account?</Label>
-				<div className="space-y-2">
-					<label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
-						<input
-							checked={registrationMode === "open"}
-							className="mt-0.5"
-							name="admin-registration-mode"
-							onChange={() => setRegistrationMode("open")}
-							type="radio"
-						/>
-						<span>
-							<span className="block font-medium">Open</span>
-							<span className="block text-muted-foreground">
-								Anyone can sign up (optionally restricted to the domains below).
-							</span>
-						</span>
-					</label>
-					<label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
-						<input
-							checked={registrationMode === "closed"}
-							className="mt-0.5"
-							name="admin-registration-mode"
-							onChange={() => setRegistrationMode("closed")}
-							type="radio"
-						/>
-						<span>
-							<span className="block font-medium">Invite-only</span>
-							<span className="block text-muted-foreground">
-								Only people with a pending workspace invite can sign up.
-							</span>
-						</span>
-					</label>
-				</div>
-			</fieldset>
+		<div className="space-y-6 pb-20">
+			<div>
+				<SettingsRow
+					description="Control who can join this instance."
+					label="Workspace access"
+				>
+					<fieldset className="grid gap-3 sm:grid-cols-2">
+						<legend className="sr-only">Who can create an account?</legend>
+						{MODES.map((mode) => (
+							<label
+								className={cn(
+									"flex cursor-pointer items-start gap-2.5 rounded-xl border p-3.5 text-sm transition-colors",
+									registrationMode === mode.value
+										? "border-primary bg-primary-soft/40 ring-1 ring-primary"
+										: "border-border hover:bg-muted/40"
+								)}
+								key={mode.value}
+							>
+								<input
+									checked={registrationMode === mode.value}
+									className="mt-0.5 accent-primary"
+									name="admin-registration-mode"
+									onChange={() => setRegistrationMode(mode.value)}
+									type="radio"
+								/>
+								<span>
+									<span className="block font-medium">{mode.title}</span>
+									<span className="block text-subtle-foreground text-xs">
+										{mode.description}
+									</span>
+								</span>
+							</label>
+						))}
+					</fieldset>
+				</SettingsRow>
 
-			<div className="space-y-2">
-				<Label htmlFor="admin-domains">Allowed email domains</Label>
-				<Textarea
-					id="admin-domains"
-					onChange={(event) => setDomains(event.target.value)}
-					placeholder="acme.com, acme.io"
-					value={domains}
-				/>
-				<p className="text-muted-foreground text-xs">
-					Comma or newline separated. Leave empty to allow any domain.
-				</p>
+				<SettingsRow
+					description="Restrict sign-ups to these domains. Leave empty to allow any domain."
+					htmlFor="admin-domain-input"
+					label="Allowed email domains"
+				>
+					<div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border border-input px-2 py-1.5 shadow-xs focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/25">
+						{domains.map((domain) => (
+							<Badge key={domain} variant="neutral">
+								{domain}
+								<button
+									aria-label={`Remove ${domain}`}
+									onClick={() =>
+										setDomains((current) => current.filter((d) => d !== domain))
+									}
+									type="button"
+								>
+									<XIcon className="size-3" />
+								</button>
+							</Badge>
+						))}
+						<Input
+							className="h-6 min-w-28 flex-1 border-none bg-transparent px-1 shadow-none focus-visible:ring-0"
+							id="admin-domain-input"
+							onBlur={() => addDomains(domainDraft)}
+							onChange={(event) => setDomainDraft(event.target.value)}
+							onKeyDown={(event) => {
+								if (event.key === "Enter" || event.key === ",") {
+									event.preventDefault();
+									addDomains(domainDraft);
+								}
+							}}
+							placeholder="Add a domain…"
+							value={domainDraft}
+						/>
+					</div>
+				</SettingsRow>
+
+				<SettingsRow
+					description="Shown to people who can't sign in."
+					htmlFor="admin-support-email"
+					label="Support email"
+				>
+					<Input
+						id="admin-support-email"
+						onChange={(event) => setSupportEmail(event.target.value)}
+						type="email"
+						value={supportEmail}
+					/>
+				</SettingsRow>
 			</div>
 
-			<div className="space-y-2">
-				<Label htmlFor="admin-support-email">Support email</Label>
-				<Input
-					id="admin-support-email"
-					onChange={(event) => setSupportEmail(event.target.value)}
-					type="email"
-					value={supportEmail}
-				/>
-			</div>
-
-			<Button
-				disabled={update.isPending}
-				onClick={() =>
+			<SettingsFooter
+				dirty={isDirty}
+				onDiscard={discard}
+				onSave={() =>
 					update.mutate({
-						allowedEmailDomains: domains
-							.split(DOMAIN_SPLIT)
-							.map((d) => d.trim().toLowerCase())
-							.filter(Boolean),
+						allowedEmailDomains: domains,
 						registrationMode,
 						supportEmail: supportEmail.trim() || "",
 					})
 				}
-			>
-				{update.isPending ? "Saving…" : "Save access settings"}
-			</Button>
+				saving={update.isPending}
+			/>
 		</div>
 	);
 }

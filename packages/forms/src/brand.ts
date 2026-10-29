@@ -17,6 +17,7 @@ import {
 	FRAME_SHADOWS,
 	imageCreditSchema,
 	LAYOUTS,
+	LOGO_ALIGNMENTS,
 	SIZES,
 	THEMES,
 	WIDTHS,
@@ -75,6 +76,14 @@ export const BRAND_KEYS = [
 	"classicLayout",
 	/** Shows the resolved brand logo above the Classic layout. Defaults to true. */
 	"showBrandLogo",
+	/** Brand logo position above the form: "left" | "center" | "right". */
+	"logoAlignment",
+	/** Dark-scheme page background; light colours are never reused in dark mode. */
+	"pageBackgroundColorDark",
+	/** Dark-scheme card background. */
+	"frameBackgroundColorDark",
+	/** Dark-scheme card border colour. */
+	"frameBorderColorDark",
 ] as const;
 
 export type BrandKey = (typeof BRAND_KEYS)[number];
@@ -112,11 +121,15 @@ export const workspaceBrandSchema = z
 		noBranding: z.boolean(),
 		classicLayout: z.enum(CLASSIC_LAYOUTS),
 		showBrandLogo: z.boolean(),
+		logoAlignment: z.enum(LOGO_ALIGNMENTS),
+		pageBackgroundColorDark: z.string().max(30).nullable(),
+		frameBackgroundColorDark: z.string().max(30).nullable(),
+		frameBorderColorDark: z.string().max(30).nullable(),
 	})
 	.partial();
 
 /**
- * The 19 brand keys that aren't real form columns: they live in the form's
+ * The 23 brand keys that aren't real form columns: they live in the form's
  * `settings` jsonb blob (see `@StryveForms/forms/settings`'s `settings` field)
  * instead of their own DB column, so adding them needed no migration. Kept as
  * a loose string array (not re-deriving from BRAND_KEYS) so the list is
@@ -142,6 +155,10 @@ export const NESTED_BRAND_KEYS = [
 	"headerImageCredit",
 	"classicLayout",
 	"showBrandLogo",
+	"logoAlignment",
+	"pageBackgroundColorDark",
+	"frameBackgroundColorDark",
+	"frameBorderColorDark",
 ] as const satisfies readonly BrandKey[];
 
 type NestedBrandKey = (typeof NESTED_BRAND_KEYS)[number];

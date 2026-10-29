@@ -6,10 +6,10 @@ const LABELS: Record<string, string> = {
 	public: "Live",
 };
 
-const VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
-	closed: "outline",
-	draft: "secondary",
-	public: "default",
+const VARIANTS: Record<string, "success" | "neutral" | "warning"> = {
+	closed: "warning",
+	draft: "neutral",
+	public: "success",
 };
 
 export default function StatusBadge({
@@ -21,7 +21,8 @@ export default function StatusBadge({
 }) {
 	const key = isClosed ? "closed" : visibility;
 	return (
-		<Badge variant={VARIANTS[key] ?? "outline"}>
+		<Badge variant={VARIANTS[key] ?? "neutral"}>
+			<span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
 			{LABELS[key] ?? visibility}
 		</Badge>
 	);

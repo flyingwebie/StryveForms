@@ -12,6 +12,10 @@ export interface AppConfig {
 		hcaptchaSecret?: string | undefined;
 		recaptchaSecret?: string | undefined;
 		turnstileSecret?: string | undefined;
+		/** Public site keys, sent to the browser with each form at runtime (so prebuilt images work). */
+		hcaptchaSiteKey?: string | undefined;
+		recaptchaSiteKey?: string | undefined;
+		turnstileSiteKey?: string | undefined;
 	};
 	importRateLimitPerMinute: number;
 	/** Public URL of this API server, used for file links. */

@@ -37,7 +37,11 @@ export const instanceSettings = pgTable("instance_settings", {
 	logoUrl: text("logo_url"),
 	logoDarkUrl: text("logo_dark_url"),
 	faviconUrl: text("favicon_url"),
+	/** App icon/favicon for dark mode; falls back to `faviconUrl`. */
+	faviconDarkUrl: text("favicon_dark_url"),
 	primaryColor: text("primary_color").default("#7C3AED").notNull(),
+	/** Brand colour in dark mode; falls back to `primaryColor`. */
+	primaryColorDark: text("primary_color_dark"),
 	heroTitle: text("hero_title"),
 	heroSubtitle: text("hero_subtitle"),
 	/** `open`: anyone can sign up. `closed`: only people with a workspace invite. */

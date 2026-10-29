@@ -1,10 +1,11 @@
 import { Button } from "@StryveForms/ui/components/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { CheckCircle2Icon } from "lucide-react";
+import { ArrowRightIcon, DownloadIcon, PartyPopperIcon } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
+import { useInstance } from "@/lib/instance";
 import { useTRPC } from "@/utils/trpc";
 
 /** Step 4: marks onboarding complete and sends the admin to the dashboard. */
@@ -12,6 +13,7 @@ export default function SetupStepDone() {
 	const trpc = useTRPC();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
+	const instance = useInstance();
 
 	const complete = useMutation(
 		trpc.instance.completeSetup.mutationOptions({
@@ -31,11 +33,13 @@ export default function SetupStepDone() {
 
 	return (
 		<div className="flex flex-col items-center gap-4 text-center">
-			<CheckCircle2Icon className="size-10 text-green-600" />
-			<h2 className="font-semibold text-xl">You're all set</h2>
+			<span className="flex size-14 items-center justify-center rounded-full bg-primary-soft text-primary-soft-foreground">
+				<PartyPopperIcon className="size-6" />
+			</span>
+			<h1 className="font-display text-4xl">You're all set!</h1>
 			<p className="max-w-sm text-muted-foreground text-sm">
-				Your workspace is ready. You can fine-tune branding and access anytime
-				from Admin settings.
+				StryveForms is ready for {instance?.name ?? "your workspace"}. Invite
+				your team or bring over your existing forms.
 			</p>
 			<div className="flex flex-wrap justify-center gap-2">
 				<Button
@@ -44,10 +48,10 @@ export default function SetupStepDone() {
 					}
 					variant="outline"
 				>
-					Import forms
+					<DownloadIcon /> Import forms
 				</Button>
 				<Button onClick={() => navigate({ to: "/dashboard" })}>
-					Go to dashboard
+					<ArrowRightIcon /> Go to dashboard
 				</Button>
 			</div>
 		</div>

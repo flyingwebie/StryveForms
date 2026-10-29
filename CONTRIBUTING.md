@@ -39,14 +39,13 @@ openssl rand -base64 48
 
 Open **http://localhost:3002** (the web app) — the API runs behind it on port `3000` and you normally don't talk to it directly. The first visit runs onboarding: create an administrator account and you're in.
 
-Environment variables are managed with [Varlock](https://varlock.dev): each app's `.env.schema` is the source of truth for what exists and what's required; `bun install`'s postinstall step (and `bun run env:generate`) turns that into typed `env.ts` files. If you add a new variable, add it to the relevant `.env.schema` first — see [Deployment → Overview](apps/fumadocs/content/docs/deployment/overview.mdx) for how we document these for self-hosters.
 
 Useful commands while you work:
 
 | Command | What it does |
 | --- | --- |
 | `bun run dev` | Run web + server together, with labeled logs |
-| `bun run dev:web` / `dev:server` / `dev:docs` / `dev:tui` | Run just one app |
+| `bun run dev:web` / `dev:server` / `dev:tui` | Run just one app |
 | `bun run check` | Lint + type-check the whole workspace |
 | `bun run check-types` | Type-check only |
 | `bunx ultracite check` / `bunx ultracite fix` | Lint/format (see Coding standards below) |
@@ -60,7 +59,6 @@ Useful commands while you work:
 apps/
   web/              TanStack Start + Router + Query, React 19, Tailwind v4, shadcn (Base UI) — the product itself
   server/           Hono + tRPC API, Better Auth — everything apps/web talks to
-  fumadocs/         This documentation site
   tui/              Experimental terminal UI (OpenTUI + React) for local/ops tasks
 
 packages/
@@ -136,7 +134,6 @@ A pre-commit hook (`.husky/pre-commit`) runs `ultracite fix` on staged files aut
   - [ ] Relevant `bun test` suites pass, and you added tests for new non-trivial logic
   - [ ] **UI changes include screenshots, in both light and dark mode** — this is the fastest way for a reviewer to catch a dark-mode or corner-radius regression without pulling your branch
   - [ ] New or changed settings have a plain-language description in the UI
-  - [ ] If you touched `.env.schema`, the corresponding deployment doc under `apps/fumadocs/content/docs/deployment/` mentions it
 - Describe *why* the change is needed in the PR description, not just what changed — the diff already shows the what.
 
 ## Good first issues / where help is wanted
@@ -146,7 +143,6 @@ Great places to start if you're not sure where to dig in:
 - **Integrations** — new destinations under `packages/api/src/services/integrations/` (another chat app, another automation platform).
 - **Importers** — improving coverage in `packages/opnform-import` / `packages/jotform-import` for fields or settings that don't map cleanly yet.
 - **Translations** — the UI isn't fully internationalized yet; help design and wire up the i18n approach, or add a locale once it exists.
-- **Documentation** — this docs site (`apps/fumadocs`) always has gaps; deployment guides for platforms we haven't covered are especially welcome.
 - **Templates** — starter form templates for common use cases (contact forms, RSVPs, surveys, intake forms).
 
 Check open issues labeled `good first issue` or `help wanted` on GitHub, or open a new issue to discuss an idea before investing a lot of time — especially for anything that touches the form data model or auth.

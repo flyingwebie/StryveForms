@@ -105,13 +105,12 @@ function RouteComponent() {
 	}
 
 	return (
-		<div className="max-w-3xl space-y-6">
-			<div className="flex items-center justify-between gap-3">
+		<div className="space-y-6">
+			<div className="flex flex-wrap items-center justify-between gap-3">
 				<div>
-					<h3 className="font-medium text-sm">Email notifications</h3>
+					<h2 className="font-semibold text-base">Email notifications</h2>
 					<p className="text-muted-foreground text-sm">
-						Sent automatically on every submission — to you, your team, or the
-						respondent (as a confirmation).
+						Send an email every time someone submits this form.
 					</p>
 				</div>
 				<Button onClick={() => openEditor("new")}>

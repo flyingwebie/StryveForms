@@ -16,37 +16,37 @@ export function BuildTab() {
 	const properties = state.settings.properties as FormField[];
 
 	return (
-		// pb-24 (~6rem): keeps the last field row clear of the floating
+		// pb-24 (~6rem): keeps the Add block button clear of the floating
 		// TanStack devtools button that overlaps the bottom of this panel.
 		<div className="flex flex-col gap-3 p-3 pb-24">
 			<div className="flex items-center justify-between gap-2">
-				<p className="font-medium text-muted-foreground text-xs">Fields</p>
-				{readOnly ? null : (
-					<Button
-						onClick={() => openAddBlockPanel(null)}
-						size="sm"
-						type="button"
-						variant="outline"
-					>
-						<PlusIcon /> Add block
-					</Button>
-				)}
+				<p className="font-medium text-subtle-foreground text-xs uppercase tracking-wide">
+					Fields
+				</p>
+				<span className="text-muted-foreground text-xs">
+					{properties.length}
+				</span>
 			</div>
 			{properties.length === 0 ? (
-				<p className="p-6 text-center text-muted-foreground text-xs">
-					No fields yet. Click "Add block" to open the block library.
+				<p className="text-muted-foreground text-xs">
+					No fields yet. Add your first block to get started.
 				</p>
 			) : (
 				<SortableContext
 					items={properties.map((f) => listItemId(f.id))}
 					strategy={verticalListSortingStrategy}
 				>
-					<div className="flex flex-col gap-1">
+					<div className="flex flex-col gap-0.5">
 						{properties.map((field) => (
 							<FieldRow field={field} key={field.id} />
 						))}
 					</div>
 				</SortableContext>
+			)}
+			{readOnly ? null : (
+				<Button onClick={() => openAddBlockPanel(null)} type="button">
+					<PlusIcon /> Add block
+				</Button>
 			)}
 		</div>
 	);

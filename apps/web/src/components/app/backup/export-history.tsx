@@ -9,13 +9,13 @@ import { useBackupJobs } from "./backup-rpc";
 
 const STATUS_VARIANT: Record<
 	string,
-	"default" | "secondary" | "outline" | "destructive"
+	React.ComponentProps<typeof Badge>["variant"]
 > = {
-	cancelled: "outline",
-	completed: "secondary",
-	failed: "destructive",
-	pending: "outline",
-	running: "default",
+	cancelled: "neutral",
+	completed: "success",
+	failed: "danger",
+	pending: "neutral",
+	running: "info",
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -56,8 +56,8 @@ export default function ExportHistory({
 
 	return (
 		<div className="space-y-2">
-			<h3 className="font-medium text-sm">Export history</h3>
-			<div className="divide-y divide-border overflow-hidden rounded-xl border bg-card">
+			<h3 className="font-semibold text-base">Export history</h3>
+			<div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
 				{exportJobs.map((job) => {
 					const expiry = expiryLabel(job.expiresAt);
 					return (
@@ -69,17 +69,17 @@ export default function ExportHistory({
 								<div className="flex items-center gap-2">
 									<Badge
 										className="capitalize"
-										variant={STATUS_VARIANT[job.status] ?? "outline"}
+										variant={STATUS_VARIANT[job.status] ?? "neutral"}
 									>
 										{job.status}
 									</Badge>
 									{job.sizeBytes ? (
-										<span className="text-muted-foreground text-xs">
+										<span className="font-mono text-subtle-foreground text-xs">
 											{formatBytes(job.sizeBytes)}
 										</span>
 									) : null}
 								</div>
-								<p className="mt-0.5 text-muted-foreground text-xs">
+								<p className="mt-0.5 text-subtle-foreground text-xs">
 									{new Date(job.createdAt).toLocaleString()}
 									{expiry ? ` · ${expiry}` : ""}
 								</p>
@@ -101,7 +101,7 @@ export default function ExportHistory({
 					);
 				})}
 			</div>
-			<p className="text-muted-foreground text-xs">
+			<p className="text-subtle-foreground text-xs">
 				{plural(exportJobs.length, "export")} · finished files are deleted
 				automatically after 7 days.
 			</p>

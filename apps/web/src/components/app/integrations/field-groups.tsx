@@ -1,3 +1,4 @@
+import { Button } from "@StryveForms/ui/components/button";
 import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
@@ -11,6 +12,7 @@ import {
 	SelectValue,
 } from "@StryveForms/ui/components/select";
 import { Textarea } from "@StryveForms/ui/components/textarea";
+import { cn } from "@StryveForms/ui/lib/utils";
 import type { ReactNode } from "react";
 
 import { SettingsSection } from "./settings-section";
@@ -101,6 +103,33 @@ function CheckField({
 				onCheckedChange={(c) => onChange(c === true)}
 			/>
 			<Label>{label}</Label>
+		</div>
+	);
+}
+
+/** A small segmented control for a short set of mutually-exclusive options. */
+function OptionButtons<T extends string>({
+	onChange,
+	options,
+	value,
+}: {
+	onChange: (value: T) => void;
+	options: readonly { label: string; value: T }[];
+	value: T;
+}) {
+	return (
+		<div className="flex flex-wrap gap-2">
+			{options.map((option) => (
+				<Button
+					key={option.value}
+					onClick={() => onChange(option.value)}
+					size="sm"
+					type="button"
+					variant={value === option.value ? "default" : "outline"}
+				>
+					{option.label}
+				</Button>
+			))}
 		</div>
 	);
 }
@@ -324,6 +353,82 @@ function num(settings: IntegrationSettings, key: string, fallback: number) {
 	return typeof value === "number" ? value : fallback;
 }
 
+const AUTH_TYPE_OPTIONS = [
+	{ label: "None", value: "none" },
+	{ label: "Bearer", value: "bearer" },
+	{ label: "Basic", value: "basic" },
+	{ label: "API key", value: "api_key" },
+] as const;
+
+const SLACK_FORMAT_OPTIONS = [
+	{ label: "Rich", value: "blocks" },
+	{ label: "Simple", value: "simple" },
+] as const;
+
+const PAYLOAD_SHAPE_OPTIONS = [
+	{
+		label: "Classic (OpnForm)",
+		preview: '{ "data":\n  { "email": "…" } }',
+		value: "classic",
+	},
+	{
+		label: "Nested",
+		preview: '{ "email":\n  { "value": "…" } }',
+		value: "nested",
+	},
+	{ label: "Flat", preview: '{ "email":\n  "jamie@…" }', value: "flat" },
+] as const;
+
+/** The "Payload shape" radio tiles: a label, a short JSON preview, and a
+ * selection ring — matches the field-data-shape picker shown for every
+ * webhook-like integration. */
+function PayloadShapeField({
+	onChange,
+	value,
+}: {
+	onChange: (value: string) => void;
+	value: string;
+}) {
+	return (
+		<div className="space-y-2">
+			<div className="grid gap-2 sm:grid-cols-3">
+				{PAYLOAD_SHAPE_OPTIONS.map((option) => (
+					<button
+						className={cn(
+							"flex flex-col gap-2 rounded-xl border p-3 text-left transition-colors",
+							value === option.value
+								? "border-primary ring-1 ring-primary"
+								: "border-border hover:border-foreground/20"
+						)}
+						key={option.value}
+						onClick={() => onChange(option.value)}
+						type="button"
+					>
+						<span className="flex items-center gap-2 font-medium text-sm">
+							<span
+								className={cn(
+									"size-3.5 shrink-0 rounded-full border",
+									value === option.value
+										? "border-primary bg-primary"
+										: "border-input"
+								)}
+							/>
+							{option.label}
+						</span>
+						<pre className="whitespace-pre-wrap rounded-md bg-muted/60 p-2 font-mono text-[11px] text-muted-foreground leading-tight">
+							{option.preview}
+						</pre>
+					</button>
+				))}
+			</div>
+			<p className="text-muted-foreground text-xs">
+				Flat is the easiest shape for no-code tools like Zapier or Make to map
+				fields from.
+			</p>
+		</div>
+	);
+}
+
 /** Security / Payload / Advanced for webhook, n8n, Zapier, Make, Pabbly,
  * Activepieces, Albato — they're all a plain JSON POST, so one settings UI
  * covers all seven. */
@@ -344,28 +449,11 @@ export function WebhookLikeSettingsFields({
 				title="Security"
 			>
 				<Field label="Authentication">
-					<Select
-						items={[
-							{ label: "None", value: "none" },
-							{ label: "Bearer token", value: "bearer" },
-							{ label: "Basic auth", value: "basic" },
-							{ label: "API key header", value: "api_key" },
-						]}
-						onValueChange={(value) =>
-							setSettings({ ...settings, auth_type: value })
-						}
+					<OptionButtons
+						onChange={(value) => setSettings({ ...settings, auth_type: value })}
+						options={AUTH_TYPE_OPTIONS}
 						value={authType}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="none">None</SelectItem>
-							<SelectItem value="bearer">Bearer token</SelectItem>
-							<SelectItem value="basic">Basic auth</SelectItem>
-							<SelectItem value="api_key">API key header</SelectItem>
-						</SelectContent>
-					</Select>
+					/>
 				</Field>
 				{authType === "bearer" ? (
 					<Field label="Bearer token">
@@ -481,41 +569,17 @@ export function WebhookLikeSettingsFields({
 
 			<SettingsSection
 				description="Controls the shape of the JSON body this form sends."
-				title="Payload"
+				title="Payload shape"
 			>
-				<Field label="Field data shape">
-					<Select
-						items={[
-							{ label: "Classic (OpnForm-compatible)", value: "classic" },
-							{ label: "Nested (name/type/value per field)", value: "nested" },
-							{ label: "Flat (field id → value)", value: "flat" },
-						]}
-						onValueChange={(value) =>
-							setSettings({ ...settings, payload_style: value })
-						}
-						value={
-							str(settings, "payload_style") ||
-							(integrationId === "webhook" ? "classic" : "nested")
-						}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="classic">
-								Classic (OpnForm-compatible)
-							</SelectItem>
-							<SelectItem value="nested">
-								Nested (name/type/value per field)
-							</SelectItem>
-							<SelectItem value="flat">Flat (field id → value)</SelectItem>
-						</SelectContent>
-					</Select>
-					<p className="text-muted-foreground text-xs">
-						Flat is the easiest shape for no-code tools like Zapier or Make to
-						map fields from.
-					</p>
-				</Field>
+				<PayloadShapeField
+					onChange={(value) =>
+						setSettings({ ...settings, payload_style: value })
+					}
+					value={
+						str(settings, "payload_style") ||
+						(integrationId === "webhook" ? "classic" : "nested")
+					}
+				/>
 				<CheckField
 					checked={settings.include_metadata !== false}
 					label="Include metadata (e.g. UTM/referrer attribution), when available"
@@ -564,31 +628,18 @@ export function SlackSettingsFields({
 		<div className="-mx-2">
 			<SettingsSection
 				description="How the message is formatted in Slack."
-				title="Payload"
+				title="Message format"
 			>
-				<Field label="Format">
-					<Select
-						items={[
-							{ label: "Rich (Block Kit sections)", value: "blocks" },
-							{ label: "Simple (plain text)", value: "simple" },
-						]}
-						onValueChange={(value) =>
-							setSettings({ ...settings, format: value })
-						}
-						value={str(settings, "format") || "blocks"}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="blocks">Rich (Block Kit sections)</SelectItem>
-							<SelectItem value="simple">Simple (plain text)</SelectItem>
-						</SelectContent>
-					</Select>
-				</Field>
+				<OptionButtons
+					onChange={(value) => setSettings({ ...settings, format: value })}
+					options={SLACK_FORMAT_OPTIONS}
+					value={str(settings, "format") || "blocks"}
+				/>
 				<p className="text-muted-foreground text-xs">
-					Slack fixes the posting channel, name and icon to whatever was chosen
-					when this webhook was created — they can't be overridden here.
+					Rich shows each answer as a block; Simple sends one plain-text line
+					per field. Slack fixes the posting channel, name and icon to whatever
+					was chosen when this webhook was created — they can't be overridden
+					here.
 				</p>
 			</SettingsSection>
 		</div>

@@ -13,7 +13,7 @@ import {
 	ArrowDownIcon,
 	ArrowUpIcon,
 	MergeIcon,
-	MoreVerticalIcon,
+	MoreHorizontalIcon,
 	XIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -96,7 +96,7 @@ export function PageCard({
 			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center gap-2">
 					<p className="font-medium text-sm">Page {index + 1}</p>
-					<Badge variant="outline">
+					<Badge variant="neutral">
 						{page.fields.length} field{page.fields.length === 1 ? "" : "s"}
 					</Badge>
 				</div>
@@ -117,7 +117,7 @@ export function PageCard({
 							<DropdownMenuTrigger
 								render={<Button size="icon-xs" type="button" variant="ghost" />}
 							>
-								<MoreVerticalIcon />
+								<MoreHorizontalIcon />
 							</DropdownMenuTrigger>
 							<DropdownMenuContent>
 								<DropdownMenuItem

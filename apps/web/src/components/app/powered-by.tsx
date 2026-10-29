@@ -19,33 +19,32 @@ export default function PoweredBy({ className }: { className?: string }) {
 	return (
 		<div
 			className={cn(
-				"flex flex-col items-center gap-1 text-muted-foreground text-xs",
+				"flex flex-col gap-1 rounded-xl border border-sidebar-border bg-background p-3 text-xs shadow-xs group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none",
 				className
 			)}
 		>
 			<a
-				className="flex items-center gap-1.5 hover:text-foreground group-data-[collapsible=icon]:hidden"
+				className="flex items-center gap-1.5 font-semibold text-foreground hover:text-primary group-data-[collapsible=icon]:hidden"
 				href={STRYVEFORMS_URL}
 				rel="noopener noreferrer"
 				target="_blank"
 			>
-				Powered by
 				<img
-					alt="StryveForms"
-					className="h-3.5 w-auto"
+					alt=""
+					className="size-3.5"
 					height={14}
 					src="/brand/stryveforms-mark.svg"
 					width={14}
 				/>
-				<span className="font-medium">StryveForms</span>
+				Powered by StryveForms
 			</a>
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-2 text-muted-foreground">
 				<span className="group-data-[collapsible=icon]:hidden">
-					v{APP_VERSION}
+					v{APP_VERSION} · Open source · AGPL-3.0
 				</span>
 				<a
 					aria-label={`StryveForms v${APP_VERSION} on GitHub`}
-					className="hover:text-foreground"
+					className="ml-auto hover:text-foreground group-data-[collapsible=icon]:ml-0"
 					href={REPO_URL}
 					rel="noopener noreferrer"
 					target="_blank"

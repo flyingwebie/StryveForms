@@ -19,7 +19,7 @@ function RouteComponent() {
 	}
 
 	return (
-		<div className="min-w-0 max-w-3xl">
+		<div className="min-w-0">
 			<ShareContent form={formQuery.data} />
 		</div>
 	);

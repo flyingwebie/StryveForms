@@ -1,7 +1,13 @@
 # StryveForms on Coolify (https://coolify.io)
 #
-# 1. In Coolify: New Resource → Public/Private Repository → Build Pack "Docker Compose",
-#    Docker Compose Location: /docker-compose.coolify.yaml
+# Uses the prebuilt images published by GitHub Actions on every release
+# (ghcr.io/flyingwebie/stryveforms-web and -server), so nothing is built on
+# your server. Pin a version with STRYVEFORMS_VERSION (e.g. 1.0.0, or 1 to
+# follow 1.x); it defaults to "latest".
+#
+# 1. In Coolify: New Resource → Docker Compose Empty, paste this file (or
+#    Public Repository → Build Pack "Docker Compose", Docker Compose Location:
+#    /docker-compose.coolify.yaml).
 # 2. Set a domain for the "web" service (e.g. https://forms.example.com:3002 — the
 #    port suffix tells Coolify which container port to route to). Coolify fills
 #    SERVICE_URL_WEB_3002 from it. The "server" and "postgres" services stay private.
@@ -15,9 +21,7 @@
 
 services:
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: ghcr.io/flyingwebie/stryveforms-web:${STRYVEFORMS_VERSION:-latest}
     environment:
       # Coolify routes the public domain to port 3002 of this container.
       SERVICE_URL_WEB_3002: /
@@ -26,9 +30,6 @@ services:
       HOST: 0.0.0.0
       # The web app forwards /api and /trpc to the API over the private network.
       SERVER_URL: http://server:3000
-      VITE_HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY:-}
-      VITE_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
-      VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
     depends_on:
       server:
         condition: service_healthy
@@ -41,9 +42,7 @@ services:
     restart: unless-stopped
 
   server:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
+    image: ghcr.io/flyingwebie/stryveforms-server:${STRYVEFORMS_VERSION:-latest}
     environment:
       NODE_ENV: production
       APP_NAME: ${APP_NAME:-StryveForms}
@@ -76,10 +75,16 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       MAIL_FROM: ${MAIL_FROM:-StryveForms <no-reply@example.com>}
 
-      # Optional integrations
+      # Optional captcha. Site keys are public and sent to the browser with
+      # each form at runtime, so they work with the prebuilt images.
+      HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY:-}
       HCAPTCHA_SECRET_KEY: ${HCAPTCHA_SECRET_KEY:-}
+      RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
       RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+
+      # Optional integrations
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       OPNFORM_IMPORT_RATE_LIMIT: ${OPNFORM_IMPORT_RATE_LIMIT:-60}
     volumes:

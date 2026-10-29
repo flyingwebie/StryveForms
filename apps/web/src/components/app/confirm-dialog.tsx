@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 /** A controlled confirm dialog for destructive actions (delete, remove, etc.). */
 export default function ConfirmDialog({
 	children,
+	confirmIcon,
 	confirmLabel = "Delete",
 	description,
 	loading = false,
@@ -22,6 +23,8 @@ export default function ConfirmDialog({
 	title,
 }: {
 	children?: ReactNode;
+	/** Icon shown before the confirm button's label (e.g. a trash icon). */
+	confirmIcon?: ReactNode;
 	confirmLabel?: string;
 	description: ReactNode;
 	loading?: boolean;
@@ -47,6 +50,7 @@ export default function ConfirmDialog({
 						onClick={onConfirm}
 						variant="destructive"
 					>
+						{confirmIcon}
 						{actionLabel}
 					</AlertDialogAction>
 				</AlertDialogFooter>

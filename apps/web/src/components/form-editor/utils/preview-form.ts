@@ -47,6 +47,9 @@ function resolveClassicPresentation(
 		headerImage,
 		headerImageCredit:
 			(branded.headerImageCredit as ImageCredit | null | undefined) ?? null,
+		logoAlignment:
+			(branded.logoAlignment as "left" | "center" | "right" | undefined) ??
+			null,
 		showBrandLogo: (branded.showBrandLogo as boolean | undefined) ?? true,
 	};
 }
@@ -113,6 +116,12 @@ export function toPreviewForm(
 			(branded.frameBackgroundColor as string | null | undefined) ?? null,
 		frameBorderColor:
 			(branded.frameBorderColor as string | null | undefined) ?? null,
+		pageBackgroundColorDark:
+			(branded.pageBackgroundColorDark as string | null | undefined) ?? null,
+		frameBackgroundColorDark:
+			(branded.frameBackgroundColorDark as string | null | undefined) ?? null,
+		frameBorderColorDark:
+			(branded.frameBorderColorDark as string | null | undefined) ?? null,
 		frameBorderWidth: (branded.frameBorderWidth as number | undefined) ?? 0,
 		frameShadow:
 			(branded.frameShadow as "none" | "sm" | "md" | "lg" | undefined) ?? "sm",
@@ -137,6 +146,7 @@ export function toPreviewForm(
 		headerImageHeight: (branded.headerImageHeight as number | undefined) ?? 160,
 		headerImageCredit: classicPresentation.headerImageCredit,
 		classicLayout: classicPresentation.classicLayout,
+		logoAlignment: classicPresentation.logoAlignment,
 		showBrandLogo: classicPresentation.showBrandLogo,
 		focusedImageLayoutDefault:
 			(nestedSettings.focusedImageLayoutDefault as string | undefined) ??
@@ -151,6 +161,7 @@ export function toPreviewForm(
 		submittedText: settings.submittedText,
 		useCaptcha: settings.useCaptcha,
 		captchaProvider: settings.captchaProvider,
+		captchaSiteKey: null,
 		closedText: settings.closedText,
 		maxSubmissionsReachedText: settings.maxSubmissionsReachedText,
 		editableSubmissions: settings.editableSubmissions,

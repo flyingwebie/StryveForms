@@ -118,7 +118,7 @@ function Section({
 }) {
 	return (
 		<div className="space-y-4">
-			<h3 className="font-medium text-sm">{title}</h3>
+			<h3 className="font-semibold text-base">{title}</h3>
 			{children}
 		</div>
 	);
@@ -146,7 +146,7 @@ function ColorField({
 				presets={neutral ? NEUTRAL_PRESETS : undefined}
 				value={value}
 			/>
-			{hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
+			{hint ? <p className="text-subtle-foreground text-xs">{hint}</p> : null}
 		</div>
 	);
 }
@@ -170,7 +170,7 @@ function DarkColorField({
 			<div className="flex items-center justify-between gap-3">
 				<Label>{label}</Label>
 				<div className="flex items-center gap-2">
-					<span className="text-muted-foreground text-xs">Custom</span>
+					<span className="text-subtle-foreground text-xs">Custom</span>
 					<Switch
 						checked={lightValue !== null}
 						onCheckedChange={(checked) => onChange(checked ? "#18181b" : null)}
@@ -178,7 +178,7 @@ function DarkColorField({
 				</div>
 			</div>
 			{lightValue === null ? (
-				<p className="text-muted-foreground text-xs italic">
+				<p className="text-subtle-foreground text-xs italic">
 					Auto-derived from the light colour (target lightness {autoTarget}%).
 				</p>
 			) : (
@@ -306,7 +306,7 @@ function SocialLinkRow({
 				</p>
 			) : null}
 			{status === "empty" ? (
-				<p className="pl-9 text-muted-foreground text-xs italic">
+				<p className="pl-9 text-subtle-foreground text-xs italic">
 					Empty — this row is removed automatically when you save.
 				</p>
 			) : null}
@@ -410,7 +410,7 @@ export default function EmailSettingsForm({
 							))}
 						</SelectContent>
 					</Select>
-					<p className="text-muted-foreground text-xs">
+					<p className="text-subtle-foreground text-xs">
 						"Auto" adds proper `color-scheme` CSS so Apple Mail, Gmail and
 						Outlook.com switch to a dark palette automatically. Each colour
 						below defaults to an automatic dark counterpart, or pick your own.
@@ -455,7 +455,7 @@ export default function EmailSettingsForm({
 							onChange={(c) => set("darkAccentColor", c)}
 							value={value.darkAccentColor}
 						/>
-						<p className="text-muted-foreground text-xs">
+						<p className="text-subtle-foreground text-xs">
 							Right now, auto colours resolve to: background{" "}
 							{autoDarkColor(value.backgroundColor, 10)}, card{" "}
 							{autoDarkColor(value.contentBackgroundColor, 16)}.
@@ -640,7 +640,7 @@ export default function EmailSettingsForm({
 
 				<div className="space-y-2">
 					<Label>Social links</Label>
-					<p className="text-muted-foreground text-xs">
+					<p className="text-subtle-foreground text-xs">
 						Paste a profile URL (or just a handle/domain) — we detect the
 						network automatically; override it with the picker if needed.
 					</p>
@@ -765,7 +765,7 @@ export default function EmailSettingsForm({
 				<div className="flex items-center justify-between rounded-lg border border-border p-3">
 					<div>
 						<p className="font-medium text-sm">Show "Sent with StryveForms"</p>
-						<p className="text-muted-foreground text-xs">
+						<p className="text-subtle-foreground text-xs">
 							A small credit line in the footer of every email.
 						</p>
 					</div>

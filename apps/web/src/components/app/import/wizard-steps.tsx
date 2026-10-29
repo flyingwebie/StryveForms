@@ -23,23 +23,25 @@ export default function WizardSteps({
 				return (
 					<li
 						aria-current={active ? "step" : undefined}
-						className="flex flex-1 items-center gap-2"
+						className="flex flex-1 items-center gap-2.5"
 						key={label}
 					>
 						<span
 							className={cn(
 								"flex size-6 shrink-0 items-center justify-center rounded-full border font-medium text-xs transition-colors",
-								done && "border-primary bg-primary text-primary-foreground",
-								active && "border-primary text-primary ring-4 ring-primary/15",
-								!(done || active) && "text-muted-foreground"
+								(done || active) &&
+									"border-primary bg-primary text-primary-foreground",
+								!(done || active) && "border-border text-muted-foreground"
 							)}
 						>
 							{done ? <CheckIcon className="size-3.5" /> : index + 1}
 						</span>
 						<span
 							className={cn(
-								"hidden truncate sm:inline",
-								active ? "font-medium" : "text-muted-foreground"
+								"hidden truncate text-sm sm:inline",
+								active && "font-semibold text-foreground",
+								done && !active && "font-normal text-foreground",
+								!(done || active) && "text-muted-foreground"
 							)}
 						>
 							{label}

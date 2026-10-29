@@ -1,30 +1,29 @@
 import type { PresentationStyle } from "@StryveForms/forms/blocks";
-import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@StryveForms/ui/components/dialog";
-import {
-	Field,
-	FieldDescription,
-	FieldLabel,
-} from "@StryveForms/ui/components/field";
 import { Input } from "@StryveForms/ui/components/input";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileTextIcon, SearchIcon } from "lucide-react";
+import {
+	ArrowUpRightIcon,
+	CheckIcon,
+	ChevronRightIcon,
+	FileTextIcon,
+	LayoutGridIcon,
+	SearchIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { PresentationPreview } from "@/components/form-editor/design/illustrations";
-import {
-	OptionCard,
-	OptionCardGrid,
-} from "@/components/form-editor/design/option-card";
 import { useTRPC } from "@/utils/trpc";
 
 const PRESENTATION_OPTIONS: {
@@ -33,12 +32,12 @@ const PRESENTATION_OPTIONS: {
 	value: PresentationStyle;
 }[] = [
 	{
-		description: "All questions on one scrollable page.",
+		description: "One page, all questions together.",
 		label: "Classic",
 		value: "classic",
 	},
 	{
-		description: "One question at a time, Typeform-style.",
+		description: "One question per screen, like a conversation.",
 		label: "Focused",
 		value: "focused",
 	},
@@ -84,141 +83,165 @@ export default function NewFormDialog({
 		template.name.toLowerCase().includes(search.toLowerCase())
 	);
 
+	const templateRows = [
+		...mine.map((template) => ({
+			fieldsCount: template.fieldsCount,
+			key: template.id,
+			name: template.name,
+			onSelect: () =>
+				create.mutate({
+					data: { presentationStyle },
+					folderId,
+					templateId: template.id,
+					workspaceId,
+				}),
+		})),
+		...builtIn.map((template) => ({
+			fieldsCount: template.fieldsCount,
+			key: template.slug,
+			name: template.name,
+			onSelect: () =>
+				create.mutate({
+					data: { presentationStyle },
+					folderId,
+					templateSlug: template.slug,
+					workspaceId,
+				}),
+		})),
+	];
+
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="sm:max-w-lg">
+			<DialogContent className="sm:max-w-3xl">
 				<DialogHeader>
 					<DialogTitle>Create a new form</DialogTitle>
-					<DialogDescription>Start blank or from a template.</DialogDescription>
+					<DialogDescription>
+						Start blank in a style, or pick a template to customize.
+					</DialogDescription>
 				</DialogHeader>
 
-				<Field>
-					<FieldLabel>Form style</FieldLabel>
-					<OptionCardGrid>
-						{PRESENTATION_OPTIONS.map((option) => (
-							<OptionCard
-								illustration={<PresentationPreview variant={option.value} />}
-								key={option.value}
-								label={option.label}
-								onSelect={() => setPresentationStyle(option.value)}
-								selected={presentationStyle === option.value}
+				<div className="grid gap-6 sm:grid-cols-2">
+					<div className="space-y-2">
+						<p className="font-medium text-[13px]">Style</p>
+						<div className="grid grid-cols-2 gap-3">
+							{PRESENTATION_OPTIONS.map((option) => (
+								<button
+									aria-pressed={presentationStyle === option.value}
+									className={cn(
+										"flex flex-col gap-2 rounded-xl border p-3 text-left transition-colors",
+										presentationStyle === option.value
+											? "border-primary ring-1 ring-primary"
+											: "border-border hover:border-foreground/30"
+									)}
+									key={option.value}
+									onClick={() => setPresentationStyle(option.value)}
+									type="button"
+								>
+									<div className="flex h-24 items-center justify-center rounded-lg bg-subtle">
+										<PresentationPreview variant={option.value} />
+									</div>
+									<div className="flex items-center justify-between gap-2">
+										<span className="font-medium text-sm">{option.label}</span>
+										<span
+											aria-hidden="true"
+											className={cn(
+												"flex size-4 shrink-0 items-center justify-center rounded-full border",
+												presentationStyle === option.value
+													? "border-primary bg-primary text-primary-foreground"
+													: "border-input"
+											)}
+										>
+											{presentationStyle === option.value ? (
+												<CheckIcon className="size-3" />
+											) : null}
+										</span>
+									</div>
+									<p className="text-subtle-foreground text-xs">
+										{option.description}
+									</p>
+								</button>
+							))}
+						</div>
+					</div>
+
+					<div className="space-y-2">
+						<p className="font-medium text-[13px]">Start from a template</p>
+						<div className="relative">
+							<SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+							<Input
+								className="pl-8"
+								onChange={(event) => setSearch(event.target.value)}
+								placeholder="Search templates…"
+								value={search}
 							/>
-						))}
-					</OptionCardGrid>
-					<FieldDescription>
-						{
-							PRESENTATION_OPTIONS.find((o) => o.value === presentationStyle)
-								?.description
-						}{" "}
-						Applies to a blank form or any template below.
-					</FieldDescription>
-				</Field>
+						</div>
 
-				<button
-					className="flex w-full items-center gap-3 border border-border border-dashed p-3 text-left hover:bg-muted"
-					disabled={create.isPending}
-					onClick={() =>
-						create.mutate({
-							data: { presentationStyle },
-							folderId,
-							workspaceId,
-						})
-					}
-					type="button"
-				>
-					<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-						<FileTextIcon className="size-4" />
-					</span>
-					<span>
-						<span className="block font-medium text-sm">Blank form</span>
-						<span className="block text-muted-foreground text-xs">
-							Start from scratch with an empty form
-						</span>
-					</span>
-				</button>
+						<div className="max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border">
+							{templateRows.map((template) => (
+								<button
+									className="flex w-full items-center gap-3 p-2.5 text-left hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+									disabled={create.isPending}
+									key={template.key}
+									onClick={template.onSelect}
+									type="button"
+								>
+									<span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-soft-foreground">
+										<FileTextIcon className="size-4" />
+									</span>
+									<span className="min-w-0 flex-1">
+										<span className="block truncate font-medium text-sm">
+											{template.name}
+										</span>
+										<span className="block text-subtle-foreground text-xs">
+											{template.fieldsCount} fields
+										</span>
+									</span>
+									<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+								</button>
+							))}
+							{templates.isSuccess &&
+							myTemplates.isSuccess &&
+							templateRows.length === 0 ? (
+								<p className="py-6 text-center text-muted-foreground text-sm">
+									No templates match "{search}"
+								</p>
+							) : null}
+						</div>
 
-				<div className="relative">
-					<SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-					<Input
-						className="pl-8"
-						onChange={(event) => setSearch(event.target.value)}
-						placeholder="Search templates…"
-						value={search}
-					/>
+						<Button
+							className="w-full justify-start text-muted-foreground"
+							onClick={() => onOpenChange(false)}
+							render={<Link to="/dashboard/templates" />}
+							size="sm"
+							variant="ghost"
+						>
+							<LayoutGridIcon /> Browse all templates
+						</Button>
+					</div>
 				</div>
 
-				<div className="max-h-80 space-y-1 overflow-y-auto">
-					{mine.map((template) => (
-						<button
-							className="flex w-full items-start justify-between gap-3 border border-border p-3 text-left hover:bg-muted"
-							disabled={create.isPending}
-							key={template.id}
-							onClick={() =>
-								create.mutate({
-									data: { presentationStyle },
-									templateId: template.id,
-									workspaceId,
-									folderId,
-								})
-							}
-							type="button"
-						>
-							<span>
-								<span className="block font-medium text-sm">
-									{template.icon ? `${template.icon} ` : ""}
-									{template.name}
-								</span>
-								<span className="block text-muted-foreground text-xs">
-									{template.description}
-								</span>
-							</span>
-							<Badge variant="outline">{template.fieldsCount} fields</Badge>
-						</button>
-					))}
-					{builtIn.map((template) => (
-						<button
-							className="flex w-full items-start justify-between gap-3 border border-border p-3 text-left hover:bg-muted"
-							disabled={create.isPending}
-							key={template.slug}
-							onClick={() =>
-								create.mutate({
-									data: { presentationStyle },
-									templateSlug: template.slug,
-									workspaceId,
-									folderId,
-								})
-							}
-							type="button"
-						>
-							<span>
-								<span className="block font-medium text-sm">
-									{template.name}
-								</span>
-								<span className="block text-muted-foreground text-xs">
-									{template.description}
-								</span>
-							</span>
-							<Badge variant="outline">{template.fieldsCount} fields</Badge>
-						</button>
-					))}
-					{templates.isSuccess &&
-						myTemplates.isSuccess &&
-						builtIn.length === 0 &&
-						mine.length === 0 && (
-							<p className="py-6 text-center text-muted-foreground text-sm">
-								No templates match "{search}"
-							</p>
-						)}
-				</div>
-
-				<Button
-					onClick={() => onOpenChange(false)}
-					render={<Link to="/dashboard/templates" />}
-					size="sm"
-					variant="ghost"
-				>
-					Browse all templates
-				</Button>
+				<DialogFooter>
+					<Button
+						onClick={() => onOpenChange(false)}
+						type="button"
+						variant="ghost"
+					>
+						Cancel
+					</Button>
+					<Button
+						disabled={create.isPending}
+						onClick={() =>
+							create.mutate({
+								data: { presentationStyle },
+								folderId,
+								workspaceId,
+							})
+						}
+						type="button"
+					>
+						<ArrowUpRightIcon /> Start from scratch
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

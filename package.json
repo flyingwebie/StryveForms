@@ -1,6 +1,6 @@
 {
   "name": "StryveForms",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "workspaces": {
@@ -38,7 +38,6 @@
     "db:watch": "docker compose up postgres",
     "dev": "bun scripts/free-dev-ports.ts && vp run --filter web --filter server --parallel --log labeled dev",
     "dev:all": "vp run -r dev",
-    "dev:docs": "vp run --filter fumadocs dev",
     "dev:server": "vp run --filter server dev",
     "dev:tui": "vp run --filter tui dev",
     "dev:web": "vp run --filter web dev",

@@ -1,19 +1,11 @@
 import { Button } from "@StryveForms/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { MonitorSmartphoneIcon } from "lucide-react";
+import { CheckIcon, MonitorIcon, ShieldCheckIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 
-import InstanceLogo from "@/components/app/instance-logo";
+import AuthShell from "@/components/app/auth/auth-shell";
 import { authClient } from "@/lib/auth-client";
 
 const SCOPE_LABELS: Record<string, string> = {
@@ -41,8 +33,39 @@ export const Route = createFileRoute("/device_/approve")({
 	},
 });
 
+function ResultCard({ approved }: { approved: boolean }) {
+	return (
+		<div className="space-y-4 text-center">
+			<span
+				className={
+					approved
+						? "inline-flex size-12 items-center justify-center rounded-xl bg-success-soft text-success"
+						: "inline-flex size-12 items-center justify-center rounded-xl bg-destructive-soft text-destructive"
+				}
+			>
+				{approved ? (
+					<CheckIcon className="size-6" />
+				) : (
+					<XIcon className="size-6" />
+				)}
+			</span>
+			<div className="space-y-1">
+				<h1 className="font-semibold text-xl tracking-tight">
+					{approved ? "Device connected" : "Request denied"}
+				</h1>
+				<p className="text-muted-foreground text-sm">
+					{approved
+						? "You can now close this window and return to your device."
+						: "This device was not approved. You can close this window."}
+				</p>
+			</div>
+		</div>
+	);
+}
+
 function RouteComponent() {
 	const { user_code: userCode } = Route.useSearch();
+	const { data: session } = authClient.useSession();
 	const [result, setResult] = useState<"approved" | "denied" | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
@@ -79,76 +102,71 @@ function RouteComponent() {
 		.filter((s) => SCOPE_LABELS[s])
 		.map((s) => SCOPE_LABELS[s]);
 
-	if (result) {
-		return (
-			<div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-				<Card className="w-full max-w-sm rounded-xl text-center">
-					<CardHeader>
-						<CardTitle>
-							{result === "approved" ? "Device connected" : "Request denied"}
-						</CardTitle>
-						<CardDescription>
-							{result === "approved"
-								? "You can go back to your terminal or device now."
-								: "The device was not given access."}
-						</CardDescription>
-					</CardHeader>
-				</Card>
-			</div>
-		);
-	}
-
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-			<Card className="w-full max-w-sm rounded-xl">
-				<CardHeader className="items-center text-center">
-					<InstanceLogo showName={false} />
-					<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-						<MonitorSmartphoneIcon className="size-6" />
-					</div>
-					<CardTitle className="text-xl">
-						Connect {request.data?.client_id ?? "this device"}?
-					</CardTitle>
-					<CardDescription>
-						Only approve this if you just started this sign-in yourself. Code:{" "}
-						<span className="font-mono">{userCode}</span>
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-2">
-					{scopes.length > 0 ? (
-						scopes.map((label) => (
-							<div
-								className="rounded-lg border border-border p-3 text-sm"
-								key={label}
-							>
-								It will be able to {label}.
+		<AuthShell showHero={false}>
+			<div className="w-full rounded-2xl border bg-card p-6 text-card-foreground shadow-black/5 shadow-xl sm:p-8 dark:shadow-black/40">
+				{result ? (
+					<ResultCard approved={result === "approved"} />
+				) : (
+					<div className="space-y-5">
+						<div className="space-y-4 text-center">
+							<span className="inline-flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+								<ShieldCheckIcon className="size-6" />
+							</span>
+							<div className="space-y-1">
+								<h1 className="font-semibold text-xl tracking-tight">
+									Approve this device?
+								</h1>
+								<p className="text-muted-foreground text-sm">
+									It will sign in as you — {session?.user.email ?? "you"}.
+								</p>
 							</div>
-						))
-					) : (
-						<p className="text-muted-foreground text-sm">
-							It will sign in as you.
-						</p>
-					)}
-					{error ? <p className="text-destructive text-sm">{error}</p> : null}
-				</CardContent>
-				<CardFooter className="flex gap-2">
-					<Button
-						className="flex-1"
-						disabled={pending}
-						onClick={() => respond("deny")}
-						variant="outline"
-					>
-						Deny
-					</Button>
-					<Button
-						className="flex-1"
-						disabled={pending}
-						onClick={() => respond("approve")}
-					>
-						Approve
-					</Button>
-				</CardFooter>
-			</Card>
-		</div>
+						</div>
+
+						<div className="flex items-center gap-3 rounded-xl border bg-muted/40 p-3 text-left">
+							<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+								<MonitorIcon className="size-4" />
+							</span>
+							<div className="min-w-0">
+								<p className="truncate font-semibold text-sm">
+									{request.data?.client_id ?? "This device"}
+								</p>
+								<p className="truncate text-muted-foreground text-xs">
+									Code <span className="font-mono">{userCode}</span>
+								</p>
+							</div>
+						</div>
+
+						{scopes.length > 0 ? (
+							<ul className="space-y-1.5 text-muted-foreground text-sm">
+								{scopes.map((label) => (
+									<li key={label}>It will be able to {label}.</li>
+								))}
+							</ul>
+						) : null}
+
+						{error ? <p className="text-destructive text-sm">{error}</p> : null}
+
+						<div className="flex gap-2">
+							<Button
+								className="flex-1"
+								disabled={pending}
+								onClick={() => respond("deny")}
+								variant="outline"
+							>
+								Deny
+							</Button>
+							<Button
+								className="flex-1"
+								disabled={pending}
+								onClick={() => respond("approve")}
+							>
+								Approve
+							</Button>
+						</div>
+					</div>
+				)}
+			</div>
+		</AuthShell>
 	);
 }

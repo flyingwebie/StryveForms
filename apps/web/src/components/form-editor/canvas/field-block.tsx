@@ -127,13 +127,13 @@ function BlockToolbar({
 
 	return (
 		<div
-			className={`absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border bg-background p-0.5 shadow-sm transition-opacity ${
+			className={`absolute -top-3 left-2 z-10 flex items-center gap-0.5 rounded-lg bg-foreground p-1 text-background shadow-md transition-opacity ${
 				visible ? "opacity-100" : "opacity-0 group-hover:opacity-100"
 			}`}
 		>
 			<button
 				aria-label="Drag to reorder"
-				className="cursor-grab px-1 text-muted-foreground active:cursor-grabbing"
+				className="cursor-grab px-1 opacity-80 active:cursor-grabbing"
 				type="button"
 				{...dragAttributes}
 				{...dragListeners}
@@ -142,6 +142,7 @@ function BlockToolbar({
 			</button>
 			{showWidth ? (
 				<Button
+					className="text-background hover:bg-background/20 hover:text-background"
 					onClick={() =>
 						updateField(field.id, { width: nextWidth(field.width ?? "full") })
 					}
@@ -156,6 +157,7 @@ function BlockToolbar({
 				</Button>
 			) : null}
 			<Button
+				className="text-background hover:bg-background/20 hover:text-background"
 				onClick={() => select(field.id)}
 				size="icon-xs"
 				title="Settings"
@@ -165,6 +167,7 @@ function BlockToolbar({
 				<SettingsIcon />
 			</Button>
 			<Button
+				className="text-background hover:bg-background/20 hover:text-background"
 				onClick={() => duplicateField(field.id)}
 				size="icon-xs"
 				title="Duplicate"
@@ -174,6 +177,7 @@ function BlockToolbar({
 				<CopyIcon />
 			</Button>
 			<Button
+				className="text-background hover:bg-background/20 hover:text-background"
 				onClick={() => removeField(field.id)}
 				size="icon-xs"
 				title="Delete"
@@ -274,10 +278,8 @@ export function FieldBlock({
 			{/* biome-ignore lint/a11y/useSemanticElements: a <button> here would nest inside field renderers that are themselves buttons (select, date, …), which is invalid HTML */}
 			<div
 				aria-label={`Select ${field.name}`}
-				className={`flex w-full flex-col rounded-md border p-2 text-left transition-colors ${
-					selected
-						? "border-primary ring-2 ring-primary/40"
-						: "border-transparent hover:border-border"
+				className={`flex w-full flex-col rounded-lg border-2 p-2 text-left transition-colors ${
+					selected ? "border-primary" : "border-transparent hover:border-border"
 				} ${effectiveHidden ? "opacity-50" : ""}`}
 				onClick={() => select(field.id)}
 				onKeyDown={(e) => {
@@ -350,8 +352,8 @@ export function FieldBlock({
 					}}
 					type="button"
 				>
-					<span className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110">
-						<PlusIcon className="size-3" />
+					<span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-110">
+						<PlusIcon className="size-3.5" />
 					</span>
 				</button>
 			)}

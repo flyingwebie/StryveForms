@@ -60,7 +60,6 @@ export function ChatMessage({
 					return (
 						<ToolCallCard
 							compact={compact}
-							input={part.input}
 							key={key}
 							name={part.name}
 							output={part.output}

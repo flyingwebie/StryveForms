@@ -1,14 +1,27 @@
 import { Button } from "@StryveForms/ui/components/button";
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
-import { Textarea } from "@StryveForms/ui/components/textarea";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { PlusIcon, XIcon } from "lucide-react";
+import { type KeyboardEvent, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "@/utils/trpc";
 
-const DOMAIN_SPLIT = /[\n,]/;
+const ACCESS_OPTIONS = [
+	{
+		description:
+			"Anyone with an account on this instance can create or join a workspace.",
+		label: "Open",
+		value: "open" as const,
+	},
+	{
+		description: "New members must be invited by a workspace admin.",
+		label: "Invite-only",
+		value: "closed" as const,
+	},
+];
 
 /** Step 3: who can sign up. */
 export default function SetupStepAccess({
@@ -23,7 +36,8 @@ export default function SetupStepAccess({
 	const [registrationMode, setRegistrationMode] = useState<"open" | "closed">(
 		"open"
 	);
-	const [domains, setDomains] = useState("");
+	const [domains, setDomains] = useState<string[]>([]);
+	const [domainDraft, setDomainDraft] = useState("");
 	const [supportEmail, setSupportEmail] = useState("");
 
 	const update = useMutation(
@@ -38,55 +52,94 @@ export default function SetupStepAccess({
 		})
 	);
 
+	function addDomain() {
+		const domain = domainDraft.trim().toLowerCase();
+		if (domain && !domains.includes(domain)) {
+			setDomains((prev) => [...prev, domain]);
+		}
+		setDomainDraft("");
+	}
+
+	function handleDomainKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+		if (event.key === "Enter" || event.key === ",") {
+			event.preventDefault();
+			addDomain();
+		}
+	}
+
 	return (
 		<div className="space-y-6">
 			<fieldset className="space-y-2">
 				<Label>Who can create an account?</Label>
-				<div className="space-y-2">
-					<label className="flex items-start gap-2 rounded-xl border border-border p-3 text-sm">
-						<input
-							checked={registrationMode === "open"}
-							className="mt-0.5"
-							name="registration-mode"
-							onChange={() => setRegistrationMode("open")}
-							type="radio"
-						/>
-						<span>
-							<span className="block font-medium">Open</span>
-							<span className="block text-muted-foreground">
-								Anyone can sign up (optionally restricted to email domains
-								below).
-							</span>
-						</span>
-					</label>
-					<label className="flex items-start gap-2 rounded-xl border border-border p-3 text-sm">
-						<input
-							checked={registrationMode === "closed"}
-							className="mt-0.5"
-							name="registration-mode"
-							onChange={() => setRegistrationMode("closed")}
-							type="radio"
-						/>
-						<span>
-							<span className="block font-medium">Invite-only</span>
-							<span className="block text-muted-foreground">
-								Only people with a pending workspace invite can sign up.
-							</span>
-						</span>
-					</label>
+				<div className="grid gap-2 sm:grid-cols-2">
+					{ACCESS_OPTIONS.map((option) => {
+						const selected = registrationMode === option.value;
+						return (
+							<label
+								className={cn(
+									"flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm transition-colors",
+									selected
+										? "border-primary bg-primary-soft/40"
+										: "border-border hover:bg-muted/50"
+								)}
+								key={option.value}
+							>
+								<input
+									checked={selected}
+									className="mt-0.5 accent-primary"
+									name="registration-mode"
+									onChange={() => setRegistrationMode(option.value)}
+									type="radio"
+								/>
+								<span>
+									<span className="block font-medium">{option.label}</span>
+									<span className="block text-muted-foreground">
+										{option.description}
+									</span>
+								</span>
+							</label>
+						);
+					})}
 				</div>
 			</fieldset>
 
 			<div className="space-y-2">
-				<Label htmlFor="setup-domains">Allowed email domains (optional)</Label>
-				<Textarea
-					id="setup-domains"
-					onChange={(event) => setDomains(event.target.value)}
-					placeholder="acme.com, acme.io"
-					value={domains}
-				/>
+				<Label htmlFor="setup-domain-input">
+					Allowed email domains (optional)
+				</Label>
+				<div className="flex flex-wrap items-center gap-2 rounded-lg border border-input p-2">
+					{domains.map((domain) => (
+						<span
+							className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-secondary-foreground text-xs"
+							key={domain}
+						>
+							{domain}
+							<button
+								aria-label={`Remove ${domain}`}
+								onClick={() =>
+									setDomains((prev) => prev.filter((d) => d !== domain))
+								}
+								type="button"
+							>
+								<XIcon className="size-3" />
+							</button>
+						</span>
+					))}
+					<input
+						className="min-w-32 flex-1 bg-transparent px-1 py-1 text-sm outline-none"
+						id="setup-domain-input"
+						onBlur={addDomain}
+						onChange={(event) => setDomainDraft(event.target.value)}
+						onKeyDown={handleDomainKeyDown}
+						placeholder={domains.length === 0 ? "acme.com" : ""}
+						value={domainDraft}
+					/>
+					<Button onClick={addDomain} size="xs" type="button" variant="ghost">
+						<PlusIcon /> Add domain
+					</Button>
+				</div>
 				<p className="text-muted-foreground text-xs">
-					Comma or newline separated. Leave empty to allow any domain.
+					Press enter after each domain. Leave empty to allow any domain.
 				</p>
 			</div>
 
@@ -108,10 +161,7 @@ export default function SetupStepAccess({
 					disabled={update.isPending}
 					onClick={() =>
 						update.mutate({
-							allowedEmailDomains: domains
-								.split(DOMAIN_SPLIT)
-								.map((d) => d.trim().toLowerCase())
-								.filter(Boolean),
+							allowedEmailDomains: domains,
 							registrationMode,
 							supportEmail: supportEmail.trim() || "",
 						})

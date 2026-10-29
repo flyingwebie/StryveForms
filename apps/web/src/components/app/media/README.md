@@ -75,9 +75,8 @@ always add the visible line.
   progress state, no attribution.
 - **Library** — the workspace's own previously uploaded images (`storedFile.kind = "asset"`),
   newest first, as a thumbnail grid. Backed by `trpc.media.library.list({ workspaceId })`.
-- **Unsplash** — search field (debounced), an orientation filter, and the **Free / Premium / All**
-  filter the user asked for — see "Unsplash research" below for exactly what that filter can and
-  can't do, and why. Backed by `trpc.media.unsplash.search` / `trpc.media.unsplash.trackDownload`
+- **Unsplash** — search field (debounced) and an orientation filter, free library only (see
+  "Unsplash research" below for why there's no premium option). Backed by `trpc.media.unsplash.search` / `trpc.media.unsplash.trackDownload`
   / `trpc.media.unsplash.status`. If `status.enabled` is false, the tab shows plain-language setup
   instructions instead of a search box (see below).
 
@@ -140,15 +139,10 @@ that's said explicitly rather than guessed.
      ever return free, standard-licensed photos.** There is no API-supported way to fetch, show,
      or filter *in* real Unsplash+ results.
 
-   **So the picker's Free / Premium / All control works like this, honestly:**
-   - **Free** and **All** both just run the normal search (identical results today — "All"
-     exists so the control reads naturally and has a slot to widen into if Unsplash ever exposes
-     Plus via the API).
-   - **Premium** doesn't call the search API at all. It shows a short explanation — "Unsplash+
-     (Premium) photos aren't available through the public API this app uses, only on
-     unsplash.com itself" — plus a `Browse Unsplash+ →` link to `https://unsplash.com/plus`
-     (opens in a new tab). No premium photo is ever faked, badge-locked, or partially inserted;
-     there's simply nothing from this endpoint to show there.
+   **So the picker's Unsplash tab only searches the free library.** There's no Premium/PRO
+   control: nothing premium can be fetched through the public API, so the picker doesn't offer
+   it. Without a saved Access Key the tab shows the "Unsplash isn't turned on yet" state and
+   points to Admin → Images & Unsplash.
    - A defensive, **unofficial** heuristic (`UnsplashPhoto.likelyPremium`, keyed off an
      undocumented `premium_photo-` id prefix some community scrapers mention) exists in
      `unsplash.ts` purely as a belt-and-suspenders filter in case Unsplash ever does mix such

@@ -15,12 +15,16 @@ import {
 } from "@StryveForms/ui/components/table";
 import {
 	ArrowRightIcon,
+	CalendarIcon,
+	FileArchiveIcon,
 	FileTextIcon,
 	GlobeIcon,
 	InboxIcon,
 	InfoIcon,
+	LayoutGridIcon,
 	LockIcon,
-	PackageIcon,
+	PaperclipIcon,
+	TagIcon,
 	UsersIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -28,7 +32,7 @@ import type { ReactNode } from "react";
 import { formatBytes, plural } from "../import/format";
 import type { WorkspaceArchiveOverview } from "./contract";
 
-function Stat({
+function Row({
 	icon,
 	label,
 	value,
@@ -38,16 +42,12 @@ function Stat({
 	value: ReactNode;
 }) {
 	return (
-		<div className="flex flex-col gap-1 rounded-xl border bg-card p-4">
-			<div className="flex items-center gap-2 text-muted-foreground text-xs">
-				<span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary [&_svg]:size-3.5">
-					{icon}
-				</span>
+		<div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+			<span className="flex items-center gap-2.5 text-muted-foreground">
+				<span className="[&_svg]:size-4">{icon}</span>
 				{label}
-			</div>
-			<div className="font-semibold text-2xl tabular-nums tracking-tight">
-				{value}
-			</div>
+			</span>
+			<span className="font-medium tabular-nums">{value}</span>
 		</div>
 	);
 }
@@ -71,60 +71,81 @@ export default function ArchiveOverviewStep({
 	return (
 		<div className="space-y-6">
 			<div>
-				<h2 className="font-semibold text-lg">What's in this file</h2>
+				<h2 className="font-semibold text-lg">What's inside this backup</h2>
 				<p className="text-muted-foreground text-sm">
-					Nothing has been imported yet. This always creates a new workspace
-					that you own and manage.
+					Review the contents before importing — nothing changes yet.
 				</p>
 			</div>
 
-			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				<Stat
+			<div className="flex items-center gap-3 rounded-xl border bg-subtle px-4 py-3">
+				<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+					<FileArchiveIcon className="size-4" />
+				</span>
+				<div className="min-w-0 flex-1">
+					<p className="truncate font-medium text-sm">
+						{overview.manifest.source.instanceName}
+					</p>
+					<p className="text-muted-foreground text-xs">
+						{formatBytes(overview.sizeBytes)}
+					</p>
+				</div>
+			</div>
+
+			<div className="divide-y divide-border overflow-hidden rounded-xl border bg-card">
+				<Row
+					icon={<LayoutGridIcon />}
+					label="Workspace"
+					value={overview.manifest.workspaces[0]?.name ?? "—"}
+				/>
+				<Row
 					icon={<FileTextIcon />}
 					label="Forms"
 					value={counts.forms.toLocaleString()}
 				/>
-				<Stat
+				<Row
 					icon={<InboxIcon />}
 					label="Submissions"
 					value={counts.submissions.toLocaleString()}
 				/>
-				<Stat
-					icon={<PackageIcon />}
+				<Row
+					icon={<PaperclipIcon />}
 					label="Files"
 					value={counts.files.toLocaleString()}
 				/>
-				<Stat
+				<Row
 					icon={<UsersIcon />}
-					label="Members & invites"
+					label="Members"
 					value={overview.members.length}
+				/>
+				<Row
+					icon={<CalendarIcon />}
+					label="Exported"
+					value={new Date(overview.manifest.createdAt).toLocaleDateString(
+						undefined,
+						{ day: "numeric", month: "short", year: "numeric" }
+					)}
+				/>
+				<Row
+					icon={<TagIcon />}
+					label="StryveForms version"
+					value={overview.manifest.appVersion}
 				/>
 			</div>
 
-			<div className="grid gap-3 sm:grid-cols-2">
-				<div className="space-y-1 rounded-xl border bg-card p-4 text-sm">
-					<p className="text-muted-foreground text-xs">From</p>
-					<p className="font-medium">{overview.manifest.source.instanceName}</p>
-					<p className="text-muted-foreground text-xs">
-						StryveForms {overview.manifest.appVersion} · exported{" "}
-						{new Date(overview.manifest.createdAt).toLocaleDateString()}
-					</p>
+			{overview.includesSecrets ? (
+				<div className="flex items-start gap-2.5 rounded-xl border border-info/30 bg-info-soft px-4 py-3 text-sm">
+					<LockIcon className="mt-0.5 size-4 shrink-0 text-info" />
+					<div>
+						<p className="font-medium text-info">
+							This export includes encrypted secrets
+						</p>
+						<p className="text-muted-foreground text-xs">
+							API keys and integration credentials are encrypted. You'll need
+							the passphrase to restore them.
+						</p>
+					</div>
 				</div>
-				<div className="space-y-1 rounded-xl border bg-card p-4 text-sm">
-					<p className="text-muted-foreground text-xs">Archive size</p>
-					<p className="font-medium">{formatBytes(overview.sizeBytes)}</p>
-					<p className="flex items-center gap-1.5 text-muted-foreground text-xs">
-						{overview.includesSecrets ? (
-							<>
-								<LockIcon className="size-3" /> Includes encrypted secrets —
-								you'll need the passphrase next
-							</>
-						) : (
-							"Secrets weren't included when this was exported"
-						)}
-					</p>
-				</div>
-			</div>
+			) : null}
 
 			{overview.warnings.length > 0 ? (
 				<Alert>

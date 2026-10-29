@@ -28,7 +28,6 @@ import {
 import type { FormField } from "@StryveForms/forms/types";
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
-import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import {
 	Field,
 	FieldDescription,
@@ -42,37 +41,23 @@ import {
 } from "@StryveForms/ui/components/native-select";
 import { Slider } from "@StryveForms/ui/components/slider";
 import { Switch } from "@StryveForms/ui/components/switch";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { RotateCcwIcon } from "lucide-react";
+import { ExternalLinkIcon, RotateCcwIcon } from "lucide-react";
+import FontPicker from "@/components/app/branding/font-picker";
+import LogoAlignmentControl, {
+	type LogoAlignment,
+} from "@/components/app/branding/logo-alignment-control";
 import ImagePicker from "@/components/app/media/image-picker";
 import { useTRPC } from "@/utils/trpc";
 import { FOCUSED_IMAGE_LAYOUTS } from "../../form-renderer/image-layout";
 import { UploadButton } from "../shared/upload-button";
 import { useEditor } from "../state/editor-context";
-import {
-	ClassicLayoutPreview,
-	DarkModePreview,
-	RadiusPreview,
-	SizePreview,
-	ThemePreview,
-	WidthPreview,
-} from "./illustrations";
+import { ClassicLayoutPreview, ThemePreview } from "./illustrations";
 import { OptionCard, OptionCardGrid } from "./option-card";
 import { PresentationStyleSwitch } from "./presentation-style-switch";
-
-const FONTS = [
-	"Inter",
-	"Roboto",
-	"Open Sans",
-	"Lato",
-	"Montserrat",
-	"Poppins",
-	"Source Sans Pro",
-	"Nunito",
-	"Playfair Display",
-	"Merriweather",
-];
+import { SegmentedControl } from "./segmented-control";
 
 const FOCUSED_IMAGE_LAYOUT_LABELS: Record<string, string> = {
 	none: "No image",
@@ -269,19 +254,7 @@ function ToggleField({
 			: Boolean(settings[id]);
 	return (
 		<Field orientation="horizontal">
-			<Checkbox
-				checked={isChecked}
-				id={id}
-				onCheckedChange={(checked) => {
-					const value = checked === true;
-					if (brandKey) {
-						brandPatch(brandKey, value);
-					} else {
-						patch({ [id]: value } as Partial<FormSettings>);
-					}
-				}}
-			/>
-			<div className="flex flex-col">
+			<div className="flex flex-1 flex-col">
 				{brandKey ? (
 					<BrandFieldLabel brandKey={brandKey} htmlFor={id} label={label} />
 				) : (
@@ -291,6 +264,17 @@ function ToggleField({
 					<FieldDescription>{description}</FieldDescription>
 				) : null}
 			</div>
+			<Switch
+				checked={isChecked}
+				id={id}
+				onCheckedChange={(checked) => {
+					if (brandKey) {
+						brandPatch(brandKey, checked);
+					} else {
+						patch({ [id]: checked } as Partial<FormSettings>);
+					}
+				}}
+			/>
 		</Field>
 	);
 }
@@ -307,14 +291,16 @@ function NestedSettingToggle({
 	const nested = state.settings.settings;
 	return (
 		<Field orientation="horizontal">
-			<Checkbox
+			<FieldLabel className="flex-1" htmlFor={id}>
+				{label}
+			</FieldLabel>
+			<Switch
 				checked={Boolean(nested[id])}
 				id={id}
 				onCheckedChange={(checked) =>
-					patch({ settings: { ...nested, [id]: checked === true } })
+					patch({ settings: { ...nested, [id]: checked } })
 				}
 			/>
-			<FieldLabel htmlFor={id}>{label}</FieldLabel>
 		</Field>
 	);
 }
@@ -567,6 +553,9 @@ function ClassicLayoutImageFields({
 function ClassicLayoutField({ layout }: { layout: ClassicLayout }) {
 	const patch = useNestedBrandPatch();
 	const showBrandLogo = Boolean(useNestedBrandValue("showBrandLogo") ?? true);
+	const logoAlignment = useNestedBrandValue("logoAlignment") as
+		| LogoAlignment
+		| undefined;
 	return (
 		<Field>
 			<BrandFieldLabel
@@ -574,7 +563,7 @@ function ClassicLayoutField({ layout }: { layout: ClassicLayout }) {
 				htmlFor="classic-layout"
 				label="Classic layout"
 			/>
-			<OptionCardGrid>
+			<OptionCardGrid columns={2}>
 				{CLASSIC_LAYOUTS.map((option) => (
 					<OptionCard
 						illustration={<ClassicLayoutPreview variant={option} />}
@@ -587,21 +576,79 @@ function ClassicLayoutField({ layout }: { layout: ClassicLayout }) {
 			</OptionCardGrid>
 			<FieldDescription>{CLASSIC_LAYOUT_DESCRIPTIONS[layout]}</FieldDescription>
 			<Field className="mt-1" orientation="horizontal">
-				<Checkbox
-					checked={showBrandLogo}
-					id="show-brand-logo"
-					onCheckedChange={(checked) =>
-						patch("showBrandLogo", checked === true)
-					}
-				/>
-				<div className="flex flex-col">
+				<div className="flex flex-1 flex-col">
 					<FieldLabel htmlFor="show-brand-logo">Show brand logo</FieldLabel>
 					<FieldDescription>
 						Shows your uploaded logo above the title for this layout.
 					</FieldDescription>
 				</div>
+				<Switch
+					checked={showBrandLogo}
+					id="show-brand-logo"
+					onCheckedChange={(checked) => patch("showBrandLogo", checked)}
+				/>
 			</Field>
+			{showBrandLogo ? (
+				<>
+					<LogoAlignmentControl
+						onChange={(alignment) => patch("logoAlignment", alignment)}
+						value={logoAlignment ?? "center"}
+					/>
+					<MissingLogoHint />
+				</>
+			) : null}
 		</Field>
+	);
+}
+
+/**
+ * "Show brand logo" is on but there's no logo to show (none on the form and
+ * none in the workspace brand it follows), so the preview shows nothing.
+ * Says so, and offers both fixes right here.
+ */
+function MissingLogoHint() {
+	const { state } = useEditor();
+	const brandPatch = useBrandPatch();
+	const logoPicture = useBrandValue("logoPicture");
+	const logoPictureDark = useNestedBrandValue("logoPictureDark") as
+		| string
+		| null
+		| undefined;
+	if (logoPicture || logoPictureDark) {
+		return null;
+	}
+	const followsBrand = state.settings.useWorkspaceBrand;
+	return (
+		<div className="mt-1 space-y-2 rounded-lg border border-warning/30 bg-warning-soft p-3 text-sm">
+			<p className="font-medium text-warning">No logo to show yet</p>
+			<p className="text-muted-foreground text-xs">
+				{followsBrand
+					? "Your workspace brand doesn't have a logo. Add one to the workspace brand (used by every form that follows it), or upload one just for this form."
+					: "This form doesn't have a logo. Upload one to show it above the title."}
+			</p>
+			<div className="flex flex-wrap items-center gap-2">
+				<UploadButton
+					accept="image/*"
+					label={followsBrand ? "Upload for this form" : "Upload logo"}
+					onUploaded={(url) => brandPatch("logoPicture", url)}
+				/>
+				{followsBrand ? (
+					<Button
+						render={
+							<Link
+								search={{ tab: "brand" }}
+								target="_blank"
+								to="/dashboard/settings"
+							/>
+						}
+						size="sm"
+						variant="ghost"
+					>
+						<ExternalLinkIcon /> Workspace brand
+					</Button>
+				) : null}
+			</div>
+		</div>
 	);
 }
 
@@ -614,12 +661,22 @@ function FrameAppearanceFields({ frameShadow }: { frameShadow: string }) {
 			<NestedColorField
 				brandKey="frameBackgroundColor"
 				fallback="#ffffff"
-				label="Frame background colour"
+				label="Frame background · light theme"
+			/>
+			<NestedColorField
+				brandKey="frameBackgroundColorDark"
+				fallback="#18181b"
+				label="Frame background · dark theme"
 			/>
 			<NestedColorField
 				brandKey="frameBorderColor"
 				fallback="#e5e5e5"
-				label="Frame border colour"
+				label="Frame border · light theme"
+			/>
+			<NestedColorField
+				brandKey="frameBorderColorDark"
+				fallback="#27272a"
+				label="Frame border · dark theme"
 			/>
 			<NestedSliderField
 				brandKey="frameBorderWidth"
@@ -791,7 +848,13 @@ function LayoutFields({
 				brandKey="pageBackgroundColor"
 				description="The colour behind the form, outside the card."
 				fallback="#f4f4f5"
-				label="Page background colour"
+				label="Page background · light theme"
+			/>
+			<NestedColorField
+				brandKey="pageBackgroundColorDark"
+				description="Used when the form shows in dark mode. Use the top bar's light/dark switch in Preview to check both."
+				fallback="#09090b"
+				label="Page background · dark theme"
 			/>
 			{isFocused ? (
 				<FrameAppearanceFields frameShadow={frameShadow} />
@@ -800,26 +863,6 @@ function LayoutFields({
 			)}
 		</>
 	);
-}
-
-/**
- * The workspace brand's own Classic layout choice, in plain words — shown
- * read-only while a form follows the brand, since the layout picker itself
- * is hidden in that state (see `customizing` in `DesignTab`).
- */
-function brandLayoutSummary(brand: WorkspaceBrand): string | null {
-	if (brand.classicLayout === undefined) {
-		// The brand leaves the layout to each form: the picker stays visible.
-		return null;
-	}
-	const layout = resolveClassicLayout({
-		backgroundImage: brand.backgroundImage ?? null,
-		classicLayout: brand.classicLayout,
-		coverPicture: null,
-		headerImage: brand.headerImage ?? null,
-		layout: brand.layout ?? null,
-	});
-	return `Using the brand's "${CLASSIC_LAYOUT_LABELS[layout]}" layout.`;
 }
 
 /**
@@ -837,6 +880,18 @@ function brandDescription(hasBrand: boolean, following: boolean): string {
 		: "This form uses its own design. Turn this on to use your workspace's brand.";
 }
 
+/** Labels for the brand keys called out as badges on `WorkspaceBrandCard`, when the brand defines them. */
+const BRAND_BADGE_LABELS: Partial<Record<BrandKey, string>> = {
+	borderRadius: "Border radius",
+	classicLayout: "Layout",
+	color: "Accent color",
+	fontFamily: "Font",
+	logoPicture: "Logo",
+	size: "Size",
+	theme: "Theme",
+	width: "Width",
+};
+
 function WorkspaceBrandCard() {
 	const { patch, state } = useEditor();
 	const brand = useWorkspaceBrandValue();
@@ -844,62 +899,72 @@ function WorkspaceBrandCard() {
 		? Object.values(brand).some((value) => value !== undefined)
 		: false;
 	const following = state.settings.useWorkspaceBrand;
-	const layoutSummary =
-		following &&
-		brand &&
-		state.settings.presentationStyle === "classic" &&
-		!state.settings.brandOverrides.includes("classicLayout")
-			? brandLayoutSummary(brand)
-			: null;
+	const { brandOverrides } = state.settings;
+	const definedBrandKeys = brand
+		? (Object.keys(BRAND_BADGE_LABELS) as BrandKey[]).filter(
+				(key) => brand[key] !== undefined
+			)
+		: [];
+	const canReset = hasBrand && (!following || brandOverrides.length > 0);
 
 	return (
-		<div className="flex items-start justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
-			<div className="flex min-w-0 flex-col gap-1.5">
-				<div className="flex flex-col gap-0.5">
-					<span className="font-medium text-sm" id="workspace-brand-title">
+		<div className="flex flex-col gap-3 rounded-xl border border-border bg-subtle p-3">
+			<div className="flex items-start justify-between gap-3">
+				<div className="flex items-center gap-2">
+					<span
+						aria-hidden="true"
+						className={cn(
+							"size-5 shrink-0 rounded-full",
+							!brand?.color && "bg-primary"
+						)}
+						style={brand?.color ? { backgroundColor: brand.color } : undefined}
+					/>
+					<span className="font-semibold text-sm" id="workspace-brand-title">
 						Workspace brand
 					</span>
-					<span className="flex items-center gap-1.5 text-muted-foreground text-xs">
-						<span
-							aria-hidden="true"
-							className={`size-2 rounded-full ${following ? "bg-emerald-500" : "bg-amber-500"}`}
-						/>
-						{following
-							? "Following workspace brand"
-							: "Customized for this form"}
-					</span>
 				</div>
-				<span className="text-muted-foreground text-xs">
-					{brandDescription(hasBrand, following)}
-				</span>
-				{hasBrand && brand ? (
-					<span className="flex items-center gap-1.5 text-muted-foreground text-xs">
-						{brand.color ? (
+				<Switch
+					aria-labelledby="workspace-brand-title"
+					checked={following}
+					onCheckedChange={(checked) => patch({ useWorkspaceBrand: checked })}
+				/>
+			</div>
+			<p className="text-muted-foreground text-xs">
+				{brandDescription(hasBrand, following)}
+			</p>
+			{definedBrandKeys.length > 0 ? (
+				<div className="flex flex-wrap items-center gap-1.5">
+					{definedBrandKeys.map((key) => (
+						<Badge className="gap-1" key={key} variant="warning">
 							<span
 								aria-hidden="true"
-								className="size-3 rounded-full border border-border"
-								style={{ backgroundColor: brand.color }}
-								title="Brand colour"
+								className="size-1.5 rounded-full bg-warning"
 							/>
-						) : null}
-						{brand.theme ?? "default"} theme
-						{brand.fontFamily ? ` · ${brand.fontFamily}` : ""}
-						{layoutSummary ? ` · ${layoutSummary}` : ""}
-					</span>
-				) : null}
-				<Link
-					className="text-primary text-xs underline underline-offset-2"
-					search={{ tab: "brand" }}
-					to="/dashboard/settings"
+							{BRAND_BADGE_LABELS[key]}
+						</Badge>
+					))}
+				</div>
+			) : null}
+			{canReset ? (
+				<Button
+					className="justify-center gap-1.5 text-muted-foreground"
+					onClick={() => patch({ brandOverrides: [], useWorkspaceBrand: true })}
+					size="sm"
+					type="button"
+					variant="ghost"
 				>
-					Edit workspace brand
-				</Link>
-			</div>
-			<Switch
-				aria-labelledby="workspace-brand-title"
-				checked={following}
-				onCheckedChange={(checked) => patch({ useWorkspaceBrand: checked })}
-			/>
+					<RotateCcwIcon className="size-3.5" /> Reset to brand
+				</Button>
+			) : null}
+			<Button
+				className="justify-center gap-1.5 text-muted-foreground"
+				render={<Link search={{ tab: "brand" }} to="/dashboard/settings" />}
+				size="sm"
+				type="button"
+				variant="ghost"
+			>
+				<ExternalLinkIcon className="size-3.5" /> Edit workspace brand
+			</Button>
 		</div>
 	);
 }
@@ -990,15 +1055,15 @@ export function DesignTab() {
 
 	return (
 		<div className="flex flex-col gap-5 p-3 pb-24">
-			<WorkspaceBrandCard />
 			<PresentationStyleSwitch />
+			<WorkspaceBrandCard />
 			{isFocused ? <FocusedImageDefaultField /> : null}
 
 			{customizing ? (
 				<>
 					<Field>
 						<BrandFieldLabel brandKey="theme" htmlFor="theme" label="Theme" />
-						<OptionCardGrid>
+						<OptionCardGrid columns={3}>
 							{THEMES.map((themeOption) => (
 								<OptionCard
 									illustration={<ThemePreview variant={themeOption} />}
@@ -1020,17 +1085,16 @@ export function DesignTab() {
 							htmlFor="dark-mode"
 							label="Dark mode"
 						/>
-						<OptionCardGrid>
-							{DARK_MODES.map((mode) => (
-								<OptionCard
-									illustration={<DarkModePreview variant={mode} />}
-									key={mode}
-									label={mode}
-									onSelect={() => brandPatch("darkMode", mode)}
-									selected={darkMode === mode}
-								/>
-							))}
-						</OptionCardGrid>
+						<SegmentedControl
+							ariaLabel="Dark mode"
+							fullWidth
+							onChange={(mode) => brandPatch("darkMode", mode)}
+							options={DARK_MODES.map((mode) => ({
+								label: mode,
+								value: mode,
+							}))}
+							value={darkMode}
+						/>
 						<FieldDescription>
 							"Auto" follows each respondent's device setting; "Light" and
 							"Dark" force one appearance for everyone.
@@ -1060,28 +1124,19 @@ export function DesignTab() {
 							form.
 						</FieldDescription>
 					</Field>
+					<Field>
+						<BrandFieldLabel
+							brandKey="fontFamily"
+							htmlFor="font"
+							label="Font"
+						/>
+						<FontPicker
+							id="font"
+							onChange={(family) => brandPatch("fontFamily", family)}
+							value={fontFamily ?? null}
+						/>
+					</Field>
 					<FieldSet className="grid grid-cols-2 gap-2">
-						<Field>
-							<BrandFieldLabel
-								brandKey="fontFamily"
-								htmlFor="font"
-								label="Font"
-							/>
-							<NativeSelect
-								id="font"
-								onChange={(e) =>
-									brandPatch("fontFamily", e.target.value || null)
-								}
-								value={fontFamily ?? ""}
-							>
-								<NativeSelectOption value="">Default</NativeSelectOption>
-								{FONTS.map((font) => (
-									<NativeSelectOption key={font} value={font}>
-										{font}
-									</NativeSelectOption>
-								))}
-							</NativeSelect>
-						</Field>
 						<Field>
 							<FieldLabel htmlFor="language">Language</FieldLabel>
 							<NativeSelect
@@ -1109,17 +1164,16 @@ export function DesignTab() {
 					/>
 					<Field>
 						<BrandFieldLabel brandKey="size" htmlFor="size" label="Size" />
-						<OptionCardGrid>
-							{SIZES.map((sizeOption) => (
-								<OptionCard
-									illustration={<SizePreview variant={sizeOption} />}
-									key={sizeOption}
-									label={sizeOption}
-									onSelect={() => brandPatch("size", sizeOption)}
-									selected={size === sizeOption}
-								/>
-							))}
-						</OptionCardGrid>
+						<SegmentedControl
+							ariaLabel="Size"
+							fullWidth
+							onChange={(sizeOption) => brandPatch("size", sizeOption)}
+							options={SIZES.map((sizeOption) => ({
+								label: sizeOption,
+								value: sizeOption,
+							}))}
+							value={size}
+						/>
 						<FieldDescription>
 							Overall text and control size: "sm" fits more on screen, "lg" is
 							easier to tap on mobile.
@@ -1132,17 +1186,16 @@ export function DesignTab() {
 								htmlFor="border-radius"
 								label="Border radius"
 							/>
-							<OptionCardGrid>
-								{BORDER_RADII.map((radius) => (
-									<OptionCard
-										illustration={<RadiusPreview variant={radius} />}
-										key={radius}
-										label={radius}
-										onSelect={() => brandPatch("borderRadius", radius)}
-										selected={borderRadius === radius}
-									/>
-								))}
-							</OptionCardGrid>
+							<SegmentedControl
+								ariaLabel="Border radius"
+								fullWidth
+								onChange={(radius) => brandPatch("borderRadius", radius)}
+								options={BORDER_RADII.map((radius) => ({
+									label: radius,
+									value: radius,
+								}))}
+								value={borderRadius}
+							/>
 							<FieldDescription>
 								How rounded inputs, cards, and buttons are, from sharp corners
 								to fully pill-shaped.
@@ -1152,17 +1205,16 @@ export function DesignTab() {
 					{isFocused ? null : (
 						<Field>
 							<BrandFieldLabel brandKey="width" htmlFor="width" label="Width" />
-							<OptionCardGrid>
-								{WIDTHS.map((widthOption) => (
-									<OptionCard
-										illustration={<WidthPreview variant={widthOption} />}
-										key={widthOption}
-										label={widthOption}
-										onSelect={() => brandPatch("width", widthOption)}
-										selected={width === widthOption}
-									/>
-								))}
-							</OptionCardGrid>
+							<SegmentedControl
+								ariaLabel="Width"
+								fullWidth
+								onChange={(widthOption) => brandPatch("width", widthOption)}
+								options={WIDTHS.map((widthOption) => ({
+									label: widthOption,
+									value: widthOption,
+								}))}
+								value={width}
+							/>
 							<FieldDescription>
 								"Centered" keeps the form narrow and readable; "Full" stretches
 								it to the page's width.

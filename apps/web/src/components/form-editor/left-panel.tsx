@@ -5,6 +5,7 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "@StryveForms/ui/components/tabs";
+import { FilesIcon, LayersIcon, PaletteIcon, SparklesIcon } from "lucide-react";
 import EditorAiPanel from "@/components/app/ai/editor-ai-panel";
 import { BuildTab } from "./build-panel/build-tab";
 import { DesignTab } from "./design/design-tab";
@@ -25,12 +26,36 @@ export function LeftPanel() {
 			onValueChange={(value) => setLeftTab(value as LeftPanelTab)}
 			value={tab}
 		>
-			<TabsList className="m-3">
-				<TabsTrigger value="build">Build</TabsTrigger>
-				{showPages ? <TabsTrigger value="pages">Pages</TabsTrigger> : null}
-				<TabsTrigger value="design">Design</TabsTrigger>
-				<TabsTrigger value="ai">AI</TabsTrigger>
-			</TabsList>
+			<div className="border-b px-3">
+				<TabsList className="w-full justify-start gap-4 p-0" variant="line">
+					<TabsTrigger
+						className="flex-none gap-1 px-0.5 py-3 text-[13px] [&_svg]:size-3.5"
+						value="build"
+					>
+						<LayersIcon /> Build
+					</TabsTrigger>
+					{showPages ? (
+						<TabsTrigger
+							className="flex-none gap-1 px-0.5 py-3 text-[13px] [&_svg]:size-3.5"
+							value="pages"
+						>
+							<FilesIcon /> Pages
+						</TabsTrigger>
+					) : null}
+					<TabsTrigger
+						className="flex-none gap-1 px-0.5 py-3 text-[13px] [&_svg]:size-3.5"
+						value="design"
+					>
+						<PaletteIcon /> Design
+					</TabsTrigger>
+					<TabsTrigger
+						className="flex-none gap-1 px-0.5 py-3 text-[13px] [&_svg]:size-3.5"
+						value="ai"
+					>
+						<SparklesIcon /> AI
+					</TabsTrigger>
+				</TabsList>
+			</div>
 			<TabsContent
 				className="h-[calc(100%-3rem)] overflow-y-auto"
 				value="build"

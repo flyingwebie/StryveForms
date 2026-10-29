@@ -1,5 +1,6 @@
+import { Button } from "@StryveForms/ui/components/button";
 import { Link } from "@tanstack/react-router";
-import { XIcon } from "lucide-react";
+import { SparklesIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
@@ -23,16 +24,22 @@ export default function SetupBanner() {
 	}
 
 	return (
-		<div className="flex items-center justify-between gap-3 border-b bg-primary/10 px-4 py-2 text-sm">
-			<p>
-				Finish setting up your installation &mdash;{" "}
-				<Link className="font-medium underline" to="/setup">
-					resume onboarding
-				</Link>
-				.
+		<div className="flex items-center gap-3 border-b bg-primary-soft px-4 py-2.5 text-primary-soft-foreground text-sm">
+			<SparklesIcon className="size-4 shrink-0" />
+			<p className="min-w-0 flex-1 truncate">
+				<span className="font-medium">Finish setting up your workspace</span>
+				<span className="hidden text-primary-soft-foreground/80 sm:inline">
+					{" "}
+					— Add your branding, invite teammates, and connect an email sender to
+					get the most out of StryveForms.
+				</span>
 			</p>
+			<Button render={<Link to="/setup" />} size="sm">
+				Continue setup
+			</Button>
 			<button
 				aria-label="Dismiss"
+				className="shrink-0 text-primary-soft-foreground/70 hover:text-primary-soft-foreground"
 				onClick={() => {
 					window.localStorage.setItem(DISMISSED_KEY, "1");
 					setDismissed(true);

@@ -13,6 +13,7 @@ import { useEffect, useRef } from "react";
 import AppHeader from "@/components/app/app-header";
 import AppSidebar from "@/components/app/app-sidebar";
 import SetupBanner from "@/components/app/setup-banner";
+import { ShellProvider } from "@/components/app/shell-context";
 import TwoFactorNudgeBanner from "@/components/app/two-factor-nudge-banner";
 import { authClient } from "@/lib/auth-client";
 import { useWorkspaces } from "@/lib/workspace";
@@ -47,29 +48,30 @@ function AuthLayout() {
 
 	return (
 		<SidebarProvider>
-			<AppSidebar
-				activeWorkspace={activeWorkspace}
+			<ShellProvider
+				activeWorkspaceId={activeWorkspaceId}
 				setWorkspaceId={setWorkspaceId}
-				variant="inset"
 				workspaces={workspaces}
-			/>
-			<SidebarInset className="h-svh min-w-0 overflow-hidden">
-				<AppHeader
+			>
+				<AppSidebar
 					activeWorkspace={activeWorkspace}
-					activeWorkspaceId={activeWorkspaceId}
 					setWorkspaceId={setWorkspaceId}
+					variant="inset"
 					workspaces={workspaces}
 				/>
-				<SetupBanner />
-				<TwoFactorNudgeBanner />
-				<div
-					className="min-w-0 flex-1 overflow-y-auto"
-					key={activeWorkspaceId ?? "none"}
-					ref={scrollerRef}
-				>
-					<Outlet />
-				</div>
-			</SidebarInset>
+				<SidebarInset className="h-svh min-w-0 overflow-hidden md:peer-data-[variant=inset]:h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:shadow-xs">
+					<AppHeader activeWorkspace={activeWorkspace} />
+					<SetupBanner />
+					<TwoFactorNudgeBanner />
+					<div
+						className="min-w-0 flex-1 overflow-y-auto"
+						key={activeWorkspaceId ?? "none"}
+						ref={scrollerRef}
+					>
+						<Outlet />
+					</div>
+				</SidebarInset>
+			</ShellProvider>
 		</SidebarProvider>
 	);
 }

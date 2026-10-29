@@ -1,15 +1,6 @@
-import { Badge } from "@StryveForms/ui/components/badge";
 import { Switch } from "@StryveForms/ui/components/switch";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@StryveForms/ui/components/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckIcon } from "lucide-react";
+import { LockIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { formatTrpcError } from "@/lib/format-trpc-error";
@@ -20,6 +11,29 @@ type CapabilityRole = "readonly" | "user";
 const ROLE_COLUMNS: { label: string; role: CapabilityRole }[] = [
 	{ label: "Member", role: "user" },
 	{ label: "Read only", role: "readonly" },
+];
+
+/** Presentational-only grouping of the flat capability list, matching the design. */
+const CAPABILITY_GROUPS: { keys: string[]; label: string }[] = [
+	{
+		keys: ["view_forms", "edit_forms", "delete_forms", "publish_forms"],
+		label: "Content",
+	},
+	{ keys: ["manage_submissions"], label: "Submissions" },
+	{
+		keys: ["manage_integrations", "manage_pdf_templates", "use_ai_assistant"],
+		label: "Integrations & AI",
+	},
+	{
+		keys: [
+			"manage_folders",
+			"manage_members",
+			"manage_workspace",
+			"import_data",
+			"export_workspace",
+		],
+		label: "Workspace",
+	},
 ];
 
 /**
@@ -69,65 +83,73 @@ export default function RolesSettingsTab({
 		});
 	}
 
+	const capabilityByKey = new Map(capabilities.map((c) => [c.key, c]));
+
 	return (
-		<div className="max-w-3xl space-y-4">
-			<p className="text-muted-foreground text-sm">
-				Each toggle turns one capability on or off for that role. Admin is
-				always full access and can't be changed.
-			</p>
-
-			<div className="rounded-xl border">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Capability</TableHead>
-							<TableHead className="text-center">
-								Admin
-								<Badge className="ml-1.5" variant="outline">
-									Locked
-								</Badge>
-							</TableHead>
-							{ROLE_COLUMNS.map((column) => (
-								<TableHead className="text-center" key={column.role}>
-									{column.label}
-								</TableHead>
-							))}
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{capabilities.map((capability) => (
-							<TableRow key={capability.key}>
-								<TableCell>
-									<div className="font-medium">{capability.label}</div>
-									<div className="text-muted-foreground text-xs">
-										{capability.description}
-									</div>
-								</TableCell>
-								<TableCell className="text-center">
-									<CheckIcon className="mx-auto size-4 text-muted-foreground" />
-								</TableCell>
-								{ROLE_COLUMNS.map((column) => (
-									<TableCell className="text-center" key={column.role}>
-										<Switch
-											checked={matrix[column.role][capability.key]}
-											disabled={!isAdmin || update.isPending}
-											onCheckedChange={(checked) =>
-												toggle(column.role, capability.key, checked)
-											}
-										/>
-									</TableCell>
-								))}
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-			</div>
-
+		<div className="space-y-6">
 			{!isAdmin && (
-				<p className="text-muted-foreground text-xs">
+				<p className="text-muted-foreground text-sm">
 					Only workspace admins can change these permissions.
 				</p>
 			)}
+
+			<div className="grid grid-cols-[1fr_repeat(3,96px)] items-center gap-x-4 border-border border-b pb-3 sm:grid-cols-[1fr_repeat(3,120px)]">
+				<span />
+				<span className="flex items-center justify-center gap-1 font-medium text-muted-foreground text-xs">
+					Admin <LockIcon className="size-3" />
+				</span>
+				{ROLE_COLUMNS.map((column) => (
+					<span
+						className="text-center font-medium text-muted-foreground text-xs"
+						key={column.role}
+					>
+						{column.label}
+					</span>
+				))}
+			</div>
+
+			{CAPABILITY_GROUPS.map((group) => (
+				<div className="space-y-1" key={group.label}>
+					<h3 className="pt-2 font-semibold text-sm">{group.label}</h3>
+					<div className="divide-y divide-border">
+						{group.keys.flatMap((key) => {
+							const capability = capabilityByKey.get(key as Capability);
+							if (!capability) {
+								return [];
+							}
+							return (
+								<div
+									className="grid grid-cols-[1fr_repeat(3,96px)] items-center gap-x-4 py-4 sm:grid-cols-[1fr_repeat(3,120px)]"
+									key={capability.key}
+								>
+									<div>
+										<p className="font-medium text-[13px]">
+											{capability.label}
+										</p>
+										<p className="text-subtle-foreground text-xs">
+											{capability.description}
+										</p>
+									</div>
+									<div className="flex justify-center">
+										<LockIcon className="size-4 text-muted-foreground/60" />
+									</div>
+									{ROLE_COLUMNS.map((column) => (
+										<div className="flex justify-center" key={column.role}>
+											<Switch
+												checked={matrix[column.role][capability.key]}
+												disabled={!isAdmin || update.isPending}
+												onCheckedChange={(checked) =>
+													toggle(column.role, capability.key, checked)
+												}
+											/>
+										</div>
+									))}
+								</div>
+							);
+						})}
+					</div>
+				</div>
+			))}
 		</div>
 	);
 }

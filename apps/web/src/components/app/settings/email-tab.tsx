@@ -9,7 +9,6 @@ import {
 	ItemGroup,
 	ItemTitle,
 } from "@StryveForms/ui/components/item";
-import { Label } from "@StryveForms/ui/components/label";
 import {
 	Select,
 	SelectContent,
@@ -19,9 +18,15 @@ import {
 } from "@StryveForms/ui/components/select";
 import { Switch } from "@StryveForms/ui/components/switch";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MailIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import {
+	SettingsFooter,
+	SettingsRow,
+	SettingsSection,
+} from "@/components/app/settings-shell";
 import { formatTrpcError } from "@/lib/format-trpc-error";
 import type { WorkspaceSummary } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
@@ -208,138 +213,132 @@ export default function EmailSettingsTab({
 	}
 
 	return (
-		<div className="max-w-lg space-y-8">
-			<div className="space-y-4">
-				<h3 className="font-medium text-sm">Senders</h3>
-				<p className="text-muted-foreground text-sm">
-					The email addresses notifications can be sent from. Pick one as the
-					default — forms can still choose a different sender for their own
-					notifications. Every sender has a reply-to address, which defaults to
-					the sender's own address but can be changed.
-				</p>
-
-				{senders.length > 0 ? (
-					<ItemGroup>
-						{senders.map((sender) => (
-							<Item className="rounded-lg" key={sender.id} variant="outline">
-								<ItemContent>
-									<ItemTitle>
-										{sender.name}
-										{sender.id === defaultSenderId ? (
-											<Badge className="ml-1" variant="secondary">
-												Default
-											</Badge>
-										) : null}
-									</ItemTitle>
-									<ItemDescription>
-										{sender.address} &middot; replies to{" "}
-										{sender.replyTo || sender.address}
-									</ItemDescription>
-								</ItemContent>
-								{isAdmin ? (
-									<ItemActions className="gap-1">
-										{sender.id === defaultSenderId ? null : (
+		<div className="space-y-10">
+			<SettingsSection
+				description="The email addresses notifications can be sent from. Pick one as the default — forms can still choose a different sender for their own notifications."
+				title="Senders"
+			>
+				<div className="space-y-3 border-t-0 py-0">
+					{senders.length > 0 ? (
+						<ItemGroup className="gap-2">
+							{senders.map((sender) => (
+								<Item className="rounded-lg" key={sender.id} variant="outline">
+									<MailIcon className="size-4 shrink-0 text-muted-foreground" />
+									<ItemContent>
+										<ItemTitle className="flex items-center gap-2">
+											{sender.name} &lt;{sender.address}&gt;
+											{sender.id === defaultSenderId ? (
+												<Badge variant="soft">Default</Badge>
+											) : null}
+										</ItemTitle>
+										<ItemDescription>
+											Replies go to {sender.replyTo || sender.address}
+										</ItemDescription>
+									</ItemContent>
+									{isAdmin ? (
+										<ItemActions className="gap-1">
+											{sender.id === defaultSenderId ? null : (
+												<Button
+													onClick={() => handleSetDefault(sender.id)}
+													size="sm"
+													variant="ghost"
+												>
+													Make default
+												</Button>
+											)}
 											<Button
-												onClick={() => handleSetDefault(sender.id)}
+												onClick={() => {
+													setEditingSender(sender);
+													setDialogOpen(true);
+												}}
 												size="sm"
 												variant="ghost"
 											>
-												Make default
+												Edit
 											</Button>
-										)}
-										<Button
-											onClick={() => {
-												setEditingSender(sender);
-												setDialogOpen(true);
-											}}
-											size="sm"
-											variant="ghost"
-										>
-											Edit
-										</Button>
-										<Button
-											onClick={() => handleRemoveSender(sender.id)}
-											size="sm"
-											variant="ghost"
-										>
-											Remove
-										</Button>
-									</ItemActions>
-								) : null}
-							</Item>
-						))}
-					</ItemGroup>
-				) : (
-					<p className="rounded-xl border border-dashed p-4 text-center text-muted-foreground text-sm">
-						No senders yet — notifications use the shared instance address.
-					</p>
-				)}
-
-				{isAdmin ? (
-					<Button
-						onClick={() => {
-							setEditingSender(null);
-							setDialogOpen(true);
-						}}
-						variant="outline"
-					>
-						Add sender
-					</Button>
-				) : null}
-
-				<p className="text-muted-foreground text-xs">
-					Heads up: the "From" address only works if your SMTP server (below)
-					allows sending mail as that address — otherwise most mail providers
-					will reject or quietly rewrite it.
-				</p>
-			</div>
-
-			<div className="space-y-4 border-t pt-6">
-				<div className="flex items-center justify-between">
-					<div>
-						<h3 className="font-medium text-sm">Custom SMTP</h3>
-						<p className="text-muted-foreground text-sm">
-							Send notifications through your own mail server instead of the
-							shared one.
+											<Button
+												className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+												onClick={() => handleRemoveSender(sender.id)}
+												size="sm"
+												variant="ghost"
+											>
+												Remove
+											</Button>
+										</ItemActions>
+									) : null}
+								</Item>
+							))}
+						</ItemGroup>
+					) : (
+						<p className="rounded-xl border border-dashed p-4 text-center text-muted-foreground text-sm">
+							No senders yet — notifications use the shared instance address.
 						</p>
-					</div>
-					<Switch
-						checked={smtpEnabled}
-						disabled={!isAdmin}
-						onCheckedChange={setSmtpEnabled}
-					/>
-				</div>
+					)}
 
+					{isAdmin ? (
+						<Button
+							onClick={() => {
+								setEditingSender(null);
+								setDialogOpen(true);
+							}}
+							variant="outline"
+						>
+							<PlusIcon /> Add sender
+						</Button>
+					) : null}
+
+					<p className="text-muted-foreground text-xs">
+						Heads up: the "From" address only works if your SMTP server (below)
+						allows sending mail as that address — otherwise most mail providers
+						will reject or quietly rewrite it.
+					</p>
+				</div>
+			</SettingsSection>
+
+			<SettingsSection
+				description="Used for outgoing mail when no managed sender is configured."
+				title={
+					<span className="flex items-center justify-between gap-3">
+						Custom SMTP
+						<Switch
+							checked={smtpEnabled}
+							disabled={!isAdmin}
+							onCheckedChange={setSmtpEnabled}
+						/>
+					</span>
+				}
+			>
 				{smtpEnabled ? (
-					<div className="space-y-4">
-						<div className="grid grid-cols-3 gap-2">
-							<div className="col-span-2 space-y-2">
-								<Label htmlFor="smtp-host">Host</Label>
-								<Input
-									disabled={!isAdmin}
-									id="smtp-host"
-									onChange={(event) =>
-										setSmtp({ ...smtp, host: event.target.value })
-									}
-									placeholder="smtp.yourhost.com"
-									value={smtp.host}
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="smtp-port">Port</Label>
-								<Input
-									disabled={!isAdmin}
-									id="smtp-port"
-									onChange={(event) =>
-										setSmtp({ ...smtp, port: Number(event.target.value) })
-									}
-									type="number"
-									value={smtp.port}
-								/>
-							</div>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="smtp-username">Username</Label>
+					<>
+						<SettingsRow description="SMTP server hostname." label="Host">
+							<Input
+								disabled={!isAdmin}
+								id="smtp-host"
+								onChange={(event) =>
+									setSmtp({ ...smtp, host: event.target.value })
+								}
+								placeholder="smtp.yourhost.com"
+								value={smtp.host}
+							/>
+						</SettingsRow>
+						<SettingsRow
+							description="Usually 587 (STARTTLS) or 465 (SSL)."
+							label="Port"
+						>
+							<Input
+								disabled={!isAdmin}
+								id="smtp-port"
+								onChange={(event) =>
+									setSmtp({ ...smtp, port: Number(event.target.value) })
+								}
+								type="number"
+								value={smtp.port}
+							/>
+						</SettingsRow>
+						<SettingsRow
+							description="Usually the full email address."
+							label="Username"
+						>
 							<Input
 								disabled={!isAdmin}
 								id="smtp-username"
@@ -348,23 +347,26 @@ export default function EmailSettingsTab({
 								}
 								value={smtp.username}
 							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="smtp-password">
-								Password
-								{smtp.hasPassword ? " (leave blank to keep current)" : ""}
-							</Label>
+						</SettingsRow>
+						<SettingsRow
+							description="Stored encrypted, never shown again."
+							label="Password"
+						>
 							<Input
 								disabled={!isAdmin}
 								id="smtp-password"
 								onChange={(event) => setSmtpPassword(event.target.value)}
-								placeholder={smtp.hasPassword ? "••••••••" : ""}
+								placeholder={
+									smtp.hasPassword ? "Leave blank to keep current" : ""
+								}
 								type="password"
 								value={smtpPassword}
 							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="smtp-sender">Sender address</Label>
+						</SettingsRow>
+						<SettingsRow
+							description={'The "from" address used for outgoing mail.'}
+							label="Sender address"
+						>
 							<Input
 								disabled={!isAdmin}
 								id="smtp-sender"
@@ -375,9 +377,11 @@ export default function EmailSettingsTab({
 								type="email"
 								value={smtp.senderAddress}
 							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="smtp-encryption">Encryption</Label>
+						</SettingsRow>
+						<SettingsRow
+							description="How the connection to the server is secured."
+							label="Encryption"
+						>
 							<Select
 								disabled={!isAdmin}
 								items={ENCRYPTION_OPTIONS.map((option) => ({
@@ -400,20 +404,18 @@ export default function EmailSettingsTab({
 									))}
 								</SelectContent>
 							</Select>
-							<p className="text-muted-foreground text-xs">
-								{
-									ENCRYPTION_OPTIONS.find((o) => o.value === smtp.encryption)
-										?.description
-								}
-							</p>
-						</div>
-					</div>
+						</SettingsRow>
+					</>
 				) : null}
+			</SettingsSection>
 
-				<Button disabled={!isAdmin || update.isPending} onClick={saveSmtp}>
-					{update.isPending ? "Saving…" : "Save SMTP settings"}
-				</Button>
-			</div>
+			{isAdmin ? (
+				<SettingsFooter>
+					<Button disabled={update.isPending} onClick={saveSmtp}>
+						{update.isPending ? "Saving…" : "Save"}
+					</Button>
+				</SettingsFooter>
+			) : null}
 
 			<SenderDialog
 				onOpenChange={setDialogOpen}

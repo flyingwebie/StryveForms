@@ -129,7 +129,7 @@ export function PhoneInput({
 			aria-invalid={invalid || undefined}
 			aria-label={ariaLabel}
 			className={cn(
-				"flex h-8 w-full items-stretch overflow-hidden border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/50",
+				"flex h-8 w-full items-stretch overflow-hidden border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/25",
 				invalid && "border-destructive ring-1 ring-destructive/20",
 				disabled && "opacity-50",
 				className

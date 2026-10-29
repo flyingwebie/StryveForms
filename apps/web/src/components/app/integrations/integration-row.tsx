@@ -1,6 +1,12 @@
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@StryveForms/ui/components/dropdown-menu";
+import {
 	Item,
 	ItemActions,
 	ItemContent,
@@ -9,16 +15,17 @@ import {
 } from "@StryveForms/ui/components/item";
 import { Switch } from "@StryveForms/ui/components/switch";
 import {
-	CheckCircle2Icon,
+	MoreHorizontalIcon,
+	PencilIcon,
 	ScrollTextIcon,
 	SendIcon,
 	Trash2Icon,
-	XCircleIcon,
 } from "lucide-react";
 
 import { IntegrationBadge } from "./brand-icons";
 
 const RECIPIENT_SPLIT = /[\n,;]+/;
+const TAG = /<[^>]+>/g;
 const URL_KEYS = [
 	"webhook_url",
 	"hook_url",
@@ -26,13 +33,20 @@ const URL_KEYS = [
 	"discord_webhook_url",
 ];
 
+/** Strips mention/other HTML tags for a plain-text summary. */
+function plainText(html: string | undefined): string {
+	return (html ?? "").replace(TAG, "").trim();
+}
+
 /** A short "where this goes" summary, read straight from the integration's own data. */
 function targetSummary(
 	integrationId: string,
 	data: Record<string, unknown>
 ): string | null {
 	if (integrationId === "email") {
-		const sendTo = typeof data.send_to === "string" ? data.send_to : "";
+		const sendTo = plainText(
+			typeof data.send_to === "string" ? data.send_to : ""
+		);
 		const recipients = sendTo
 			.split(RECIPIENT_SPLIT)
 			.map((r) => r.trim())
@@ -100,64 +114,58 @@ export function IntegrationRow({
 					<button className="hover:underline" onClick={onEdit} type="button">
 						{name}
 					</button>
-					{integration.logic ? (
-						<Badge variant="outline">Conditional</Badge>
-					) : null}
+					{integration.logic ? <Badge variant="info">Conditional</Badge> : null}
 					{needsReconnect ? (
-						<Badge
-							className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-							variant="outline"
-						>
-							Needs reconnecting
-						</Badge>
+						<Badge variant="warning">Needs reconnecting</Badge>
 					) : null}
 				</ItemTitle>
 				<p className="line-clamp-1 text-muted-foreground text-xs">
 					{needsReconnect
 						? "Its secret wasn't included in the workspace it was imported from — re-enter it to turn this back on."
 						: (target ?? "No destination set yet")}
-					{lastRun ? (
-						<span className="ml-2 inline-flex items-center gap-1">
-							{lastRun.type === "success" ? (
-								<CheckCircle2Icon className="size-3 text-green-600" />
-							) : (
-								<XCircleIcon className="size-3 text-destructive" />
-							)}
-							{new Date(lastRun.createdAt).toLocaleString()}
-						</span>
-					) : null}
 				</p>
 			</ItemContent>
+			{lastRun ? (
+				<div className="hidden shrink-0 flex-col text-xs sm:flex">
+					<span className="text-subtle-foreground">Last run</span>
+					<span
+						className={
+							lastRun.type === "success"
+								? "text-muted-foreground"
+								: "text-destructive"
+						}
+					>
+						{lastRun.type === "success" ? "Sent " : "Failed "}
+						{new Date(lastRun.createdAt).toLocaleString()}
+					</span>
+				</div>
+			) : null}
 			<ItemActions>
+				<Button onClick={onTest} size="sm" variant="ghost">
+					<SendIcon /> Send test
+				</Button>
+				<Button onClick={onViewEvents} size="sm" variant="ghost">
+					<ScrollTextIcon /> Delivery log
+				</Button>
 				<Switch
 					checked={integration.status === "active"}
 					onCheckedChange={onToggle}
 				/>
-				<Button
-					onClick={onTest}
-					size="icon-sm"
-					title="Send test"
-					variant="ghost"
-				>
-					<SendIcon />
-				</Button>
-				<Button
-					onClick={onViewEvents}
-					size="icon-sm"
-					title="View delivery log"
-					variant="ghost"
-				>
-					<ScrollTextIcon />
-				</Button>
-				<Button
-					className="text-destructive"
-					onClick={onDelete}
-					size="icon-sm"
-					title="Delete"
-					variant="ghost"
-				>
-					<Trash2Icon />
-				</Button>
+				<DropdownMenu>
+					<DropdownMenuTrigger
+						render={<Button size="icon-sm" variant="ghost" />}
+					>
+						<MoreHorizontalIcon />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem onClick={onEdit}>
+							<PencilIcon /> Edit
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={onDelete} variant="destructive">
+							<Trash2Icon /> Delete
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</ItemActions>
 		</Item>
 	);

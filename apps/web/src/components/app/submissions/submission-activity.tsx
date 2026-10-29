@@ -2,13 +2,20 @@ import { Skeleton } from "@StryveForms/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import {
+	AlertTriangleIcon,
 	CheckCircle2Icon,
 	MailIcon,
-	SendIcon,
-	XCircleIcon,
+	PencilIcon,
+	ZapIcon,
 } from "lucide-react";
 
 import { useTRPC } from "@/utils/trpc";
+
+const TONE_CLASSES = {
+	default: "text-muted-foreground",
+	error: "text-destructive",
+	success: "text-success",
+} as const;
 
 /** One row of the submission's activity timeline. */
 function TimelineRow({
@@ -22,19 +29,11 @@ function TimelineRow({
 	message?: string | null;
 	time: string;
 	title: string;
-	tone?: "default" | "error";
+	tone?: keyof typeof TONE_CLASSES;
 }) {
 	return (
 		<div className="flex gap-2.5">
-			<div
-				className={
-					tone === "error"
-						? "mt-0.5 text-destructive"
-						: "mt-0.5 text-muted-foreground"
-				}
-			>
-				{icon}
-			</div>
+			<div className={`mt-0.5 ${TONE_CLASSES[tone]}`}>{icon}</div>
 			<div className="min-w-0 flex-1 space-y-0.5">
 				<div className="flex items-baseline justify-between gap-2">
 					<p className="font-medium text-sm">{title}</p>
@@ -97,13 +96,14 @@ export default function SubmissionActivity({
 	return (
 		<div className="space-y-3">
 			<TimelineRow
-				icon={<SendIcon className="size-4" />}
+				icon={<CheckCircle2Icon className="size-4" />}
 				time={relative(activity.createdAt)}
 				title="Submitted"
+				tone="success"
 			/>
 			{edited ? (
 				<TimelineRow
-					icon={<SendIcon className="size-4" />}
+					icon={<PencilIcon className="size-4" />}
 					time={relative(activity.updatedAt)}
 					title="Edited"
 				/>
@@ -112,9 +112,9 @@ export default function SubmissionActivity({
 				<TimelineRow
 					icon={
 						event.type === "success" ? (
-							<CheckCircle2Icon className="size-4" />
+							<ZapIcon className="size-4" />
 						) : (
-							<XCircleIcon className="size-4" />
+							<AlertTriangleIcon className="size-4" />
 						)
 					}
 					key={event.id}
@@ -125,7 +125,7 @@ export default function SubmissionActivity({
 							? `Sent to ${event.integrationName}`
 							: `${event.integrationName} failed`
 					}
-					tone={event.type === "error" ? "error" : "default"}
+					tone={event.type === "error" ? "error" : "success"}
 				/>
 			))}
 			{activity.events.length === 0 && !edited ? (

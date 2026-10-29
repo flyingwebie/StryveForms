@@ -10,7 +10,6 @@ import {
 } from "@StryveForms/forms/redirect";
 import type { ComputedVariable, FormField } from "@StryveForms/forms/types";
 import { Button } from "@StryveForms/ui/components/button";
-import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -29,6 +28,7 @@ import {
 	NativeSelectOption,
 } from "@StryveForms/ui/components/native-select";
 import { RichTextEditor } from "@StryveForms/ui/components/rich-text-editor";
+import { Switch } from "@StryveForms/ui/components/switch";
 import { AtSignIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useMemo, useState } from "react";
@@ -221,20 +221,15 @@ export function RedirectBuilder() {
 
 	return (
 		<div className="flex flex-col gap-3">
-			<FieldDescription>
-				After someone submits, send them to another page. Pass their own answers
-				along as URL parameters — e.g. collect a name and email, then show or
-				pre-fill them on the destination page.
-			</FieldDescription>
 			<div className="flex items-center justify-between">
 				<FieldLabel htmlFor="redirect-advanced-toggle">
 					Advanced: edit the raw URL
 				</FieldLabel>
-				<Checkbox
+				<Switch
 					checked={advanced}
 					disabled={readOnly}
 					id="redirect-advanced-toggle"
-					onCheckedChange={(checked) => setAdvanced(checked === true)}
+					onCheckedChange={(checked) => setAdvanced(checked)}
 				/>
 			</div>
 			{advanced ? (
@@ -342,7 +337,14 @@ export function RedirectBuilder() {
 				</>
 			)}
 			<Field orientation="horizontal">
-				<Checkbox
+				<div className="flex flex-1 flex-col">
+					<FieldLabel htmlFor="redirect-new-tab">Open in a new tab</FieldLabel>
+					<FieldDescription>
+						Keeps your form's success screen open and opens the redirect in a
+						separate tab, instead of navigating away.
+					</FieldDescription>
+				</div>
+				<Switch
 					checked={Boolean(extraSettings.redirectOpenInNewTab)}
 					disabled={readOnly}
 					id="redirect-new-tab"
@@ -350,34 +352,14 @@ export function RedirectBuilder() {
 						patch({
 							settings: {
 								...settings.settings,
-								redirectOpenInNewTab: checked === true,
+								redirectOpenInNewTab: checked,
 							},
 						})
 					}
 				/>
-				<div className="flex flex-col">
-					<FieldLabel htmlFor="redirect-new-tab">Open in a new tab</FieldLabel>
-					<FieldDescription>
-						Keeps your form's success screen open and opens the redirect in a
-						separate tab, instead of navigating away.
-					</FieldDescription>
-				</div>
 			</Field>
 			<Field orientation="horizontal">
-				<Checkbox
-					checked={Boolean(extraSettings.redirectKeepEmptyParams)}
-					disabled={readOnly}
-					id="redirect-keep-empty"
-					onCheckedChange={(checked) =>
-						patch({
-							settings: {
-								...settings.settings,
-								redirectKeepEmptyParams: checked === true,
-							},
-						})
-					}
-				/>
-				<div className="flex flex-col">
+				<div className="flex flex-1 flex-col">
 					<FieldLabel htmlFor="redirect-keep-empty">
 						Keep empty parameters
 					</FieldLabel>
@@ -386,6 +368,19 @@ export function RedirectBuilder() {
 						dropping it from the URL.
 					</FieldDescription>
 				</div>
+				<Switch
+					checked={Boolean(extraSettings.redirectKeepEmptyParams)}
+					disabled={readOnly}
+					id="redirect-keep-empty"
+					onCheckedChange={(checked) =>
+						patch({
+							settings: {
+								...settings.settings,
+								redirectKeepEmptyParams: checked,
+							},
+						})
+					}
+				/>
 			</Field>
 			{preview ? (
 				<div className="flex flex-col gap-1 rounded-lg border bg-muted/30 p-2.5">

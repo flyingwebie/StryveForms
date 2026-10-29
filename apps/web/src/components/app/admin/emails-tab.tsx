@@ -20,6 +20,7 @@ import { authClient } from "@/lib/auth-client";
 import { formatTrpcError } from "@/lib/format-trpc-error";
 import { useTRPC } from "@/utils/trpc";
 import EmailSettingsForm from "./emails/email-settings-form";
+import { SettingsFooter } from "./settings-row";
 
 const DEBOUNCE_MS = 300;
 const PREVIEW_WIDTH = { desktop: 640, mobile: 375 } as const;
@@ -115,40 +116,26 @@ export default function AdminEmailsTab() {
 	const from = `${instanceQuery.data?.name || "StryveForms"} <no-reply@yourdomain.com>`;
 
 	return (
-		<div className="grid gap-8 lg:grid-cols-2">
+		<div className="grid gap-8 pb-20 lg:grid-cols-2">
 			<div className="space-y-6">
-				<div className="flex items-center justify-between gap-2">
-					<div className="flex items-center gap-2">
-						<Button
-							disabled={!isDirty || update.isPending}
-							onClick={() => update.mutate(draft)}
-							size="sm"
-						>
-							{update.isPending ? "Saving…" : "Save"}
-						</Button>
-						<Button
-							disabled={!isDirty}
-							onClick={discard}
-							size="sm"
-							variant="outline"
-						>
-							Discard
-						</Button>
-						<Button onClick={resetToDefaults} size="sm" variant="ghost">
+				<EmailSettingsForm onChange={setDraft} value={draft} />
+				<SettingsFooter
+					dirty={isDirty}
+					leading={
+						<Button onClick={resetToDefaults} type="button" variant="ghost">
 							Reset to defaults
 						</Button>
-					</div>
-					{isDirty ? (
-						<span className="text-muted-foreground text-xs">
-							Unsaved changes
-						</span>
-					) : null}
-				</div>
-
-				<EmailSettingsForm onChange={setDraft} value={draft} />
+					}
+					onDiscard={discard}
+					onSave={() => update.mutate(draft)}
+					saving={update.isPending}
+				/>
 			</div>
 
-			<div className="space-y-4 self-start lg:sticky lg:top-20">
+			<div className="space-y-3 self-start lg:sticky lg:top-6">
+				<p className="font-medium text-subtle-foreground text-xs uppercase tracking-wide">
+					Live preview
+				</p>
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<Select
 						items={(templatesQuery.data ?? []).map((t) => ({
@@ -268,7 +255,7 @@ export default function AdminEmailsTab() {
 						{sendTest.isPending ? "Sending…" : "Send test email"}
 					</Button>
 				</div>
-				<p className="text-muted-foreground text-xs">
+				<p className="text-subtle-foreground text-xs">
 					Sends the current draft (unsaved changes included) using this
 					template's sample data. If SMTP isn't configured, it's logged on the
 					server instead of delivered.

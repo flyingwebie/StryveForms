@@ -37,16 +37,21 @@ export default function AuthCard({
 	const [tab, setTab] = useState<Tab>(
 		registrationOpen ? defaultTab : "sign-in"
 	);
+	// While the sign-in form is showing its 2FA step, the card drops its own
+	// heading and tabs so the 2FA screen can own the whole card (see design).
+	const [twoFactorActive, setTwoFactorActive] = useState(false);
 	const heading = HEADINGS[tab];
 
 	return (
-		<div className="w-full rounded-2xl border bg-card/90 p-6 text-card-foreground shadow-black/5 shadow-xl backdrop-blur sm:p-8 dark:shadow-black/40 [&_[data-slot=tabs-list]]:rounded-lg [&_[data-slot=tabs-trigger]]:rounded-md [&_button]:rounded-lg [&_input]:rounded-lg">
-			<div className="mb-6 space-y-1">
-				<h2 className="font-semibold text-xl tracking-tight">
-					{heading.title}
-				</h2>
-				<p className="text-muted-foreground text-sm">{heading.subtitle}</p>
-			</div>
+		<div className="w-full rounded-2xl border bg-card p-6 text-card-foreground shadow-black/5 shadow-xl sm:p-8 dark:shadow-black/40">
+			{twoFactorActive ? null : (
+				<div className="mb-6 space-y-1">
+					<h2 className="font-semibold text-xl tracking-tight">
+						{heading.title}
+					</h2>
+					<p className="text-muted-foreground text-sm">{heading.subtitle}</p>
+				</div>
+			)}
 			{registrationOpen ? (
 				<Tabs
 					onValueChange={(value) => {
@@ -55,12 +60,20 @@ export default function AuthCard({
 					}}
 					value={tab}
 				>
-					<TabsList className="grid w-full grid-cols-2">
-						<TabsTrigger value="sign-in">Sign in</TabsTrigger>
-						<TabsTrigger value="sign-up">Create account</TabsTrigger>
-					</TabsList>
-					<TabsContent className="pt-5" value="sign-in">
-						<SignInForm redirectTo={redirectTo} />
+					{twoFactorActive ? null : (
+						<TabsList className="grid w-full grid-cols-2">
+							<TabsTrigger value="sign-in">Sign in</TabsTrigger>
+							<TabsTrigger value="sign-up">Create account</TabsTrigger>
+						</TabsList>
+					)}
+					<TabsContent
+						className={twoFactorActive ? undefined : "pt-5"}
+						value="sign-in"
+					>
+						<SignInForm
+							onTwoFactorActiveChange={setTwoFactorActive}
+							redirectTo={redirectTo}
+						/>
 					</TabsContent>
 					<TabsContent className="pt-5" value="sign-up">
 						<SignUpForm redirectTo={redirectTo} />
@@ -68,11 +81,16 @@ export default function AuthCard({
 				</Tabs>
 			) : (
 				<div className="space-y-5">
-					<SignInForm redirectTo={redirectTo} />
-					<p className="rounded-lg bg-muted px-3 py-2 text-center text-muted-foreground text-xs">
-						New accounts are by invitation only. Ask an administrator to invite
-						you.
-					</p>
+					<SignInForm
+						onTwoFactorActiveChange={setTwoFactorActive}
+						redirectTo={redirectTo}
+					/>
+					{twoFactorActive ? null : (
+						<p className="rounded-lg bg-muted px-3 py-2 text-center text-muted-foreground text-xs">
+							New accounts are by invitation only. Ask an administrator to
+							invite you.
+						</p>
+					)}
 				</div>
 			)}
 		</div>

@@ -1,13 +1,6 @@
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
-import {
 	Tabs,
 	TabsContent,
 	TabsList,
@@ -23,6 +16,7 @@ import {
 	buildMcpConnectSnippets,
 	MCP_TOOL_SUMMARY,
 } from "./mcp-connect-snippets";
+import { SettingsSection } from "./settings-row";
 
 const TRAILING_SLASH = /\/$/;
 
@@ -76,11 +70,10 @@ export default function McpInstructions({
 	});
 
 	return (
-		<div className="space-y-6">
-			<Card className="rounded-xl">
-				<CardHeader>
-					<CardTitle>Connect an agent</CardTitle>
-					<CardDescription>
+		<div className="space-y-8">
+			<SettingsSection
+				description={
+					<>
 						Paste one of these into your AI coding tool. Each one points it at
 						this server's MCP endpoint —{" "}
 						<code className="rounded bg-muted px-1 py-0.5 text-xs">
@@ -90,11 +83,13 @@ export default function McpInstructions({
 						{token
 							? "This snippet includes your personal API token — keep it private."
 							: "The agent will open a browser to sign in and approve access the first time."}
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-3">
+					</>
+				}
+				title="Connect an agent"
+			>
+				<div className="space-y-3">
 					<Tabs onValueChange={setTab} value={tab}>
-						<TabsList className="flex-wrap">
+						<TabsList className="flex-wrap" variant="line">
 							{snippets.map((s) => (
 								<TabsTrigger key={s.id} value={s.id}>
 									{s.label}
@@ -102,7 +97,7 @@ export default function McpInstructions({
 							))}
 						</TabsList>
 						{snippets.map((s) => (
-							<TabsContent key={s.id} value={s.id}>
+							<TabsContent className="pt-3" key={s.id} value={s.id}>
 								<CodeBlock
 									code={s.code}
 									filename={`${s.label.toLowerCase()}.${s.language === "bash" ? "sh" : s.language}`}
@@ -112,11 +107,10 @@ export default function McpInstructions({
 						))}
 					</Tabs>
 
-					<div className="flex items-center gap-3 pt-2">
+					<div className="flex items-center gap-3">
 						<Button
 							disabled={testConnection.isPending}
 							onClick={() => testConnection.mutate()}
-							size="sm"
 							variant="outline"
 						>
 							{testConnection.isPending ? (
@@ -125,7 +119,7 @@ export default function McpInstructions({
 							Test connection
 						</Button>
 						{testConnection.isSuccess ? (
-							<span className="flex items-center gap-1.5 text-emerald-600 text-sm dark:text-emerald-400">
+							<span className="flex items-center gap-1.5 text-sm text-success">
 								<CheckCircle2Icon className="size-4" />
 								{testConnection.data.message}
 							</span>
@@ -137,45 +131,38 @@ export default function McpInstructions({
 							</span>
 						) : null}
 					</div>
-				</CardContent>
-			</Card>
+				</div>
+			</SettingsSection>
 
-			<Card className="rounded-xl">
-				<CardHeader>
-					<CardTitle>What these tools can do</CardTitle>
-					<CardDescription>
-						An agent connected over MCP can call these tools, scoped to your own
-						workspaces and permissions. Tools that change data are marked
-						"Write" and respect your token's read/write scope.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-2">
+			<SettingsSection
+				description="An agent connected over MCP can call these tools, scoped to your own workspaces and permissions. Tools that change data respect your token's read/write scope."
+				title="What these tools can do"
+			>
+				<div className="space-y-1.5">
 					{MCP_TOOL_SUMMARY.map((row) => (
 						<div
-							className="flex flex-col gap-1 rounded-lg border border-border p-3 text-sm sm:flex-row sm:items-baseline sm:gap-3"
+							className="flex flex-col gap-1 border-border border-b py-2 text-sm last:border-b-0 sm:flex-row sm:items-baseline sm:gap-3"
 							key={row.label}
 						>
-							<span className="shrink-0 font-medium">{row.label}</span>
-							<code className="text-muted-foreground text-xs">{row.tools}</code>
+							<span className="w-32 shrink-0 font-medium">{row.label}</span>
+							<code className="text-subtle-foreground text-xs">
+								{row.tools}
+							</code>
 						</div>
 					))}
-				</CardContent>
-			</Card>
+				</div>
+			</SettingsSection>
 
-			<Card className="rounded-xl">
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
+			<SettingsSection
+				description="Skills are short, task-focused instructions an AI coding agent reads before using StryveForms — how to create/edit forms, wire up integrations, set up email notifications, and work with submissions, using this same CLI and MCP connection."
+				title={
+					<span className="flex items-center gap-2">
 						Agent skills
-						<Badge variant="secondary">New</Badge>
-					</CardTitle>
-					<CardDescription>
-						Skills are short, task-focused instructions an AI coding agent reads
-						before using StryveForms — how to create/edit forms, wire up
-						integrations, set up email notifications, and work with submissions,
-						using this same CLI and MCP connection.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-3">
+						<Badge variant="soft">New</Badge>
+					</span>
+				}
+			>
+				<div className="space-y-3">
 					<CodeBlock
 						code="npx skills add flyingwebie/stryveforms"
 						filename="install all skills"
@@ -198,8 +185,8 @@ export default function McpInstructions({
 							language="bash"
 						/>
 					</div>
-				</CardContent>
-			</Card>
+				</div>
+			</SettingsSection>
 		</div>
 	);
 }

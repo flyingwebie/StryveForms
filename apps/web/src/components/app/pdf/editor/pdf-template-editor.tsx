@@ -338,9 +338,6 @@ export default function PdfTemplateEditor({
 					onRemovePage={removePage}
 					onSelectPage={setPageIndex}
 					pages={draft.pages}
-					zoneCountByPage={(index) =>
-						draft.zones.filter((z) => z.page === index).length
-					}
 				/>
 				<div className="flex-1 overflow-auto bg-muted/30 p-8">
 					<PageCanvas

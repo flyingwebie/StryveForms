@@ -66,3 +66,6 @@ temp
 
 # Uploaded files (local storage driver)
 apps/server/storage
+
+# Pencil design files
+/design/

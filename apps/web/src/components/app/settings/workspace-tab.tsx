@@ -1,12 +1,17 @@
 import { Button } from "@StryveForms/ui/components/button";
 import { Input } from "@StryveForms/ui/components/input";
-import { Label } from "@StryveForms/ui/components/label";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/app/confirm-dialog";
 import IconPicker from "@/components/app/icons/icon-picker";
+import {
+	SettingsFooter,
+	SettingsRow,
+	SettingsSection,
+} from "@/components/app/settings-shell";
 import { formatTrpcError } from "@/lib/format-trpc-error";
 import { useInstance } from "@/lib/instance";
 import type { WorkspaceSummary } from "@/lib/workspace";
@@ -56,68 +61,99 @@ export default function WorkspaceSettingsTab({
 	);
 
 	const isAdmin = workspace.role === "admin";
+	const dirty =
+		name !== workspace.name || icon !== (workspace.icon ?? DEFAULT_ICON);
+
+	function discard() {
+		setName(workspace.name);
+		setIcon(workspace.icon ?? DEFAULT_ICON);
+	}
 
 	return (
-		<div className="max-w-lg space-y-8">
-			<div className="space-y-4">
-				<div className="space-y-1.5">
-					<Label>Icon</Label>
-					<p className="text-muted-foreground text-xs">
-						Pick an emoji, or a Lucide icon tinted with the workspace colour
-						(set in Brand).
-					</p>
-					<IconPicker
-						color={iconColor}
-						disabled={!isAdmin}
-						label="workspace icon"
-						onChange={(next) => setIcon(next ?? DEFAULT_ICON)}
-						value={icon}
-					/>
-				</div>
-				<div className="space-y-2">
-					<Label htmlFor="workspace-settings-name">Name</Label>
+		<div className="space-y-10">
+			<SettingsSection>
+				<SettingsRow
+					description="Shown in the sidebar, browser tab, and shared links."
+					label="Workspace icon"
+				>
+					<div className="flex items-center gap-2">
+						<IconPicker
+							color={iconColor}
+							disabled={!isAdmin}
+							label="workspace icon"
+							onChange={(next) => setIcon(next ?? DEFAULT_ICON)}
+							triggerClassName="size-10"
+							value={icon}
+						/>
+					</div>
+				</SettingsRow>
+				<SettingsRow
+					description="Appears in page titles, emails, and the sidebar."
+					label="Workspace name"
+				>
 					<Input
+						aria-label="Workspace name"
 						disabled={!isAdmin}
-						id="workspace-settings-name"
 						onChange={(event) => setName(event.target.value)}
 						value={name}
 					/>
-				</div>
-				<Button
-					disabled={!isAdmin || update.isPending || !name.trim()}
-					onClick={() =>
-						update.mutate({
-							icon: icon ?? null,
-							id: workspace.id,
-							name: name.trim(),
-						})
-					}
-				>
-					{update.isPending ? "Saving…" : "Save changes"}
-				</Button>
-			</div>
+				</SettingsRow>
+			</SettingsSection>
+
+			{isAdmin && dirty ? (
+				<SettingsFooter>
+					<Button onClick={discard} type="button" variant="outline">
+						Discard
+					</Button>
+					<Button
+						disabled={update.isPending || !name.trim()}
+						onClick={() =>
+							update.mutate({
+								icon: icon ?? null,
+								id: workspace.id,
+								name: name.trim(),
+							})
+						}
+					>
+						{update.isPending ? "Saving…" : "Save changes"}
+					</Button>
+				</SettingsFooter>
+			) : null}
 
 			{isAdmin && (
-				<div className="space-y-2 border-destructive/30 border-t pt-6">
-					<h3 className="font-medium text-destructive text-sm">
-						Delete workspace
-					</h3>
-					<p className="text-muted-foreground text-sm">
-						Permanently deletes this workspace, its forms and submissions. You
-						can't delete your only workspace.
-					</p>
-					<Button onClick={() => setDeleteOpen(true)} variant="destructive">
-						Delete workspace
-					</Button>
-					<ConfirmDialog
-						description="This permanently deletes the workspace and everything in it. This can't be undone."
-						loading={remove.isPending}
-						onConfirm={() => remove.mutate({ id: workspace.id })}
-						onOpenChange={setDeleteOpen}
-						open={deleteOpen}
-						title="Delete this workspace?"
-					/>
-				</div>
+				<SettingsSection
+					description="These actions are irreversible. Please proceed with caution."
+					title="Danger zone"
+				>
+					<SettingsRow
+						description="Permanently deletes this workspace, its forms, submissions, and files. This can't be undone."
+						label={<span className="text-destructive">Delete workspace</span>}
+					>
+						<div className="flex justify-end sm:justify-start">
+							<Button
+								className="w-full sm:w-auto"
+								onClick={() => setDeleteOpen(true)}
+								variant="destructive"
+							>
+								<TrashIcon /> Delete workspace
+							</Button>
+						</div>
+						<ConfirmDialog
+							confirmLabel="Delete workspace"
+							description={
+								<>
+									This permanently removes the workspace, its forms, all
+									submissions, and uploaded files. This can't be undone.
+								</>
+							}
+							loading={remove.isPending}
+							onConfirm={() => remove.mutate({ id: workspace.id })}
+							onOpenChange={setDeleteOpen}
+							open={deleteOpen}
+							title={`Delete "${workspace.name}"?`}
+						/>
+					</SettingsRow>
+				</SettingsSection>
 			)}
 		</div>
 	);

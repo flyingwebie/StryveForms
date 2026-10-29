@@ -39,12 +39,16 @@ import {
 } from "@StryveForms/ui/components/native-select";
 import { Slider } from "@StryveForms/ui/components/slider";
 import { Switch } from "@StryveForms/ui/components/switch";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MoonIcon, SparklesIcon, SunIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ColorPicker, {
 	NEUTRAL_PRESETS,
 } from "@/components/app/branding/color-picker";
+import FontPicker from "@/components/app/branding/font-picker";
+import LogoAlignmentControl from "@/components/app/branding/logo-alignment-control";
 import LogoUpload from "@/components/app/branding/logo-upload";
 import ImagePicker from "@/components/app/media/image-picker";
 import {
@@ -86,21 +90,6 @@ const RADIUS_LABELS: Record<string, string> = {
 	small: "Slightly rounded",
 };
 
-const FONTS = [
-	"Inter",
-	"Roboto",
-	"Open Sans",
-	"Lato",
-	"Montserrat",
-	"Poppins",
-	"Source Sans Pro",
-	"Nunito",
-	"Playfair Display",
-	"Merriweather",
-];
-
-const DEFAULT_FONT = "__default__";
-
 const SAMPLE_PROPERTIES: FormField[] = [
 	{
 		id: "full_name",
@@ -135,6 +124,7 @@ function sampleForm(brand: WorkspaceBrand): PublicFormDto {
 		borderRadius: "small",
 		canBeIndexed: false,
 		captchaProvider: "hcaptcha",
+		captchaSiteKey: null,
 		classicLayout: "card",
 		closedText: null,
 		color: DEFAULT_COLOR,
@@ -161,6 +151,9 @@ function sampleForm(brand: WorkspaceBrand): PublicFormDto {
 		pageBackgroundColor: null,
 		frameBackgroundColor: null,
 		frameBorderColor: null,
+		pageBackgroundColorDark: null,
+		frameBackgroundColorDark: null,
+		frameBorderColorDark: null,
 		frameBorderWidth: 0,
 		frameShadow: "sm",
 		backgroundImage: null,
@@ -185,6 +178,7 @@ function sampleForm(brand: WorkspaceBrand): PublicFormDto {
 		seoMeta: {},
 		settings: {},
 		shareUrl: "",
+		logoAlignment: null,
 		showBrandLogo: true,
 		showProgressBar: false,
 		size: "md",
@@ -207,6 +201,108 @@ function sampleForm(brand: WorkspaceBrand): PublicFormDto {
 	);
 }
 
+/** Default colours for both themes, set together when a colour row is turned on. */
+const THEME_DEFAULTS = {
+	border: { dark: "#27272A", light: "#E4E4E7" },
+	frame: { dark: "#18181B", light: "#FFFFFF" },
+	page: { dark: "#09090B", light: "#F4F4F5" },
+} as const;
+
+/**
+ * Light + dark colour for one setting. Brands saved before dark colours
+ * existed have no dark value: the form then uses the theme's own dark
+ * colour, and this offers to pick one.
+ */
+function ThemeColorPair({
+	dark,
+	darkDefault,
+	light,
+	onDarkChange,
+	onLightChange,
+}: {
+	dark: string | null | undefined;
+	darkDefault: string;
+	light: string;
+	onDarkChange: (color: string) => void;
+	onLightChange: (color: string) => void;
+}) {
+	return (
+		<div className="grid gap-3 rounded-lg border border-border p-3">
+			<div className="space-y-1.5">
+				<span className="flex items-center gap-1.5 font-medium text-muted-foreground text-xs">
+					<SunIcon className="size-3.5" /> Light theme
+				</span>
+				<ColorPicker
+					onChange={onLightChange}
+					presets={NEUTRAL_PRESETS}
+					value={light}
+				/>
+			</div>
+			<div className="space-y-1.5">
+				<span className="flex items-center gap-1.5 font-medium text-muted-foreground text-xs">
+					<MoonIcon className="size-3.5" /> Dark theme
+				</span>
+				{dark ? (
+					<ColorPicker
+						onChange={onDarkChange}
+						presets={NEUTRAL_PRESETS}
+						value={dark}
+					/>
+				) : (
+					<div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
+						Not set: forms use the theme's own dark colour.
+						<Button
+							onClick={() => onDarkChange(darkDefault)}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							Choose a dark colour
+						</Button>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+/** Light / dark switch for the brand live preview. */
+function PreviewSchemeToggle({
+	onChange,
+	value,
+}: {
+	onChange: (scheme: "light" | "dark") => void;
+	value: "light" | "dark";
+}) {
+	return (
+		<div className="inline-flex rounded-lg bg-secondary p-0.5">
+			{(
+				[
+					{ icon: SunIcon, label: "Light", value: "light" },
+					{ icon: MoonIcon, label: "Dark", value: "dark" },
+				] as const
+			).map(({ icon: Icon, label, value: scheme }) => (
+				<button
+					aria-label={`Preview in ${label.toLowerCase()} theme`}
+					aria-pressed={value === scheme}
+					className={cn(
+						"flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-xs transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/25",
+						value === scheme
+							? "bg-background text-foreground shadow-xs"
+							: "text-muted-foreground hover:text-foreground"
+					)}
+					key={scheme}
+					onClick={() => onChange(scheme)}
+					type="button"
+				>
+					<Icon className="size-3.5" />
+					{label}
+				</button>
+			))}
+		</div>
+	);
+}
+
 /** A control row with a switch for whether the brand sets this key at all. */
 function BrandRow({
 	children,
@@ -222,12 +318,12 @@ function BrandRow({
 	onToggle: (enabled: boolean) => void;
 }) {
 	return (
-		<div className="space-y-2 border-border border-b py-4 first:pt-0 last:border-b-0 last:pb-0">
+		<div className="space-y-2.5 border-border border-b py-4 first:pt-0 last:border-b-0 last:pb-0">
 			<div className="flex items-center justify-between gap-3">
-				<div>
-					<Label>{label}</Label>
+				<div className="space-y-0.5">
+					<Label className="font-medium text-[13px]">{label}</Label>
 					{description ? (
-						<p className="text-muted-foreground text-xs">{description}</p>
+						<p className="text-subtle-foreground text-xs">{description}</p>
 					) : null}
 				</div>
 				<Switch checked={enabled} onCheckedChange={onToggle} />
@@ -235,7 +331,7 @@ function BrandRow({
 			{enabled ? (
 				children
 			) : (
-				<p className="text-muted-foreground text-xs italic">
+				<p className="text-subtle-foreground text-xs italic">
 					Not set — each form decides.
 				</p>
 			)}
@@ -339,12 +435,18 @@ function NewBrandRows({
 				}
 			>
 				<NativeSelect
-					onChange={(e) => set("showBrandLogo", e.target.value === "on")}
-					value={draft.showBrandLogo ? "on" : "off"}
+					onChange={(e) => set("showBrandLogo", e.target.value === "show")}
+					value={draft.showBrandLogo ? "show" : "hide"}
 				>
-					<NativeSelectOption value="off">Off</NativeSelectOption>
-					<NativeSelectOption value="on">On</NativeSelectOption>
+					<NativeSelectOption value="show">Show the logo</NativeSelectOption>
+					<NativeSelectOption value="hide">Hide the logo</NativeSelectOption>
 				</NativeSelect>
+				{draft.showBrandLogo ? (
+					<LogoAlignmentControl
+						onChange={(alignment) => set("logoAlignment", alignment)}
+						value={draft.logoAlignment ?? "center"}
+					/>
+				) : null}
 			</BrandRow>
 
 			<BrandRow
@@ -371,19 +473,25 @@ function NewBrandRows({
 			</BrandRow>
 
 			<BrandRow
-				description="The colour behind the form, outside the card."
+				description="The colour behind the form, outside the card. Set one for each theme."
 				enabled={draft.pageBackgroundColor !== undefined}
 				label="Page background colour"
-				onToggle={(enabled) =>
-					enabled
-						? set("pageBackgroundColor", "#F4F4F5")
-						: unset("pageBackgroundColor")
-				}
+				onToggle={(enabled) => {
+					if (enabled) {
+						set("pageBackgroundColor", THEME_DEFAULTS.page.light);
+						set("pageBackgroundColorDark", THEME_DEFAULTS.page.dark);
+					} else {
+						unset("pageBackgroundColor");
+						unset("pageBackgroundColorDark");
+					}
+				}}
 			>
-				<ColorPicker
-					onChange={(color) => set("pageBackgroundColor", color)}
-					presets={NEUTRAL_PRESETS}
-					value={draft.pageBackgroundColor ?? "#F4F4F5"}
+				<ThemeColorPair
+					dark={draft.pageBackgroundColorDark}
+					darkDefault={THEME_DEFAULTS.page.dark}
+					light={draft.pageBackgroundColor ?? THEME_DEFAULTS.page.light}
+					onDarkChange={(color) => set("pageBackgroundColorDark", color)}
+					onLightChange={(color) => set("pageBackgroundColor", color)}
 				/>
 			</BrandRow>
 
@@ -395,33 +503,41 @@ function NewBrandRows({
 				label="Frame appearance"
 				onToggle={(enabled) => {
 					if (enabled) {
-						set("frameBackgroundColor", "#FFFFFF");
-						set("frameBorderColor", "#E4E4E7");
+						set("frameBackgroundColor", THEME_DEFAULTS.frame.light);
+						set("frameBackgroundColorDark", THEME_DEFAULTS.frame.dark);
+						set("frameBorderColor", THEME_DEFAULTS.border.light);
+						set("frameBorderColorDark", THEME_DEFAULTS.border.dark);
 						set("frameBorderWidth", 1);
 						set("frameShadow", "sm");
 					} else {
 						unset("frameBackgroundColor");
+						unset("frameBackgroundColorDark");
 						unset("frameBorderColor");
+						unset("frameBorderColorDark");
 						unset("frameBorderWidth");
 						unset("frameShadow");
 					}
 				}}
 			>
 				<div className="space-y-3">
-					<div className="space-y-1">
-						<Label className="text-xs">Background</Label>
-						<ColorPicker
-							onChange={(color) => set("frameBackgroundColor", color)}
-							presets={NEUTRAL_PRESETS}
-							value={draft.frameBackgroundColor ?? "#FFFFFF"}
+					<div className="space-y-1.5">
+						<Label className="text-xs">Card background</Label>
+						<ThemeColorPair
+							dark={draft.frameBackgroundColorDark}
+							darkDefault={THEME_DEFAULTS.frame.dark}
+							light={draft.frameBackgroundColor ?? THEME_DEFAULTS.frame.light}
+							onDarkChange={(color) => set("frameBackgroundColorDark", color)}
+							onLightChange={(color) => set("frameBackgroundColor", color)}
 						/>
 					</div>
-					<div className="space-y-1">
+					<div className="space-y-1.5">
 						<Label className="text-xs">Border colour</Label>
-						<ColorPicker
-							onChange={(color) => set("frameBorderColor", color)}
-							presets={NEUTRAL_PRESETS}
-							value={draft.frameBorderColor ?? "#E4E4E7"}
+						<ThemeColorPair
+							dark={draft.frameBorderColorDark}
+							darkDefault={THEME_DEFAULTS.border.dark}
+							light={draft.frameBorderColor ?? THEME_DEFAULTS.border.light}
+							onDarkChange={(color) => set("frameBorderColorDark", color)}
+							onLightChange={(color) => set("frameBorderColor", color)}
 						/>
 					</div>
 					<div className="space-y-1">
@@ -660,19 +776,23 @@ function NoBrandingRow({
 }) {
 	return (
 		<BrandRow
-			description="Removed from the 'Hide StryveForms branding' setting on the Design tab — set it here once for every form, or let a form override it."
+			description="The small “Powered by StryveForms” credit under every form. A form can still override this in its Design tab."
 			enabled={draft.noBranding !== undefined}
-			label="Hide StryveForms branding"
+			label="StryveForms branding"
 			onToggle={(enabled) =>
 				enabled ? set("noBranding", false) : unset("noBranding")
 			}
 		>
 			<NativeSelect
-				onChange={(e) => set("noBranding", e.target.value === "on")}
-				value={draft.noBranding ? "on" : "off"}
+				onChange={(e) => set("noBranding", e.target.value === "hide")}
+				value={draft.noBranding ? "hide" : "show"}
 			>
-				<NativeSelectOption value="off">Off</NativeSelectOption>
-				<NativeSelectOption value="on">On</NativeSelectOption>
+				<NativeSelectOption value="show">
+					Show “Powered by StryveForms”
+				</NativeSelectOption>
+				<NativeSelectOption value="hide">
+					Hide “Powered by StryveForms”
+				</NativeSelectOption>
 			</NativeSelect>
 		</BrandRow>
 	);
@@ -703,6 +823,7 @@ export default function BrandSettingsTab({
 	const isAdmin = workspace.role === "admin";
 	const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft);
 	const preview = useMemo(() => sampleForm(draft), [draft]);
+	const [previewScheme, setPreviewScheme] = useState<"light" | "dark">("light");
 
 	const invalidate = () =>
 		queryClient.invalidateQueries({ queryKey: trpc.workspace.get.queryKey() });
@@ -784,24 +905,10 @@ export default function BrandSettingsTab({
 							enabled ? set("fontFamily", null) : unset("fontFamily")
 						}
 					>
-						<NativeSelect
-							onChange={(e) =>
-								set(
-									"fontFamily",
-									e.target.value === DEFAULT_FONT ? null : e.target.value
-								)
-							}
-							value={draft.fontFamily ?? DEFAULT_FONT}
-						>
-							<NativeSelectOption value={DEFAULT_FONT}>
-								Default
-							</NativeSelectOption>
-							{FONTS.map((font) => (
-								<NativeSelectOption key={font} value={font}>
-									{font}
-								</NativeSelectOption>
-							))}
-						</NativeSelect>
+						<FontPicker
+							onChange={(family) => set("fontFamily", family)}
+							value={draft.fontFamily ?? null}
+						/>
 					</BrandRow>
 
 					<BrandRow
@@ -920,11 +1027,17 @@ export default function BrandSettingsTab({
 						}
 					>
 						<NativeSelect
-							onChange={(e) => set("uppercaseLabels", e.target.value === "on")}
-							value={draft.uppercaseLabels ? "on" : "off"}
+							onChange={(e) =>
+								set("uppercaseLabels", e.target.value === "uppercase")
+							}
+							value={draft.uppercaseLabels ? "uppercase" : "normal"}
 						>
-							<NativeSelectOption value="off">Off</NativeSelectOption>
-							<NativeSelectOption value="on">On</NativeSelectOption>
+							<NativeSelectOption value="normal">
+								Normal case (Full name)
+							</NativeSelectOption>
+							<NativeSelectOption value="uppercase">
+								Uppercase (FULL NAME)
+							</NativeSelectOption>
 						</NativeSelect>
 					</BrandRow>
 
@@ -950,10 +1063,22 @@ export default function BrandSettingsTab({
 					/>
 				</div>
 
-				<div className="space-y-3">
-					<Label>Live preview</Label>
-					<div className="rounded-lg border border-border bg-muted/30 p-4">
-						<FormRenderer form={preview} mode="preview" />
+				<div className="space-y-3 lg:sticky lg:top-6 lg:self-start">
+					<div className="flex items-center justify-between gap-2">
+						<p className="font-medium text-subtle-foreground text-xs uppercase tracking-wide">
+							Live preview
+						</p>
+						<PreviewSchemeToggle
+							onChange={setPreviewScheme}
+							value={previewScheme}
+						/>
+					</div>
+					<div className="overflow-hidden rounded-lg border border-border">
+						<FormRenderer
+							className="p-4"
+							form={{ ...preview, darkMode: previewScheme }}
+							mode="preview"
+						/>
 					</div>
 				</div>
 			</div>
@@ -961,18 +1086,18 @@ export default function BrandSettingsTab({
 			<div className="sticky bottom-0 flex items-center justify-between gap-3 border-border border-t bg-background py-4">
 				<div className="flex items-center gap-2">
 					<Button
+						disabled={!dirty}
+						onClick={() => setDraft(savedDraft)}
+						type="button"
+						variant="outline"
+					>
+						Discard
+					</Button>
+					<Button
 						disabled={!(isAdmin && dirty) || update.isPending}
 						onClick={() => update.mutate({ brand: draft, id: workspace.id })}
 					>
 						{update.isPending ? "Saving…" : "Save brand"}
-					</Button>
-					<Button
-						disabled={!dirty}
-						onClick={() => setDraft(savedDraft)}
-						type="button"
-						variant="ghost"
-					>
-						Discard
 					</Button>
 				</div>
 
@@ -983,11 +1108,11 @@ export default function BrandSettingsTab({
 								<Button
 									disabled={applyToAll.isPending}
 									type="button"
-									variant="outline"
+									variant="soft"
 								/>
 							}
 						>
-							Apply to all forms
+							<SparklesIcon /> Apply to all forms
 						</AlertDialogTrigger>
 						<AlertDialogContent>
 							<AlertDialogHeader>

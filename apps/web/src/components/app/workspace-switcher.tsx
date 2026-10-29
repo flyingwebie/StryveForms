@@ -46,7 +46,7 @@ export default function WorkspaceSwitcher({
 			<SidebarMenuItem>
 				<DropdownMenu>
 					<DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
-						<span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-muted text-base">
+						<span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-background text-base shadow-xs ring-1 ring-sidebar-border">
 							<EntityIcon
 								color={activeWorkspace?.brandColor ?? fallbackColor}
 								fallback="📝"
@@ -55,11 +55,13 @@ export default function WorkspaceSwitcher({
 							/>
 						</span>
 						<div className="flex min-w-0 flex-col">
-							<span className="truncate font-medium">
+							<span className="truncate font-semibold">
 								{activeWorkspace?.name ?? "Select workspace"}
 							</span>
-							<span className="truncate text-muted-foreground text-xs capitalize">
-								{activeWorkspace?.role ?? ""}
+							<span className="truncate text-muted-foreground text-xs">
+								{activeWorkspace
+									? `${activeWorkspace.role.charAt(0).toUpperCase()}${activeWorkspace.role.slice(1)} · ${activeWorkspace.formsCount} form${activeWorkspace.formsCount === 1 ? "" : "s"}`
+									: ""}
 							</span>
 						</div>
 						<ChevronsUpDownIcon className="ml-auto text-muted-foreground" />

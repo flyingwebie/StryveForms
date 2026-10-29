@@ -12,6 +12,14 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@StryveForms/ui/components/dropdown-menu";
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+} from "@StryveForms/ui/components/empty";
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
 import { Skeleton } from "@StryveForms/ui/components/skeleton";
@@ -31,6 +39,7 @@ import {
 	DownloadIcon,
 	FileIcon,
 	MoreHorizontalIcon,
+	PencilIcon,
 	PlusIcon,
 	Trash2Icon,
 } from "lucide-react";
@@ -76,15 +85,23 @@ function TemplatesTable({
 	}
 	if (templates.length === 0) {
 		return (
-			<Card>
-				<CardContent className="flex flex-col items-center gap-3 py-10 text-center text-muted-foreground">
-					<FileIcon className="size-8" />
-					<p>No PDF templates yet.</p>
-					<Button onClick={onAdd} variant="outline">
-						<PlusIcon /> Add your first template
+			<Empty className="rounded-xl border">
+				<EmptyHeader>
+					<EmptyMedia variant="icon">
+						<FileIcon />
+					</EmptyMedia>
+					<EmptyTitle>Add your first template</EmptyTitle>
+					<EmptyDescription>
+						Design a branded PDF that's generated automatically from each
+						submission.
+					</EmptyDescription>
+				</EmptyHeader>
+				<EmptyContent>
+					<Button onClick={onAdd}>
+						<PlusIcon /> Add template
 					</Button>
-				</CardContent>
-			</Card>
+				</EmptyContent>
+			</Empty>
 		);
 	}
 	return (
@@ -141,7 +158,7 @@ function TemplatesTable({
 												/>
 											}
 										>
-											Edit
+											<PencilIcon /> Edit
 										</DropdownMenuItem>
 										<DropdownMenuItem onClick={() => onDuplicate(template.id)}>
 											<CopyIcon /> Duplicate
@@ -299,12 +316,12 @@ function RouteComponent() {
 	const templates = templatesQuery.data ?? [];
 
 	return (
-		<div className="max-w-4xl space-y-6">
+		<div className="space-y-6">
 			<DownloadSettingsCard formId={formId} />
 
-			<div className="flex items-center justify-between">
+			<div className="flex flex-wrap items-center justify-between gap-3">
 				<div>
-					<h2 className="font-medium text-lg">PDF templates</h2>
+					<h2 className="font-semibold text-base">PDF templates</h2>
 					<p className="text-muted-foreground text-sm">
 						Generate a filled PDF for each submission: a filled contract, a
 						certificate, a receipt…

@@ -6,7 +6,7 @@ import {
 import { Button } from "@StryveForms/ui/components/button";
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
-import { AlertTriangleIcon, KeyRoundIcon } from "lucide-react";
+import { AlertTriangleIcon, EyeIcon, EyeOffIcon, LockIcon } from "lucide-react";
 import { useState } from "react";
 
 /**
@@ -30,20 +30,20 @@ export default function ArchivePassphraseStep({
 	onSubmit: (passphrase: string) => void;
 }) {
 	const [passphrase, setPassphrase] = useState("");
+	const [showPassphrase, setShowPassphrase] = useState(false);
 
 	return (
 		<div className="mx-auto max-w-md space-y-6">
 			<div>
 				<h2 className="font-semibold text-lg">Enter the passphrase</h2>
 				<p className="text-muted-foreground text-sm">
-					This archive includes encrypted secrets (webhook signing keys, SMTP
-					passwords, API tokens…). Enter the passphrase it was exported with to
-					bring them in too.
+					This unlocks the encrypted secrets included in the backup, like
+					integration API keys.
 				</p>
 			</div>
 
 			<form
-				className="space-y-4"
+				className="space-y-4 rounded-2xl border bg-card p-6"
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (passphrase && !checking) {
@@ -54,16 +54,33 @@ export default function ArchivePassphraseStep({
 				<div className="space-y-2">
 					<Label htmlFor="archive-passphrase">Passphrase</Label>
 					<div className="relative">
-						<KeyRoundIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
+							aria-invalid={Boolean(error) || undefined}
 							autoComplete="off"
-							className="pl-9"
+							className="pr-9"
 							id="archive-passphrase"
 							onChange={(event) => setPassphrase(event.target.value)}
-							type="password"
+							type={showPassphrase ? "text" : "password"}
 							value={passphrase}
 						/>
+						<button
+							aria-label={
+								showPassphrase ? "Hide passphrase" : "Show passphrase"
+							}
+							className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+							onClick={() => setShowPassphrase((v) => !v)}
+							type="button"
+						>
+							{showPassphrase ? (
+								<EyeOffIcon className="size-4" />
+							) : (
+								<EyeIcon className="size-4" />
+							)}
+						</button>
 					</div>
+					<p className="text-muted-foreground text-xs">
+						Set when this backup was created.
+					</p>
 				</div>
 
 				{error ? (
@@ -74,20 +91,30 @@ export default function ArchivePassphraseStep({
 					</Alert>
 				) : null}
 
-				<div className="flex items-center justify-between gap-3">
-					<Button onClick={onBack} type="button" variant="outline">
-						Back
-					</Button>
-					<div className="flex items-center gap-2">
-						<Button onClick={onSkip} type="button" variant="ghost">
-							Skip — import without secrets
-						</Button>
-						<Button disabled={!passphrase || checking} type="submit">
-							{checking ? "Checking…" : "Continue"}
-						</Button>
-					</div>
-				</div>
+				<Button
+					className="w-full"
+					disabled={!passphrase || checking}
+					type="submit"
+				>
+					<LockIcon />
+					{checking ? "Checking…" : "Unlock and continue"}
+				</Button>
 			</form>
+
+			<button
+				className="text-left text-primary text-sm hover:underline"
+				onClick={onSkip}
+				type="button"
+			>
+				Skip — import without secrets
+			</button>
+			<p className="-mt-4 text-muted-foreground text-xs">
+				You can add integration credentials manually after the import.
+			</p>
+
+			<Button onClick={onBack} variant="outline">
+				← Back
+			</Button>
 		</div>
 	);
 }

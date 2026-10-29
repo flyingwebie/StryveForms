@@ -6,6 +6,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import z from "zod";
 
+import PasswordInput from "@/components/app/auth/password-input";
+import PasswordStrengthMeter from "@/components/app/auth/password-strength-meter";
 import { authClient } from "@/lib/auth-client";
 
 export default function SignUpForm({
@@ -70,7 +72,7 @@ export default function SignUpForm({
 							value={field.state.value}
 						/>
 						{field.state.meta.errors.map((error) => (
-							<p className="text-red-500 text-sm" key={error?.message}>
+							<p className="text-destructive text-sm" key={error?.message}>
 								{error?.message}
 							</p>
 						))}
@@ -92,7 +94,7 @@ export default function SignUpForm({
 							value={field.state.value}
 						/>
 						{field.state.meta.errors.map((error) => (
-							<p className="text-red-500 text-sm" key={error?.message}>
+							<p className="text-destructive text-sm" key={error?.message}>
 								{error?.message}
 							</p>
 						))}
@@ -104,17 +106,17 @@ export default function SignUpForm({
 				{(field) => (
 					<div className="space-y-2">
 						<Label htmlFor={field.name}>Password</Label>
-						<Input
+						<PasswordInput
 							autoComplete="new-password"
 							id={field.name}
 							name={field.name}
 							onBlur={field.handleBlur}
-							onChange={(e) => field.handleChange(e.target.value)}
-							type="password"
+							onChange={field.handleChange}
 							value={field.state.value}
 						/>
+						<PasswordStrengthMeter password={field.state.value} />
 						{field.state.meta.errors.map((error) => (
-							<p className="text-red-500 text-sm" key={error?.message}>
+							<p className="text-destructive text-sm" key={error?.message}>
 								{error?.message}
 							</p>
 						))}
@@ -134,7 +136,7 @@ export default function SignUpForm({
 						disabled={!canSubmit || isSubmitting}
 						type="submit"
 					>
-						{isSubmitting ? "Creating account…" : "Sign up"}
+						{isSubmitting ? "Creating account…" : "Create account"}
 					</Button>
 				)}
 			</form.Subscribe>

@@ -1,14 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import {
 	ArchiveIcon,
-	BuildingIcon,
 	CodeIcon,
-	DownloadIcon,
 	InfoIcon,
 	MailIcon,
 	PaletteIcon,
 	ShieldIcon,
+	SlidersHorizontalIcon,
 	SparklesIcon,
+	UploadIcon,
 	UserIcon,
 	UsersIcon,
 } from "lucide-react";
@@ -54,7 +54,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 	{
 		description: "Name and icon shown across the app, and workspace deletion.",
 		group: "Workspace",
-		icon: BuildingIcon,
+		icon: SlidersHorizontalIcon,
 		label: "General",
 		value: "workspace",
 	},
@@ -93,7 +93,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 		description:
 			"Bring forms and submissions over from OpnForm or JotForm, or load a StryveForms export as a new workspace.",
 		group: "Workspace",
-		icon: DownloadIcon,
+		icon: UploadIcon,
 		label: "Import",
 		value: "import",
 	},

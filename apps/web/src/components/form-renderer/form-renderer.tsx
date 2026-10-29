@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ENV } from "@/env";
+import { useGoogleFont } from "@/lib/google-fonts";
 import { useTRPC } from "@/utils/trpc";
 import { BrandingBadge } from "./branding-badge";
 import { CaptchaWidget } from "./captcha-widget";
@@ -13,6 +14,7 @@ import { type FormDictionary, getDictionary } from "./i18n";
 import { ImageCredit } from "./image-credit";
 import { SuccessScreen } from "./success-screen";
 import {
+	effectiveAccentColor,
 	FRAME_SHADOW_VALUE,
 	fontFamilyStack,
 	formColorVars,
@@ -39,14 +41,21 @@ function resolveLogo(
 /** Inline style for the card ("frame"): brand background/border/shadow when framed, none when frameless. */
 function frameStyleFor(
 	form: PublicFormDto,
-	framed: boolean
+	framed: boolean,
+	scheme: "light" | "dark"
 ): React.CSSProperties {
 	if (!framed) {
 		return { background: "none", boxShadow: "none" };
 	}
+	// Each scheme has its own colours; a light colour is never reused in dark
+	// mode (a white card would glare), the theme's own dark surface is used instead.
+	const dark = scheme === "dark";
 	return {
-		backgroundColor: form.frameBackgroundColor || undefined,
-		borderColor: form.frameBorderColor || undefined,
+		backgroundColor:
+			(dark ? form.frameBackgroundColorDark : form.frameBackgroundColor) ||
+			undefined,
+		borderColor:
+			(dark ? form.frameBorderColorDark : form.frameBorderColor) || undefined,
 		borderStyle: form.frameBorderWidth ? "solid" : undefined,
 		borderWidth: form.frameBorderWidth
 			? `${form.frameBorderWidth}px`
@@ -103,18 +112,35 @@ function OptionalBrandingBadge({
 	return form.noBranding ? null : <BrandingBadge dict={dict} />;
 }
 
-/** Form logo above the title, already resolved to the light/dark variant and the "Show brand logo" toggle. */
-function FormLogo({ show, src }: { show: boolean; src: string | null }) {
+/** Form logo above the title, already resolved to the light/dark variant and the "Show brand logo" toggle. Centered in the classic card, left-aligned on a frameless focused screen. */
+const LOGO_ALIGN_CLASS = {
+	center: "mx-auto",
+	left: "mr-auto",
+	right: "ml-auto",
+} as const;
+
+function FormLogo({
+	alignment,
+	fallback,
+	show,
+	src,
+}: {
+	/** The brand's chosen position; `fallback` applies when it's unset. */
+	alignment: "left" | "center" | "right" | null;
+	fallback: "left" | "center";
+	show: boolean;
+	src: string | null;
+}) {
 	if (!(show && src)) {
 		return null;
 	}
 	return (
 		<img
 			alt=""
-			className="mx-auto mb-4 h-12 w-auto object-contain"
-			height={48}
+			className={`mb-4 block h-8 w-auto object-contain ${LOGO_ALIGN_CLASS[alignment ?? fallback]}`}
+			height={32}
 			src={src}
-			width={160}
+			width={120}
 		/>
 	);
 }
@@ -148,10 +174,16 @@ function HeaderImage({ form }: { form: PublicFormDto }) {
  * this is what lets the host page's own background show through the iframe
  * (see routes/forms/$slug.tsx, which also clears the surrounding html/body
  * background when embedded). */
-function resolvedPageBackgroundColor(form: PublicFormDto): string | undefined {
-	return form.transparentBackground
-		? "transparent"
-		: form.pageBackgroundColor || undefined;
+function resolvedPageBackgroundColor(
+	form: PublicFormDto,
+	scheme: "light" | "dark"
+): string | undefined {
+	if (form.transparentBackground) {
+		return "transparent";
+	}
+	const color =
+		scheme === "dark" ? form.pageBackgroundColorDark : form.pageBackgroundColor;
+	return color || undefined;
 }
 
 /** Page padding/height for the live (non-preview) renderer: a full-viewport
@@ -211,9 +243,14 @@ function fieldErrorsOf(error: unknown): Record<string, string> | null {
 		: null;
 }
 
+/** The form's site key comes from the API at runtime; the build-time VITE_* keys are a fallback for older setups. */
 function captchaSiteKeyFor(
-	provider: "hcaptcha" | "recaptcha" | "turnstile"
+	provider: "hcaptcha" | "recaptcha" | "turnstile",
+	fromServer: string | null | undefined
 ): string {
+	if (fromServer) {
+		return fromServer;
+	}
 	const keys = {
 		hcaptcha: ENV.VITE_HCAPTCHA_SITE_KEY,
 		recaptcha: ENV.VITE_RECAPTCHA_SITE_KEY,
@@ -300,6 +337,165 @@ function SplitImagePanel({ split }: { split: SplitImage | null }) {
 			/>
 			<ImageCredit credit={image.credit} />
 		</div>
+	);
+}
+
+/** The form body: a frameless, full-bleed question (focused, no wallpaper) or the classic/wallpaper card. Split out of `FormRenderer` to keep its cognitive complexity in check. */
+function FormBody({
+	cardClass,
+	columnClass,
+	dict,
+	focusedFrameless,
+	form,
+	frameStyle,
+	interactiveContent,
+	isFocused,
+	resolvedLogo,
+}: {
+	cardClass: string;
+	columnClass: string;
+	dict: FormDictionary;
+	focusedFrameless: boolean;
+	form: PublicFormDto;
+	frameStyle: React.CSSProperties;
+	interactiveContent: React.ReactNode;
+	isFocused: boolean;
+	resolvedLogo: string | null;
+}) {
+	const dir = form.layoutRtl ? "rtl" : "ltr";
+	if (focusedFrameless) {
+		// No card: the question itself (rendered by FocusedPresentation, full
+		// page-title size) is the only "heading" a focused screen shows.
+		return (
+			<div
+				className="mx-auto flex min-h-[80svh] w-full max-w-3xl flex-col justify-center gap-6 @lg/page:px-16 px-6 py-14"
+				dir={dir}
+			>
+				<FormLogo
+					alignment={form.logoAlignment}
+					fallback="left"
+					show={form.showBrandLogo}
+					src={resolvedLogo}
+				/>
+				{interactiveContent}
+				<OptionalBrandingBadge dict={dict} form={form} />
+			</div>
+		);
+	}
+	return (
+		<div className={columnClass}>
+			<HeaderImage form={form} />
+			<div
+				// `@container`: field widths below respond to this box's own size
+				// (e.g. a narrow embed, or a real phone), not the browser viewport.
+				className={cardClass}
+				dir={dir}
+				style={frameStyle}
+			>
+				<FormLogo
+					alignment={form.logoAlignment}
+					fallback="center"
+					show={form.showBrandLogo}
+					src={resolvedLogo}
+				/>
+				{isFocused ? null : (
+					<h1 className="mb-6 font-semibold text-xl">{form.title}</h1>
+				)}
+				{interactiveContent}
+				<OptionalBrandingBadge dict={dict} form={form} />
+			</div>
+		</div>
+	);
+}
+
+/** The presentation (classic/focused) plus the loading gate, captcha and submit error — split out of `FormRenderer` to keep its cognitive complexity in check. */
+function FormInteractiveContent({
+	captchaSiteKey,
+	dict,
+	engine,
+	form,
+	handleSubmit,
+	isFocused,
+	mode,
+	notInteractive,
+	onCaptchaToken,
+	onProgressChange,
+	onSplitImageChange,
+	submitError,
+	submitting,
+}: {
+	captchaSiteKey: string;
+	dict: FormDictionary;
+	engine: ReturnType<typeof useFormEngine>;
+	form: PublicFormDto;
+	handleSubmit: () => void;
+	isFocused: boolean;
+	mode: RendererMode;
+	notInteractive: boolean;
+	onCaptchaToken: (token: string | undefined) => void;
+	onProgressChange: (fraction: number | null) => void;
+	onSplitImageChange: (split: SplitImage | null) => void;
+	submitError: string | undefined;
+	submitting: boolean;
+}) {
+	const disabled = submitting || notInteractive;
+	return (
+		<>
+			{notInteractive ? (
+				<div className="mb-3 flex items-center gap-2 text-neutral-400 text-xs">
+					<Loader2 className="size-3.5 animate-spin" />
+					{dict.loading}
+				</div>
+			) : null}
+
+			<div
+				aria-busy={notInteractive}
+				className={
+					notInteractive
+						? "pointer-events-none opacity-70 transition-opacity"
+						: "transition-opacity"
+				}
+			>
+				{isFocused ? (
+					<FocusedPresentation
+						dict={dict}
+						disabled={disabled}
+						engine={engine}
+						fields={form.properties}
+						form={form}
+						formSlug={form.slug}
+						onProgressChange={onProgressChange}
+						onSplitImageChange={onSplitImageChange}
+						onSubmit={handleSubmit}
+						submitting={submitting}
+					/>
+				) : (
+					<ClassicPresentation
+						dict={dict}
+						disabled={disabled}
+						engine={engine}
+						form={form}
+						formSlug={form.slug}
+						onSubmit={handleSubmit}
+						submitting={submitting}
+					/>
+				)}
+			</div>
+
+			{mode === "live" && form.useCaptcha && captchaSiteKey ? (
+				<div className="mt-4 rounded-lg border border-neutral-300 p-3 dark:border-neutral-600">
+					<CaptchaWidget
+						onToken={onCaptchaToken}
+						provider={form.captchaProvider}
+						siteKey={captchaSiteKey}
+					/>
+				</div>
+			) : null}
+
+			{submitError ? (
+				<p className="mt-3 text-red-500 text-sm">{submitError}</p>
+			) : null}
+		</>
 	);
 }
 
@@ -490,152 +686,148 @@ export function FormRenderer({
 		}
 	}, [autoSubmit]);
 
-	const style = {
-		...formColorVars(form.color),
-		fontFamily: fontFamilyStack(form.fontFamily),
-	};
 	// Resolves "auto"/"light"/"dark" to what this respondent actually sees,
 	// independent of the host page's own dark mode, so the right logo and
 	// brand colours always show (item 17: light/dark logo by resolved scheme).
 	const scheme = useResolvedColorScheme(form.darkMode);
-	// Focused forms: the current question's split photo, shown across half the page.
+	useGoogleFont(form.fontFamily);
+	// The "Notion" theme is monochrome — every component reading
+	// `--color-form`/`--primary` (buttons, radios, stars…) picks this up instead
+	// of the form's own accent colour.
+	const style = {
+		...formColorVars(effectiveAccentColor(form.theme, form.color, scheme)),
+		fontFamily: fontFamilyStack(form.fontFamily),
+	};
+	// Focused forms: the current question's split photo, shown across half the
+	// page, and the step-progress fraction for the full-bleed top bar below
+	// (rendered at the page's own root instead of inset in a card, and `sticky`
+	// rather than `fixed` so it stays scoped to the editor's preview panel too).
 	const [splitImage, setSplitImage] = useState<SplitImage | null>(null);
-	const schemeClass = scheme === "dark" ? "dark" : "";
+	const [focusedProgress, setFocusedProgress] = useState<number | null>(null);
+	// "light" too, so a light form inside the dark app (previews) stays light.
+	const schemeClass = scheme === "dark" ? "dark" : "light";
 	const resolvedLogo = resolveLogo(form, scheme);
-	const pageBackgroundColor = resolvedPageBackgroundColor(form);
+	const pageBackgroundColor = resolvedPageBackgroundColor(form, scheme);
 	const pagePadding = livePagePadding(mode, embed);
+
+	// Focused forms never sit in the classic card: a question with a
+	// split/no photo renders full-bleed on the page (Typeform style); a
+	// "wallpaper" photo instead gets a smaller floating card centered over it.
+	const isFocused = form.presentationStyle === "focused";
+	const isWallpaper = isFocused && splitImage?.side === "full";
+	const focusedFrameless = isFocused && !isWallpaper;
 
 	// The Classic layout preset (item 1: "card" / "card-on-background" /
 	// "header-image" / "card-with-header") decides whether a Classic form sits
 	// in a framed card at all; `BackgroundImageLayer`/`HeaderImage` above
 	// decide whether the background/header image for the other presets show.
-	// Focused forms always use the card: their images come from questions.
 	const framed =
 		!showsClassicLayoutImages(form.presentationStyle) ||
 		form.classicLayout !== "header-image";
-	const frameStyle = frameStyleFor(form, framed);
+	const frameStyle = frameStyleFor(form, framed, scheme);
 
-	const cardClass = `${surfaceTheme({ borderRadius: form.borderRadius, theme: form.theme, transparentBackground: !framed })} @container w-full p-6`;
+	const cardClass = isWallpaper
+		? // Over a full-bleed photo the card always needs a solid surface, even
+			// for the "transparent" theme, or the question is unreadable.
+			`${surfaceTheme({ borderRadius: form.borderRadius, theme: form.theme })} @container mx-auto w-full max-w-xl bg-background/90! p-8 shadow-xl backdrop-blur-md`
+		: `${surfaceTheme({ borderRadius: form.borderRadius, theme: form.theme, transparentBackground: !framed })} @container w-full p-6 @sm:p-8 @lg:p-10`;
 	const columnClass = `relative mx-auto w-full ${form.width === "full" ? "" : "max-w-2xl"}`;
 
 	if (result) {
-		// Same page, header image and card as the form itself, so the
-		// thank-you screen doesn't jump to an unstyled page.
+		// Always frameless/full-page (no card), regardless of presentation
+		// style — matching the design's thank-you screen — but keeps whatever
+		// background image the form itself shows, for visual continuity.
 		return (
 			<div
-				className={`${schemeClass} @container/page relative isolate ${pagePadding} ${className ?? ""}`}
+				className={`${schemeClass} @container/page relative isolate flex ${pagePadding} items-center justify-center`.concat(
+					className ? ` ${className}` : ""
+				)}
 				style={{ ...style, backgroundColor: pageBackgroundColor }}
 			>
 				<BackgroundImageLayer form={form} />
-				<div className={columnClass}>
-					<HeaderImage form={form} />
-					<div
-						className={cardClass}
-						dir={form.layoutRtl ? "rtl" : "ltr"}
-						style={frameStyle}
-					>
-						<FormLogo show={form.showBrandLogo} src={resolvedLogo} />
-						<SuccessScreen
-							data={result.data}
-							dict={dict}
-							form={form}
-							onRefill={() => {
-								setResult(null);
-								engine.reset();
-								partialSubmissionIdRef.current = undefined;
-							}}
-							redirectUrl={result.redirectUrl}
-							submissionId={result.submissionId}
-						/>
-						<OptionalBrandingBadge dict={dict} form={form} />
-					</div>
+				<div className={columnClass} dir={form.layoutRtl ? "rtl" : "ltr"}>
+					<FormLogo
+						alignment={form.logoAlignment}
+						fallback="center"
+						show={form.showBrandLogo}
+						src={resolvedLogo}
+					/>
+					<SuccessScreen
+						data={result.data}
+						dict={dict}
+						form={form}
+						onRefill={() => {
+							setResult(null);
+							engine.reset();
+							partialSubmissionIdRef.current = undefined;
+						}}
+						redirectUrl={result.redirectUrl}
+						submissionId={result.submissionId}
+					/>
+					<OptionalBrandingBadge dict={dict} form={form} />
 				</div>
 			</div>
 		);
 	}
 
-	const captchaSiteKey = captchaSiteKeyFor(form.captchaProvider);
+	const captchaSiteKey = captchaSiteKeyFor(
+		form.captchaProvider,
+		form.captchaSiteKey
+	);
 	// Only the live, SSR'd page needs the hydration gate — the editor's preview
 	// mounts client-only, so it can be interactive immediately.
 	const notInteractive = mode === "live" && !mounted;
 
+	const interactiveContent = (
+		<FormInteractiveContent
+			captchaSiteKey={captchaSiteKey}
+			dict={dict}
+			engine={engine}
+			form={form}
+			handleSubmit={handleSubmit}
+			isFocused={isFocused}
+			mode={mode}
+			notInteractive={notInteractive}
+			onCaptchaToken={setCaptchaToken}
+			onProgressChange={setFocusedProgress}
+			onSplitImageChange={setSplitImage}
+			submitError={submitError}
+			submitting={submitting}
+		/>
+	);
+
 	return (
 		<div
-			className={`${schemeClass} @container/page relative isolate ${pagePadding} ${className ?? ""}`}
+			className={`${schemeClass} @container/page relative isolate flex flex-col ${className ?? ""}`}
 			style={{ ...style, backgroundColor: pageBackgroundColor }}
 		>
-			<BackgroundImageLayer form={form} />
-			<SplitImagePanel split={splitImage} />
-
-			<div className={splitOffsetClass(splitImage)}>
-				<div className={columnClass}>
-					<HeaderImage form={form} />
+			{focusedProgress === null ? null : (
+				<div
+					aria-hidden="true"
+					className="sticky inset-x-0 top-0 z-30 h-1 bg-neutral-200 dark:bg-neutral-800"
+				>
 					<div
-						// `@container`: field widths below respond to this box's own size
-						// (e.g. a narrow embed, or a real phone), not the browser viewport.
-						className={cardClass}
-						dir={form.layoutRtl ? "rtl" : "ltr"}
-						style={frameStyle}
-					>
-						<FormLogo show={form.showBrandLogo} src={resolvedLogo} />
-						<h1 className="mb-6 font-semibold text-xl">{form.title}</h1>
+						className="h-full bg-[var(--color-form)] transition-all duration-300"
+						style={{ width: `${focusedProgress * 100}%` }}
+					/>
+				</div>
+			)}
+			<div className={`relative flex-1 ${pagePadding}`}>
+				<BackgroundImageLayer form={form} />
+				<SplitImagePanel split={splitImage} />
 
-						{notInteractive ? (
-							<div className="mb-3 flex items-center gap-2 text-neutral-400 text-xs">
-								<Loader2 className="size-3.5 animate-spin" />
-								{dict.loading}
-							</div>
-						) : null}
-
-						<div
-							aria-busy={notInteractive}
-							className={
-								notInteractive
-									? "pointer-events-none opacity-70 transition-opacity"
-									: "transition-opacity"
-							}
-						>
-							{form.presentationStyle === "focused" ? (
-								<FocusedPresentation
-									dict={dict}
-									disabled={submitting || notInteractive}
-									engine={engine}
-									fields={form.properties}
-									form={form}
-									formSlug={form.slug}
-									onSplitImageChange={setSplitImage}
-									onSubmit={handleSubmit}
-									submitting={submitting}
-								/>
-							) : (
-								<ClassicPresentation
-									dict={dict}
-									disabled={submitting || notInteractive}
-									engine={engine}
-									form={form}
-									formSlug={form.slug}
-									onSubmit={handleSubmit}
-									submitting={submitting}
-								/>
-							)}
-						</div>
-
-						{mode === "live" && form.useCaptcha && captchaSiteKey ? (
-							<div className="mt-4">
-								<CaptchaWidget
-									onToken={setCaptchaToken}
-									provider={form.captchaProvider}
-									siteKey={captchaSiteKey}
-								/>
-							</div>
-						) : null}
-
-						{submitError ? (
-							<p className="mt-3 text-red-500 text-sm">{submitError}</p>
-						) : null}
-
-						<OptionalBrandingBadge dict={dict} form={form} />
-					</div>
+				<div className={splitOffsetClass(splitImage)}>
+					<FormBody
+						cardClass={cardClass}
+						columnClass={columnClass}
+						dict={dict}
+						focusedFrameless={focusedFrameless}
+						form={form}
+						frameStyle={frameStyle}
+						interactiveContent={interactiveContent}
+						isFocused={isFocused}
+						resolvedLogo={resolvedLogo}
+					/>
 				</div>
 			</div>
 		</div>

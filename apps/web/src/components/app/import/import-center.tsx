@@ -1,3 +1,4 @@
+import { EyeIcon, ShieldIcon, ZapIcon } from "lucide-react";
 import { useState } from "react";
 
 import StryveformsImportFlow from "../backup/stryveforms-import-flow";
@@ -7,6 +8,12 @@ import ProgressStep, { type ImportTarget } from "./progress-step";
 import RecentImportJobs from "./recent-jobs";
 import SourcePicker, { type ImportSourceId, SOURCES } from "./source-picker";
 import WizardSteps from "./wizard-steps";
+
+const TRUST_POINTS = [
+	{ icon: ShieldIcon, text: "Nothing is overwritten until you confirm" },
+	{ icon: EyeIcon, text: "Review every field before anything changes" },
+	{ icon: ZapIcon, text: "Most imports finish in a few minutes" },
+];
 
 /** Settings → Import: pick a source, then connect, choose, review and import. */
 export default function ImportCenter({
@@ -35,6 +42,7 @@ export default function ImportCenter({
 				<ProgressStep
 					jobId={job.id}
 					onStartAnother={reset}
+					sourceName={sourceName}
 					targets={job.targets}
 				/>
 			</div>
@@ -58,9 +66,6 @@ export default function ImportCenter({
 	if (source) {
 		return (
 			<div className="mx-auto max-w-4xl space-y-2">
-				<p className="text-muted-foreground text-sm">
-					Importing from {sourceName}
-				</p>
 				{source === "opnform" ? (
 					<OpnformFlow
 						onCancel={reset}
@@ -77,17 +82,36 @@ export default function ImportCenter({
 	}
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-8">
-			<div>
-				<h2 className="font-semibold text-lg">Import your forms</h2>
+		<div className="space-y-8">
+			<div className="max-w-2xl space-y-3">
+				<h2 className="font-display text-4xl">Bring everything over.</h2>
 				<p className="text-muted-foreground text-sm">
-					Bring forms, submissions and files over from another form builder.
-					You'll see an overview before anything is copied, and running an
-					import again updates what you imported before instead of duplicating
-					it.
+					Move your forms, submissions, files, and integrations from OpnForm,
+					JotForm, or a StryveForms backup.
 				</p>
+				<div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-1">
+					{TRUST_POINTS.map(({ icon: Icon, text }) => (
+						<span
+							className="flex items-center gap-1.5 text-subtle-foreground text-xs"
+							key={text}
+						>
+							<Icon className="size-3.5" />
+							{text}
+						</span>
+					))}
+				</div>
 			</div>
-			<SourcePicker onPick={setSource} />
+
+			<div className="space-y-3">
+				<div>
+					<h3 className="font-semibold text-base">Choose a source</h3>
+					<p className="text-muted-foreground text-sm">
+						Pick where you're importing from — you can always import more later.
+					</p>
+				</div>
+				<SourcePicker onPick={setSource} />
+			</div>
+
 			<RecentImportJobs onResume={(id) => setJob({ id })} />
 		</div>
 	);

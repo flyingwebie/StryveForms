@@ -151,6 +151,9 @@ function resolveClassicPresentation(
 		headerImage,
 		headerImageCredit:
 			(branded.headerImageCredit as ImageCredit | null | undefined) ?? null,
+		logoAlignment:
+			(branded.logoAlignment as "left" | "center" | "right" | undefined) ??
+			null,
 		showBrandLogo: (branded.showBrandLogo as boolean | undefined) ?? true,
 	};
 }
@@ -161,6 +164,26 @@ function resolveClassicPresentation(
  * font, theme, border radius, size, dark mode, uppercase labels, logo, width)
  * are replaced by the workspace's, except the keys the form overrides itself.
  */
+function captchaSiteKeyFrom(
+	config: AppConfig,
+	useCaptcha: boolean,
+	provider: string | null | undefined
+): string | null {
+	if (!useCaptcha) {
+		return null;
+	}
+	switch (provider) {
+		case "hcaptcha":
+			return config.captcha.hcaptchaSiteKey ?? null;
+		case "recaptcha":
+			return config.captcha.recaptchaSiteKey ?? null;
+		case "turnstile":
+			return config.captcha.turnstileSiteKey ?? null;
+		default:
+			return null;
+	}
+}
+
 export function toPublicFormDto(
 	row: FormRow,
 	config: AppConfig,
@@ -219,6 +242,12 @@ export function toPublicFormDto(
 			(branded.frameBackgroundColor as string | null | undefined) ?? null,
 		frameBorderColor:
 			(branded.frameBorderColor as string | null | undefined) ?? null,
+		pageBackgroundColorDark:
+			(branded.pageBackgroundColorDark as string | null | undefined) ?? null,
+		frameBackgroundColorDark:
+			(branded.frameBackgroundColorDark as string | null | undefined) ?? null,
+		frameBorderColorDark:
+			(branded.frameBorderColorDark as string | null | undefined) ?? null,
 		frameBorderWidth: (branded.frameBorderWidth as number | undefined) ?? 0,
 		frameShadow:
 			(branded.frameShadow as "none" | "sm" | "md" | "lg" | undefined) ?? "sm",
@@ -247,6 +276,7 @@ export function toPublicFormDto(
 		/** Attribution for `headerImage`, when picked from Unsplash (T's ImagePicker). */
 		headerImageCredit: classicPresentation.headerImageCredit,
 		classicLayout: classicPresentation.classicLayout,
+		logoAlignment: classicPresentation.logoAlignment,
 		showBrandLogo: classicPresentation.showBrandLogo,
 		focusedImageLayoutDefault:
 			(nestedSettings.focusedImageLayoutDefault as string | undefined) ??
@@ -259,6 +289,12 @@ export function toPublicFormDto(
 		submittedText: dto.submittedText,
 		useCaptcha: dto.useCaptcha,
 		captchaProvider: dto.captchaProvider,
+		/** Public site key for the form's captcha provider, from the server's runtime env. */
+		captchaSiteKey: captchaSiteKeyFrom(
+			config,
+			dto.useCaptcha,
+			dto.captchaProvider
+		),
 		closedText: dto.closedText,
 		maxSubmissionsReachedText: dto.maxSubmissionsReachedText,
 		editableSubmissions: dto.editableSubmissions,

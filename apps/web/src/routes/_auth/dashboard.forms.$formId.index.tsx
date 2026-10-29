@@ -3,6 +3,7 @@ import type { FormField } from "@StryveForms/forms/types";
 import { answerFields } from "@StryveForms/forms/values";
 import { Button } from "@StryveForms/ui/components/button";
 import { Calendar } from "@StryveForms/ui/components/calendar";
+import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import { Input } from "@StryveForms/ui/components/input";
 import {
 	Popover,
@@ -24,6 +25,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@StryveForms/ui/components/table";
+import { Tabs, TabsList, TabsTrigger } from "@StryveForms/ui/components/tabs";
+import { cn } from "@StryveForms/ui/lib/utils";
 import {
 	closestCenter,
 	DndContext,
@@ -42,15 +45,19 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
+	type Table as ReactTableInstance,
 	type SortingState,
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
+import { subDays } from "date-fns";
 import {
 	CalendarIcon,
 	DownloadIcon,
+	InboxIcon,
 	SearchIcon,
 	SlidersHorizontalIcon,
 	Trash2Icon,
@@ -74,6 +81,7 @@ import {
 	useSubmissionColumns,
 } from "@/components/app/submissions/columns";
 import { SortableTableHead } from "@/components/app/submissions/sortable-table-head";
+import SubmissionCardList from "@/components/app/submissions/submission-card-list";
 import SubmissionModal from "@/components/app/submissions/submission-modal";
 import { apiBase } from "@/lib/api-url";
 import { useTRPC } from "@/utils/trpc";
@@ -89,6 +97,13 @@ interface SubmissionDateRange {
 }
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
+const DATE_PRESETS = [
+	{ days: 0, label: "Today" },
+	{ days: 6, label: "Last 7 days" },
+	{ days: 29, label: "Last 30 days" },
+	{ days: 89, label: "Last 90 days" },
+] as const;
+
 function columnStorageKey(formId: string) {
 	return `stryveforms.submissionColumns.${formId}`;
 }
@@ -100,6 +115,18 @@ function columnOrderStorageKey(formId: string) {
 
 function formatDate(date: Date) {
 	return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+/** "Oct 1 – Oct 29, 2026", the popover footer's full-precision echo of the draft range. */
+function formatRangeWithYear(range: SubmissionDateRange | undefined): string {
+	if (!range?.from) {
+		return "Select a range";
+	}
+	const year = range.from.getFullYear();
+	if (!range.to || range.to.getTime() === range.from.getTime()) {
+		return `${formatDate(range.from)}, ${year}`;
+	}
+	return `${formatDate(range.from)} – ${formatDate(range.to)}, ${year}`;
 }
 
 function SortableHeader({
@@ -196,6 +223,482 @@ function useSubmissionNavigation({
 	};
 
 	return { goNext, goPrev, hasNext, hasPrev, positionLabel };
+}
+
+/** The toolbar's date-range control: quick presets, a two-month calendar, and an explicit Apply. */
+function DateRangeControl({
+	dateRange,
+	dateRangeLabel,
+	setDateRange,
+}: {
+	dateRange: SubmissionDateRange | undefined;
+	dateRangeLabel: string;
+	setDateRange: (range: SubmissionDateRange | undefined) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const [draft, setDraft] = useState<SubmissionDateRange | undefined>(
+		dateRange
+	);
+
+	return (
+		<Popover
+			onOpenChange={(next) => {
+				setOpen(next);
+				if (next) {
+					setDraft(dateRange);
+				}
+			}}
+			open={open}
+		>
+			<PopoverTrigger
+				render={
+					<Button size="sm" variant="outline">
+						<CalendarIcon /> {dateRangeLabel}
+					</Button>
+				}
+			/>
+			<PopoverContent align="start" className="w-auto p-0">
+				<div className="flex">
+					<div className="flex w-36 shrink-0 flex-col gap-0.5 border-border border-r p-2">
+						{DATE_PRESETS.map((preset) => (
+							<Button
+								className="justify-start"
+								key={preset.label}
+								onClick={() => {
+									const to = new Date();
+									setDraft({ from: subDays(to, preset.days), to });
+								}}
+								size="sm"
+								variant="ghost"
+							>
+								{preset.label}
+							</Button>
+						))}
+					</div>
+					<div className="flex flex-col">
+						<Calendar
+							defaultMonth={draft?.from}
+							mode="range"
+							numberOfMonths={2}
+							onSelect={setDraft}
+							selected={draft}
+						/>
+						<div className="flex items-center justify-between gap-3 border-t p-3">
+							<span className="text-muted-foreground text-xs">
+								{formatRangeWithYear(draft)}
+							</span>
+							<div className="flex gap-2">
+								<Button
+									onClick={() => setDraft(undefined)}
+									size="sm"
+									variant="ghost"
+								>
+									Clear
+								</Button>
+								<Button
+									onClick={() => {
+										setDateRange(draft);
+										setOpen(false);
+									}}
+									size="sm"
+								>
+									Apply
+								</Button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</PopoverContent>
+		</Popover>
+	);
+}
+
+/** The toolbar swaps to this bar once rows are selected: bulk actions instead of filters. */
+function SelectionToolbar({
+	enabledPdfTemplates,
+	exportUrl,
+	filters,
+	onClear,
+	onDelete,
+	selectedCount,
+	selectedIds,
+}: {
+	enabledPdfTemplates: { enabled: boolean; id: string; name: string }[];
+	exportUrl: string;
+	filters: {
+		from?: string;
+		search?: string;
+		status: StatusFilter;
+		to?: string;
+	};
+	onClear: () => void;
+	onDelete: () => void;
+	selectedCount: number;
+	selectedIds: string[];
+}) {
+	return (
+		<div className="flex flex-wrap items-center gap-3">
+			<Checkbox checked indeterminate onCheckedChange={onClear} />
+			<span className="font-medium text-sm">{selectedCount} selected</span>
+			<div className="ml-auto flex flex-wrap items-center gap-2">
+				<Button render={<a href={exportUrl} />} size="sm" variant="outline">
+					<DownloadIcon /> Export {selectedCount}
+				</Button>
+				<BulkDownloadMenu
+					filters={filters}
+					selectedIds={selectedIds}
+					templates={enabledPdfTemplates}
+				/>
+				<Button onClick={onDelete} size="sm" variant="destructive">
+					<Trash2Icon /> Delete {selectedCount}
+				</Button>
+				<Button
+					aria-label="Clear selection"
+					onClick={onClear}
+					size="icon-sm"
+					variant="ghost"
+				>
+					<XIcon />
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+/** The normal (no selection) toolbar: search, status, date range, columns, export, PDF. */
+function SubmissionsFilters({
+	bulkDownloadFilters,
+	columnOrderItems,
+	dateRange,
+	dateRangeLabel,
+	enabledPdfTemplates,
+	exportUrl,
+	onToggleColumnVisibility,
+	persistColumnOrder,
+	resetColumnOrder,
+	search,
+	selectedIds,
+	setDateRange,
+	setSearch,
+	setStatus,
+	status,
+}: {
+	bulkDownloadFilters: {
+		from?: string;
+		search?: string;
+		status: StatusFilter;
+		to?: string;
+	};
+	columnOrderItems: ColumnOrderItem[];
+	dateRange: SubmissionDateRange | undefined;
+	dateRangeLabel: string;
+	enabledPdfTemplates: { enabled: boolean; id: string; name: string }[];
+	exportUrl: string;
+	onToggleColumnVisibility: (id: string, visible: boolean) => void;
+	persistColumnOrder: (order: string[]) => void;
+	resetColumnOrder: () => void;
+	search: string;
+	selectedIds: string[];
+	setDateRange: (range: SubmissionDateRange | undefined) => void;
+	setSearch: (value: string) => void;
+	setStatus: (value: StatusFilter) => void;
+	status: StatusFilter;
+}) {
+	return (
+		<div className="flex flex-wrap items-center gap-2">
+			<div className="relative max-w-sm flex-1">
+				<SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+				<Input
+					className="pl-8"
+					onChange={(event) => setSearch(event.target.value)}
+					placeholder="Search submissions…"
+					value={search}
+				/>
+			</div>
+
+			<Tabs
+				onValueChange={(value) => setStatus(value as StatusFilter)}
+				value={status}
+			>
+				<TabsList>
+					<TabsTrigger value="all">All</TabsTrigger>
+					<TabsTrigger value="completed">Completed</TabsTrigger>
+					<TabsTrigger value="partial">Partial</TabsTrigger>
+				</TabsList>
+			</Tabs>
+
+			<DateRangeControl
+				dateRange={dateRange}
+				dateRangeLabel={dateRangeLabel}
+				setDateRange={setDateRange}
+			/>
+
+			<Popover>
+				<PopoverTrigger render={<Button size="sm" variant="outline" />}>
+					<SlidersHorizontalIcon /> Columns
+				</PopoverTrigger>
+				<PopoverContent align="end" className="w-auto">
+					<ColumnOrderMenu
+						items={columnOrderItems}
+						onReorder={persistColumnOrder}
+						onReset={resetColumnOrder}
+						onToggleVisibility={onToggleColumnVisibility}
+					/>
+				</PopoverContent>
+			</Popover>
+
+			<Button render={<a href={exportUrl} />} size="sm" variant="outline">
+				<DownloadIcon /> Export CSV
+			</Button>
+
+			<BulkDownloadMenu
+				filters={bulkDownloadFilters}
+				selectedIds={selectedIds}
+				templates={enabledPdfTemplates}
+			/>
+		</div>
+	);
+}
+
+/** Empty-state illustration inside the table body: first-run vs. filtered-to-nothing. */
+function SubmissionsEmptyState({
+	colSpan,
+	hasFilters,
+	onClearFilters,
+}: {
+	colSpan: number;
+	hasFilters: boolean;
+	onClearFilters: () => void;
+}) {
+	return (
+		<TableRow>
+			<TableCell className="p-0" colSpan={colSpan}>
+				<div className="flex flex-col items-center gap-3 py-16 text-center">
+					<span className="flex size-12 items-center justify-center rounded-full bg-primary-soft">
+						<InboxIcon className="size-5 text-primary-soft-foreground" />
+					</span>
+					<div className="space-y-1">
+						<p className="font-medium text-sm">
+							{hasFilters ? "No matching submissions" : "No submissions yet"}
+						</p>
+						<p className="text-muted-foreground text-sm">
+							{hasFilters
+								? "Try a different search or clear your filters."
+								: "New submissions will show up here in real time."}
+						</p>
+					</div>
+					{hasFilters ? (
+						<Button onClick={onClearFilters} size="sm" variant="outline">
+							Clear filters
+						</Button>
+					) : null}
+				</div>
+			</TableCell>
+		</TableRow>
+	);
+}
+
+/** Skeleton rows shown while the first page of submissions is loading. */
+function SubmissionsLoadingTable({
+	columns,
+}: {
+	columns: ColumnDef<SubmissionDto>[];
+}) {
+	const skeletonRows = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+	return (
+		<div className="overflow-hidden rounded-xl border border-border">
+			<Table>
+				<TableHeader className="bg-background">
+					<TableRow>
+						{columns.map((column) => (
+							<TableCell className="h-10" key={column.id}>
+								<Skeleton className="h-4 w-20" />
+							</TableCell>
+						))}
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{skeletonRows.map((rowIndex) => (
+						<TableRow key={rowIndex}>
+							{columns.map((column) => (
+								<TableCell key={column.id}>
+									<Skeleton className="h-4 w-24" />
+								</TableCell>
+							))}
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+		</div>
+	);
+}
+
+/** The submissions table itself: draggable/sortable headers, rows, and the empty state. */
+function SubmissionsTable({
+	columns,
+	handleHeaderDragEnd,
+	hasFilters,
+	headerDragSensors,
+	isLoading,
+	onClearFilters,
+	onRowClick,
+	table,
+}: {
+	columns: ColumnDef<SubmissionDto>[];
+	handleHeaderDragEnd: (event: DragEndEvent) => void;
+	hasFilters: boolean;
+	headerDragSensors: ReturnType<typeof useSensors>;
+	isLoading: boolean;
+	onClearFilters: () => void;
+	onRowClick: (id: string) => void;
+	table: ReactTableInstance<SubmissionDto>;
+}) {
+	if (isLoading) {
+		return <SubmissionsLoadingTable columns={columns} />;
+	}
+	return (
+		<div className="max-h-[70vh] overflow-auto rounded-xl border border-border">
+			{/* DndContext adds hidden live-region <div>s, so it must wrap the table, not sit inside it. */}
+			<DndContext
+				collisionDetection={closestCenter}
+				onDragEnd={handleHeaderDragEnd}
+				sensors={headerDragSensors}
+			>
+				<Table>
+					<TableHeader className="sticky top-0 z-10 bg-background shadow-[0_1px_0_0_var(--border)]">
+						{table.getHeaderGroups().map((headerGroup) => (
+							<SortableContext
+								items={headerGroup.headers.map((h) => h.column.id)}
+								key={headerGroup.id}
+								strategy={horizontalListSortingStrategy}
+							>
+								<TableRow>
+									{headerGroup.headers.map((header) => (
+										<SortableTableHead
+											draggable={header.column.id !== SELECT_COLUMN_ID}
+											id={header.column.id}
+											key={header.id}
+										>
+											{header.isPlaceholder ? null : (
+												<SortableHeader column={header.column}>
+													{flexRender(
+														header.column.columnDef.header,
+														header.getContext()
+													)}
+												</SortableHeader>
+											)}
+										</SortableTableHead>
+									))}
+								</TableRow>
+							</SortableContext>
+						))}
+					</TableHeader>
+					<TableBody>
+						{table.getRowModel().rows.length === 0 ? (
+							<SubmissionsEmptyState
+								colSpan={columns.length}
+								hasFilters={hasFilters}
+								onClearFilters={onClearFilters}
+							/>
+						) : (
+							table.getRowModel().rows.map((row) => (
+								<TableRow
+									className={cn(
+										"cursor-pointer",
+										row.getIsSelected() &&
+											"bg-primary-soft/40 hover:bg-primary-soft/50"
+									)}
+									key={row.id}
+									onClick={() => onRowClick(row.original.id)}
+								>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell
+											key={cell.id}
+											onClick={(event) => {
+												if (cell.column.id === SELECT_COLUMN_ID) {
+													event.stopPropagation();
+												}
+											}}
+										>
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext()
+											)}
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</DndContext>
+		</div>
+	);
+}
+
+/** Submission count + rows-per-page + prev/next, below the table. */
+function SubmissionsPagination({
+	page,
+	pageCount,
+	perPage,
+	setPage,
+	setPerPage,
+	total,
+}: {
+	page: number;
+	pageCount: number;
+	perPage: number;
+	setPage: (updater: (previous: number) => number) => void;
+	setPerPage: (value: number) => void;
+	total: number;
+}) {
+	return (
+		<div className="flex flex-wrap items-center justify-between gap-2 text-muted-foreground text-sm">
+			<span>
+				{total} {total === 1 ? "submission" : "submissions"}
+			</span>
+			<div className="flex items-center gap-3">
+				<Select
+					items={PAGE_SIZES.map((size) => ({
+						label: `${size} / page`,
+						value: String(size),
+					}))}
+					onValueChange={(value) => setPerPage(Number(value))}
+					value={String(perPage)}
+				>
+					<SelectTrigger className="w-28">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{PAGE_SIZES.map((size) => (
+							<SelectItem key={size} value={String(size)}>
+								{size} / page
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<Button
+					disabled={page <= 1}
+					onClick={() => setPage((p) => Math.max(1, p - 1))}
+					size="sm"
+					variant="outline"
+				>
+					Previous
+				</Button>
+				<span>
+					Page {page} of {pageCount}
+				</span>
+				<Button
+					disabled={page >= pageCount}
+					onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+					size="sm"
+					variant="outline"
+				>
+					Next
+				</Button>
+			</div>
+		</div>
+	);
 }
 
 function RouteComponent() {
@@ -476,236 +979,93 @@ function RouteComponent() {
 		return `${formatDate(dateRange.from)} – ${formatDate(dateRange.to)}`;
 	})();
 
+	const hasFilters = Boolean(search || status !== "all" || dateRange?.from);
+
+	const clearFilters = () => {
+		setSearch("");
+		setStatus("all");
+		setDateRange(undefined);
+	};
+	const bulkDownloadFilters = {
+		from: fromIso,
+		search: search || undefined,
+		status,
+		to: toIso,
+	};
+
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-wrap items-center gap-2">
-				<div className="relative max-w-sm flex-1">
-					<SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-					<Input
-						className="pl-8"
-						onChange={(event) => setSearch(event.target.value)}
-						placeholder="Search submissions…"
-						value={search}
-					/>
-				</div>
-				<Select
-					items={[
-						{ label: "All statuses", value: "all" },
-						{ label: "Completed", value: "completed" },
-						{ label: "Partial", value: "partial" },
-					]}
-					onValueChange={(value) => setStatus(value as StatusFilter)}
-					value={status}
-				>
-					<SelectTrigger className="w-36">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All statuses</SelectItem>
-						<SelectItem value="completed">Completed</SelectItem>
-						<SelectItem value="partial">Partial</SelectItem>
-					</SelectContent>
-				</Select>
-
-				<Popover>
-					<PopoverTrigger
-						render={
-							<Button size="sm" variant="outline">
-								<CalendarIcon /> {dateRangeLabel}
-							</Button>
-						}
-					/>
-					<PopoverContent align="start" className="w-auto p-0">
-						<Calendar
-							defaultMonth={dateRange?.from}
-							mode="range"
-							numberOfMonths={2}
-							onSelect={setDateRange}
-							selected={dateRange}
-						/>
-						{dateRange?.from ? (
-							<div className="flex justify-end border-t p-2">
-								<Button
-									onClick={() => setDateRange(undefined)}
-									size="sm"
-									variant="ghost"
-								>
-									<XIcon /> Clear
-								</Button>
-							</div>
-						) : null}
-					</PopoverContent>
-				</Popover>
-
-				<Popover>
-					<PopoverTrigger render={<Button size="sm" variant="outline" />}>
-						<SlidersHorizontalIcon /> Columns
-					</PopoverTrigger>
-					<PopoverContent align="end" className="w-auto">
-						<ColumnOrderMenu
-							items={columnOrderItems}
-							onReorder={persistColumnOrder}
-							onReset={resetColumnOrder}
-							onToggleVisibility={(id, visible) =>
-								table.getColumn(id)?.toggleVisibility(visible)
-							}
-						/>
-					</PopoverContent>
-				</Popover>
-
-				<Button render={<a href={exportUrl} />} size="sm" variant="outline">
-					<DownloadIcon /> Export
-					{selectedIds.length > 0 ? ` ${selectedIds.length}` : " CSV"}
-				</Button>
-
-				<BulkDownloadMenu
-					filters={{
-						from: fromIso,
-						search: search || undefined,
-						status,
-						to: toIso,
-					}}
+			{selectedIds.length > 0 ? (
+				<SelectionToolbar
+					enabledPdfTemplates={enabledPdfTemplates}
+					exportUrl={exportUrl}
+					filters={bulkDownloadFilters}
+					onClear={() => setRowSelection({})}
+					onDelete={() => setBulkDeleteOpen(true)}
+					selectedCount={selectedIds.length}
 					selectedIds={selectedIds}
-					templates={enabledPdfTemplates}
 				/>
-
-				{selectedIds.length > 0 ? (
-					<Button
-						onClick={() => setBulkDeleteOpen(true)}
-						size="sm"
-						variant="destructive"
-					>
-						<Trash2Icon /> Delete {selectedIds.length}
-					</Button>
-				) : null}
-			</div>
-
-			{/* biome-ignore lint/suspicious/noUnnecessaryConditions: isLoading is a runtime query-status flag */}
-			{submissionsQuery.isLoading ? (
-				<Skeleton className="h-96 w-full" />
 			) : (
-				<div className="max-h-[70vh] overflow-auto rounded-xl border border-border">
-					{/* DndContext adds hidden live-region <div>s, so it must wrap the table, not sit inside it. */}
-					<DndContext
-						collisionDetection={closestCenter}
-						onDragEnd={handleHeaderDragEnd}
-						sensors={headerDragSensors}
-					>
-						<Table>
-							<TableHeader className="sticky top-0 z-10 bg-background shadow-[0_1px_0_0_var(--border)]">
-								{table.getHeaderGroups().map((headerGroup) => (
-									<SortableContext
-										items={headerGroup.headers.map((h) => h.column.id)}
-										key={headerGroup.id}
-										strategy={horizontalListSortingStrategy}
-									>
-										<TableRow>
-											{headerGroup.headers.map((header) => (
-												<SortableTableHead
-													draggable={header.column.id !== SELECT_COLUMN_ID}
-													id={header.column.id}
-													key={header.id}
-												>
-													{header.isPlaceholder ? null : (
-														<SortableHeader column={header.column}>
-															{flexRender(
-																header.column.columnDef.header,
-																header.getContext()
-															)}
-														</SortableHeader>
-													)}
-												</SortableTableHead>
-											))}
-										</TableRow>
-									</SortableContext>
-								))}
-							</TableHeader>
-							<TableBody>
-								{table.getRowModel().rows.length === 0 ? (
-									<TableRow>
-										<TableCell
-											className="py-10 text-center text-muted-foreground"
-											colSpan={columns.length}
-										>
-											No submissions yet
-										</TableCell>
-									</TableRow>
-								) : (
-									table.getRowModel().rows.map((row) => (
-										<TableRow
-											className="cursor-pointer"
-											key={row.id}
-											onClick={() => setActiveSubmissionId(row.original.id)}
-										>
-											{row.getVisibleCells().map((cell) => (
-												<TableCell
-													key={cell.id}
-													onClick={(event) => {
-														if (cell.column.id === SELECT_COLUMN_ID) {
-															event.stopPropagation();
-														}
-													}}
-												>
-													{flexRender(
-														cell.column.columnDef.cell,
-														cell.getContext()
-													)}
-												</TableCell>
-											))}
-										</TableRow>
-									))
-								)}
-							</TableBody>
-						</Table>
-					</DndContext>
-				</div>
+				<SubmissionsFilters
+					bulkDownloadFilters={bulkDownloadFilters}
+					columnOrderItems={columnOrderItems}
+					dateRange={dateRange}
+					dateRangeLabel={dateRangeLabel}
+					enabledPdfTemplates={enabledPdfTemplates}
+					exportUrl={exportUrl}
+					onToggleColumnVisibility={(id, visible) =>
+						table.getColumn(id)?.toggleVisibility(visible)
+					}
+					persistColumnOrder={persistColumnOrder}
+					resetColumnOrder={resetColumnOrder}
+					search={search}
+					selectedIds={selectedIds}
+					setDateRange={setDateRange}
+					setSearch={setSearch}
+					setStatus={setStatus}
+					status={status}
+				/>
 			)}
 
-			<div className="flex flex-wrap items-center justify-between gap-2 text-muted-foreground text-sm">
-				<span>
-					{total} {total === 1 ? "submission" : "submissions"}
-				</span>
-				<div className="flex items-center gap-3">
-					<Select
-						items={PAGE_SIZES.map((size) => ({
-							label: `${size} / page`,
-							value: String(size),
-						}))}
-						onValueChange={(value) => setPerPage(Number(value))}
-						value={String(perPage)}
-					>
-						<SelectTrigger className="w-28">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{PAGE_SIZES.map((size) => (
-								<SelectItem key={size} value={String(size)}>
-									{size} / page
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<Button
-						disabled={page <= 1}
-						onClick={() => setPage((p) => Math.max(1, p - 1))}
-						size="sm"
-						variant="outline"
-					>
-						Previous
-					</Button>
-					<span>
-						Page {page} of {pageCount}
-					</span>
-					<Button
-						disabled={page >= pageCount}
-						onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-						size="sm"
-						variant="outline"
-					>
-						Next
-					</Button>
-				</div>
+			<div className="hidden sm:block">
+				<SubmissionsTable
+					columns={columns}
+					handleHeaderDragEnd={handleHeaderDragEnd}
+					hasFilters={hasFilters}
+					headerDragSensors={headerDragSensors}
+					isLoading={submissionsQuery.isLoading}
+					onClearFilters={clearFilters}
+					onRowClick={setActiveSubmissionId}
+					table={table}
+				/>
 			</div>
+			<div className="sm:hidden">
+				{/* biome-ignore lint/suspicious/noUnnecessaryConditions: isLoading is a runtime query-status flag */}
+				{submissionsQuery.isLoading ? (
+					<div className="space-y-3">
+						{[0, 1, 2, 3].map((i) => (
+							<Skeleton className="h-24 w-full rounded-xl" key={i} />
+						))}
+					</div>
+				) : (
+					<SubmissionCardList
+						fields={fields}
+						hasFilters={hasFilters}
+						items={items}
+						onClearFilters={clearFilters}
+						onSelect={setActiveSubmissionId}
+					/>
+				)}
+			</div>
+
+			<SubmissionsPagination
+				page={page}
+				pageCount={pageCount}
+				perPage={perPage}
+				setPage={setPage}
+				setPerPage={setPerPage}
+				total={total}
+			/>
 
 			{formQuery.data ? (
 				<SubmissionModal

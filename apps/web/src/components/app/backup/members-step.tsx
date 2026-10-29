@@ -8,6 +8,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@StryveForms/ui/components/select";
+import { Switch } from "@StryveForms/ui/components/switch";
 import {
 	Table,
 	TableBody,
@@ -16,11 +17,43 @@ import {
 	TableHeader,
 	TableRow,
 } from "@StryveForms/ui/components/table";
+import { SparklesIcon } from "lucide-react";
 import { useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 
 import type { ArchiveMemberRow, MemberDecision } from "./contract";
+
+const NAME_SPLIT_RE = /[._-]/;
+
+const AVATAR_TINTS = [
+	"bg-primary-soft text-primary-soft-foreground",
+	"bg-info-soft text-info",
+	"bg-success-soft text-success",
+	"bg-warning-soft text-warning",
+];
+
+function initials(email: string): string {
+	const name = email.split("@")[0] ?? email;
+	const parts = name.split(NAME_SPLIT_RE).filter(Boolean);
+	const letters = parts.length > 1 ? [parts[0], parts[1]] : [name, name];
+	return letters
+		.map((part) => part?.[0] ?? "")
+		.join("")
+		.slice(0, 2)
+		.toUpperCase();
+}
+
+function Avatar({ email, index }: { email: string; index: number }) {
+	return (
+		<span
+			aria-hidden="true"
+			className={`flex size-8 shrink-0 items-center justify-center rounded-full font-medium text-xs ${AVATAR_TINTS[index % AVATAR_TINTS.length]}`}
+		>
+			{initials(email)}
+		</span>
+	);
+}
 
 type Role = "admin" | "user" | "readonly";
 
@@ -81,21 +114,41 @@ export default function MembersStep({
 	return (
 		<div className="space-y-6">
 			<div>
-				<h2 className="font-semibold text-lg">Bring people along?</h2>
+				<h2 className="font-semibold text-lg">Workspace members</h2>
 				<p className="text-muted-foreground text-sm">
-					The new workspace starts with just you as admin. Tick anyone else who
-					should have access — nothing is sent until you start the import.
+					Choose a role for each person included in the backup. Nothing is sent
+					until you start the import.
 				</p>
 			</div>
+
+			{needsInvite ? (
+				<label
+					className="flex items-start justify-between gap-4 rounded-xl border bg-subtle p-4"
+					htmlFor="members-send-invites"
+				>
+					<span>
+						<span className="font-medium text-sm">
+							Send invite emails to new members
+						</span>
+						<span className="block text-muted-foreground text-xs">
+							People new to this workspace get an email invite once it's ready.
+						</span>
+					</span>
+					<Switch
+						checked={sendInvites}
+						id="members-send-invites"
+						onCheckedChange={setSendInvites}
+					/>
+				</label>
+			) : null}
 
 			<div className="overflow-hidden rounded-xl border">
 				<Table>
 					<TableHeader>
 						<TableRow className="bg-muted/40">
 							<TableHead className="w-10" />
-							<TableHead>Email</TableHead>
-							<TableHead>Role</TableHead>
-							<TableHead>Account</TableHead>
+							<TableHead>Member</TableHead>
+							<TableHead className="text-right">Role</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -104,21 +157,26 @@ export default function MembersStep({
 								<TableCell>
 									<Checkbox aria-label="You" checked disabled />
 								</TableCell>
-								<TableCell className="font-medium">
-									{session.user.email}
-									<Badge className="ml-2" variant="outline">
-										You
-									</Badge>
+								<TableCell>
+									<div className="flex items-center gap-3">
+										<Avatar email={session.user.email} index={0} />
+										<div className="min-w-0">
+											<div className="flex items-center gap-2 font-medium">
+												{session.user.name}
+												<Badge variant="outline">You</Badge>
+											</div>
+											<div className="text-muted-foreground text-xs">
+												{session.user.email}
+											</div>
+										</div>
+									</div>
 								</TableCell>
-								<TableCell className="text-muted-foreground text-sm">
+								<TableCell className="text-right text-muted-foreground text-sm">
 									Admin
-								</TableCell>
-								<TableCell className="text-muted-foreground text-xs">
-									You always become admin of the new workspace.
 								</TableCell>
 							</TableRow>
 						) : null}
-						{members.map((member) => (
+						{members.map((member, index) => (
 							<TableRow key={member.email}>
 								<TableCell>
 									<Checkbox
@@ -129,16 +187,28 @@ export default function MembersStep({
 										}
 									/>
 								</TableCell>
-								<TableCell className="font-medium">
-									{member.email}
-									{member.invited ? (
-										<Badge className="ml-2" variant="outline">
-											Was a pending invite
-										</Badge>
-									) : null}
-								</TableCell>
 								<TableCell>
+									<div className="flex items-center gap-3">
+										<Avatar email={member.email} index={index + 1} />
+										<div className="min-w-0">
+											<div className="flex items-center gap-2 font-medium">
+												{member.email.split("@")[0]}
+												{member.invited ? (
+													<Badge variant="outline">Pending invite</Badge>
+												) : null}
+												{member.hasAccount ? null : (
+													<Badge variant="outline">No account here</Badge>
+												)}
+											</div>
+											<div className="text-muted-foreground text-xs">
+												{member.email}
+											</div>
+										</div>
+									</div>
+								</TableCell>
+								<TableCell className="text-right">
 									<Select
+										disabled={!checked[member.email]}
 										items={ROLE_ITEMS}
 										onValueChange={(value) =>
 											value &&
@@ -149,7 +219,7 @@ export default function MembersStep({
 										}
 										value={roles[member.email] ?? toRole(member.role)}
 									>
-										<SelectTrigger className="w-32" size="sm">
+										<SelectTrigger className="ml-auto w-32" size="sm">
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
@@ -160,13 +230,6 @@ export default function MembersStep({
 											))}
 										</SelectContent>
 									</Select>
-								</TableCell>
-								<TableCell>
-									<Badge variant={member.hasAccount ? "secondary" : "outline"}>
-										{member.hasAccount
-											? "Has an account here"
-											: "No account here"}
-									</Badge>
 								</TableCell>
 							</TableRow>
 						))}
@@ -179,36 +242,17 @@ export default function MembersStep({
 				) : null}
 			</div>
 
-			{needsInvite ? (
-				<label
-					className="flex items-start justify-between gap-4 rounded-xl border p-3"
-					htmlFor="members-send-invites"
-				>
-					<span>
-						<span className="font-medium text-sm">Send invites</span>
-						<span className="block text-muted-foreground text-xs">
-							Email people without an account here so they can join. Left off,
-							they're added as a pending invite you can send later from Members.
-						</span>
-					</span>
-					<Checkbox
-						checked={sendInvites}
-						id="members-send-invites"
-						onCheckedChange={(value) => setSendInvites(value === true)}
-					/>
-				</label>
-			) : null}
-
 			<div className="flex justify-between">
 				<Button onClick={onBack} variant="outline">
-					Back
+					← Back
 				</Button>
 				<div className="flex items-center gap-3">
 					<span className="text-muted-foreground text-sm">
 						{selectedCount} of {members.length} selected
 					</span>
 					<Button disabled={starting} onClick={start}>
-						{starting ? "Starting…" : "Start import"}
+						<SparklesIcon />
+						{starting ? "Starting…" : "Create workspace"}
 					</Button>
 				</div>
 			</div>

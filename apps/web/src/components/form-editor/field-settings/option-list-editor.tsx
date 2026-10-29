@@ -5,9 +5,11 @@ import { Textarea } from "@StryveForms/ui/components/textarea";
 import {
 	ArrowDownIcon,
 	ArrowUpIcon,
+	GripVerticalIcon,
 	ImageIcon,
 	PlusIcon,
 	Trash2Icon,
+	XIcon,
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useState } from "react";
@@ -120,6 +122,12 @@ export function OptionListEditor({
 
 	return (
 		<div className="flex flex-col gap-2">
+			<div className="flex items-center justify-between gap-2">
+				<p className="font-medium text-subtle-foreground text-xs uppercase tracking-wide">
+					Options
+				</p>
+				<span className="text-muted-foreground text-xs">{options.length}</span>
+			</div>
 			{withImages ? (
 				<p className="text-muted-foreground text-xs">
 					Each option can show an image: upload a file or paste an image URL
@@ -128,38 +136,41 @@ export function OptionListEditor({
 			) : null}
 			<div className="flex flex-col gap-1.5">
 				{options.map((option, index) => (
-					<div className="flex flex-col gap-1" key={option.id}>
-						<div className="flex items-center gap-1">
+					<div className="group flex flex-col gap-1" key={option.id}>
+						<div className="flex items-center gap-1 rounded-lg border p-1">
+							<GripVerticalIcon className="size-4 shrink-0 text-muted-foreground" />
 							<Input
-								className="flex-1"
+								className="h-7 flex-1 border-none bg-transparent px-1 shadow-none focus-visible:ring-0"
 								onChange={(e) => updateOption(index, { name: e.target.value })}
 								value={option.name}
 							/>
-							<Button
-								disabled={index === 0}
-								onClick={() => onChange(moveOption(options, index, -1))}
-								size="icon-xs"
-								type="button"
-								variant="ghost"
-							>
-								<ArrowUpIcon />
-							</Button>
-							<Button
-								disabled={index === options.length - 1}
-								onClick={() => onChange(moveOption(options, index, 1))}
-								size="icon-xs"
-								type="button"
-								variant="ghost"
-							>
-								<ArrowDownIcon />
-							</Button>
+							<div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+								<Button
+									disabled={index === 0}
+									onClick={() => onChange(moveOption(options, index, -1))}
+									size="icon-xs"
+									type="button"
+									variant="ghost"
+								>
+									<ArrowUpIcon />
+								</Button>
+								<Button
+									disabled={index === options.length - 1}
+									onClick={() => onChange(moveOption(options, index, 1))}
+									size="icon-xs"
+									type="button"
+									variant="ghost"
+								>
+									<ArrowDownIcon />
+								</Button>
+							</div>
 							<Button
 								onClick={() => removeOption(index)}
 								size="icon-xs"
 								type="button"
 								variant="ghost"
 							>
-								<Trash2Icon />
+								<XIcon />
 							</Button>
 						</div>
 						{withImages ? (

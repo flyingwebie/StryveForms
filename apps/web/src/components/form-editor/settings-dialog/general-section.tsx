@@ -1,32 +1,17 @@
 import { VISIBILITIES } from "@StryveForms/forms/settings";
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
-import {
-	Field,
-	FieldDescription,
-	FieldLabel,
-	FieldSet,
-} from "@StryveForms/ui/components/field";
 import { Input } from "@StryveForms/ui/components/input";
-import {
-	NativeSelect,
-	NativeSelectOption,
-} from "@StryveForms/ui/components/native-select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { XIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "@/utils/trpc";
+import { SegmentedControl } from "../design/segmented-control";
 import { VISIBILITY_META } from "../shared/visibility";
 import { useEditor } from "../state/editor-context";
+import { SettingsRow, SettingsSection } from "./settings-row";
 
 function TagEditor() {
 	const { patch, state } = useEditor();
@@ -41,9 +26,12 @@ function TagEditor() {
 	}
 
 	return (
-		<Field>
-			<FieldLabel htmlFor="form-tags">Tags</FieldLabel>
-			<div className="flex flex-wrap gap-1.5">
+		<SettingsRow
+			description="Organize this form in search and filters."
+			htmlFor="form-tags"
+			label="Tags"
+		>
+			<div className="flex flex-wrap items-center gap-1.5">
 				{state.settings.tags.map((tag) => (
 					<Badge key={tag} variant="secondary">
 						{tag}
@@ -70,11 +58,7 @@ function TagEditor() {
 				placeholder="Add a tag and press Enter"
 				value={draft}
 			/>
-			<FieldDescription>
-				Keywords to organize and filter forms in your dashboard. Respondents
-				never see these.
-			</FieldDescription>
-		</Field>
+		</SettingsRow>
 	);
 }
 
@@ -100,8 +84,11 @@ function SlugEditor() {
 	);
 
 	return (
-		<Field>
-			<FieldLabel htmlFor="form-slug">Link</FieldLabel>
+		<SettingsRow
+			description="Your form's public URL."
+			htmlFor="form-slug"
+			label="Link"
+		>
 			<div className="flex gap-2">
 				<Input
 					id="form-slug"
@@ -118,11 +105,11 @@ function SlugEditor() {
 					Update
 				</Button>
 			</div>
-			<FieldDescription>
-				The URL respondents use to open this form: {meta.shareUrl}. Changing it
-				breaks any copies of the old link you've already shared.
-			</FieldDescription>
-		</Field>
+			<p className="text-muted-foreground text-xs">
+				{meta.shareUrl}. Changing it breaks any copies of the old link you've
+				already shared.
+			</p>
+		</SettingsRow>
 	);
 }
 
@@ -131,51 +118,39 @@ export function GeneralSection() {
 	const { visibility } = state.settings;
 
 	return (
-		<fieldset className="flex flex-col gap-5" disabled={readOnly}>
-			<Card>
-				<CardHeader>
-					<CardTitle>Basics</CardTitle>
-					<CardDescription>Identity and access for this form.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FieldSet>
-						<Field>
-							<FieldLabel htmlFor="form-title">Title</FieldLabel>
-							<Input
-								id="form-title"
-								onChange={(e) => patch({ title: e.target.value })}
-								value={state.settings.title}
-							/>
-							<FieldDescription>
-								Shown in your dashboard and as the public page's heading.
-							</FieldDescription>
-						</Field>
-						<TagEditor />
-						<Field>
-							<FieldLabel htmlFor="form-visibility">Visibility</FieldLabel>
-							<NativeSelect
-								id="form-visibility"
-								onChange={(e) =>
-									patch({
-										visibility: e.target.value as (typeof VISIBILITIES)[number],
-									})
-								}
-								value={visibility}
-							>
-								{VISIBILITIES.map((option) => (
-									<NativeSelectOption key={option} value={option}>
-										{VISIBILITY_META[option].label}
-									</NativeSelectOption>
-								))}
-							</NativeSelect>
-							<FieldDescription>
-								{VISIBILITY_META[visibility].description}
-							</FieldDescription>
-						</Field>
-						<SlugEditor />
-					</FieldSet>
-				</CardContent>
-			</Card>
+		<fieldset className="flex flex-col gap-8" disabled={readOnly}>
+			<SettingsSection title="General">
+				<SettingsRow
+					description="Shown in the editor and browser tab."
+					htmlFor="form-title"
+					label="Form title"
+				>
+					<Input
+						id="form-title"
+						onChange={(e) => patch({ title: e.target.value })}
+						value={state.settings.title}
+					/>
+				</SettingsRow>
+				<SettingsRow
+					description="Who can open the public link."
+					label="Visibility"
+				>
+					<SegmentedControl
+						ariaLabel="Visibility"
+						onChange={(next) => patch({ visibility: next })}
+						options={VISIBILITIES.map((option) => ({
+							label: VISIBILITY_META[option].label,
+							value: option,
+						}))}
+						value={visibility}
+					/>
+					<p className="text-muted-foreground text-xs">
+						{VISIBILITY_META[visibility].description}
+					</p>
+				</SettingsRow>
+				<SlugEditor />
+				<TagEditor />
+			</SettingsSection>
 		</fieldset>
 	);
 }

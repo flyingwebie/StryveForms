@@ -1,12 +1,10 @@
 import type { FormField } from "@StryveForms/forms/types";
-import { Button } from "@StryveForms/ui/components/button";
 import {
 	Tabs,
 	TabsContent,
 	TabsList,
 	TabsTrigger,
 } from "@StryveForms/ui/components/tabs";
-import { XIcon } from "lucide-react";
 
 import { useEditor } from "../state/editor-context";
 import { CommonFieldSettings } from "./common-fields";
@@ -85,7 +83,7 @@ function TypeSpecificPanel({ field }: { field: FormField }) {
 }
 
 export function FieldSettingsPanel() {
-	const { readOnly, select, selectedField, state } = useEditor();
+	const { readOnly, selectedField, state } = useEditor();
 	const field = selectedField;
 
 	if (!field) {
@@ -101,32 +99,30 @@ export function FieldSettingsPanel() {
 
 	return (
 		<div className="flex h-full flex-col overflow-y-auto">
-			<div className="flex items-center justify-between border-b p-3">
-				<p className="truncate font-medium text-xs">{field.name}</p>
-				<Button
-					onClick={() => select(null)}
-					size="icon-xs"
-					type="button"
-					variant="ghost"
-				>
-					<XIcon />
-				</Button>
-			</div>
 			<fieldset className="flex flex-1 flex-col" disabled={readOnly}>
 				{isLayoutBlock ? (
 					<Tabs className="flex-1" defaultValue="content">
-						<TabsList className="m-3">
-							<TabsTrigger value="content">Content</TabsTrigger>
-							<TabsTrigger value="logic">Logic</TabsTrigger>
-						</TabsList>
+						<div className="border-b px-4">
+							<TabsList className="gap-4 p-0" variant="line">
+								<TabsTrigger className="px-0.5 py-3" value="content">
+									Content
+								</TabsTrigger>
+								<TabsTrigger className="px-0.5 py-3" value="logic">
+									Logic
+								</TabsTrigger>
+							</TabsList>
+						</div>
+						<p className="truncate px-4 pt-4 font-semibold text-base">
+							{field.name}
+						</p>
 						<TabsContent
-							className="flex flex-col gap-4 p-3 pb-24"
+							className="flex flex-col gap-4 p-4 pb-24"
 							value="content"
 						>
 							<ContentPanel field={field} />
 						</TabsContent>
 						<TabsContent
-							className="flex flex-col gap-4 p-3 pb-24"
+							className="flex flex-col gap-4 p-4 pb-24"
 							value="logic"
 						>
 							<LogicSection field={field} />
@@ -134,16 +130,29 @@ export function FieldSettingsPanel() {
 					</Tabs>
 				) : (
 					<Tabs className="flex-1" defaultValue="general">
-						<TabsList className="m-3">
-							<TabsTrigger value="general">General</TabsTrigger>
-							<TabsTrigger value="options">Options</TabsTrigger>
-							<TabsTrigger value="logic">Logic</TabsTrigger>
-							{WITH_VALIDATION.has(field.type) ? (
-								<TabsTrigger value="validation">Validation</TabsTrigger>
-							) : null}
-						</TabsList>
+						<div className="border-b px-4">
+							<TabsList className="gap-4 p-0" variant="line">
+								<TabsTrigger className="px-0.5 py-3" value="general">
+									General
+								</TabsTrigger>
+								<TabsTrigger className="px-0.5 py-3" value="options">
+									Options
+								</TabsTrigger>
+								<TabsTrigger className="px-0.5 py-3" value="logic">
+									Logic
+								</TabsTrigger>
+								{WITH_VALIDATION.has(field.type) ? (
+									<TabsTrigger className="px-0.5 py-3" value="validation">
+										Validation
+									</TabsTrigger>
+								) : null}
+							</TabsList>
+						</div>
+						<p className="truncate px-4 pt-4 font-semibold text-base">
+							{field.name}
+						</p>
 						<TabsContent
-							className="flex flex-col gap-4 p-3 pb-24"
+							className="flex flex-col gap-4 p-4 pb-24"
 							value="general"
 						>
 							<CommonFieldSettings
@@ -159,20 +168,20 @@ export function FieldSettingsPanel() {
 							{isFocused ? <FocusedImagePanel field={field} /> : null}
 						</TabsContent>
 						<TabsContent
-							className="flex flex-col gap-4 p-3 pb-24"
+							className="flex flex-col gap-4 p-4 pb-24"
 							value="options"
 						>
 							<TypeSpecificPanel field={field} />
 						</TabsContent>
 						<TabsContent
-							className="flex flex-col gap-4 p-3 pb-24"
+							className="flex flex-col gap-4 p-4 pb-24"
 							value="logic"
 						>
 							<LogicSection field={field} />
 						</TabsContent>
 						{WITH_VALIDATION.has(field.type) ? (
 							<TabsContent
-								className="flex flex-col gap-4 p-3 pb-24"
+								className="flex flex-col gap-4 p-4 pb-24"
 								value="validation"
 							>
 								<ValidationSection field={field} />

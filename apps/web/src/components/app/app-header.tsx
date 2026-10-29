@@ -6,25 +6,20 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@StryveForms/ui/components/breadcrumb";
-import { Button } from "@StryveForms/ui/components/button";
-import { Kbd } from "@StryveForms/ui/components/kbd";
 import { Separator } from "@StryveForms/ui/components/separator";
 import { SidebarTrigger } from "@StryveForms/ui/components/sidebar";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { PlusIcon, SearchIcon } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import type { WorkspaceSummary } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
 
-import CommandMenu from "./command-menu";
-import NewFormDialog from "./new-form-dialog";
 import ThemeToggle from "./theme-toggle";
 
 const FORM_TAB_LABELS: Record<string, string> = {
 	analytics: "Analytics",
 	integrations: "Integrations",
+	notifications: "Notifications",
 	pdf: "PDF templates",
 	share: "Share",
 	summary: "Summary",
@@ -82,50 +77,41 @@ function useBreadcrumbTrail(activeWorkspace: WorkspaceSummary | null) {
 	return crumbs;
 }
 
-/** Sticky dashboard header: breadcrumb trail, ⌘K search, theme toggle, New form. */
+/** Top bar of the main panel: sidebar toggle, breadcrumb trail and theme toggle. */
 export default function AppHeader({
 	activeWorkspace,
-	activeWorkspaceId,
-	setWorkspaceId,
-	workspaces,
 }: {
 	activeWorkspace: WorkspaceSummary | null;
-	activeWorkspaceId: string | null;
-	setWorkspaceId: (id: string) => void;
-	workspaces: WorkspaceSummary[];
 }) {
-	const [commandOpen, setCommandOpen] = useState(false);
-	const [newFormOpen, setNewFormOpen] = useState(false);
 	const crumbs = useBreadcrumbTrail(activeWorkspace);
 
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
-				event.preventDefault();
-				setCommandOpen((open) => !open);
-			}
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, []);
-
 	return (
-		<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur-sm">
-			<SidebarTrigger />
-			<Separator className="h-5" orientation="vertical" />
-			<Breadcrumb>
-				<BreadcrumbList>
+		<header className="sticky top-0 z-10 flex h-13 shrink-0 items-center gap-2 border-b bg-background px-3 md:px-4">
+			<SidebarTrigger className="text-muted-foreground" />
+			<Separator className="mr-1 h-4" orientation="vertical" />
+			<Breadcrumb className="min-w-0">
+				<BreadcrumbList className="flex-nowrap">
 					{crumbs.map((crumb, index) => {
 						const isLast = index === crumbs.length - 1;
 						return (
-							<span className="flex items-center gap-1.5" key={crumb.label}>
-								<BreadcrumbItem>
+							<span
+								className="flex min-w-0 items-center gap-1.5"
+								key={`${crumb.to ?? "page"}-${crumb.label}`}
+							>
+								<BreadcrumbItem className="min-w-0">
 									{isLast || !crumb.to ? (
-										<BreadcrumbPage className="truncate">
+										<BreadcrumbPage
+											className={
+												isLast
+													? "truncate font-medium"
+													: "truncate font-medium text-muted-foreground"
+											}
+										>
 											{crumb.label}
 										</BreadcrumbPage>
 									) : (
 										<BreadcrumbLink
+											className="truncate font-medium"
 											render={
 												<Link
 													params={crumb.params}
@@ -144,45 +130,9 @@ export default function AppHeader({
 				</BreadcrumbList>
 			</Breadcrumb>
 
-			<div className="ml-auto flex items-center gap-2">
-				<Button
-					className="text-muted-foreground"
-					onClick={() => setCommandOpen(true)}
-					size="sm"
-					variant="outline"
-				>
-					<SearchIcon /> Search
-					<Kbd className="ml-1">⌘K</Kbd>
-				</Button>
+			<div className="ml-auto flex items-center gap-1">
 				<ThemeToggle />
-				<Button
-					disabled={!activeWorkspaceId}
-					onClick={() => setNewFormOpen(true)}
-					size="sm"
-				>
-					<PlusIcon /> New form
-				</Button>
 			</div>
-
-			{activeWorkspaceId ? (
-				<NewFormDialog
-					onOpenChange={setNewFormOpen}
-					open={newFormOpen}
-					workspaceId={activeWorkspaceId}
-				/>
-			) : null}
-
-			<CommandMenu
-				activeWorkspaceId={activeWorkspaceId}
-				onNewForm={() => {
-					setCommandOpen(false);
-					setNewFormOpen(true);
-				}}
-				onOpenChange={setCommandOpen}
-				open={commandOpen}
-				setWorkspaceId={setWorkspaceId}
-				workspaces={workspaces}
-			/>
 		</header>
 	);
 }

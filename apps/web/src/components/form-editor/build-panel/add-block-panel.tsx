@@ -1,8 +1,14 @@
 import { BLOCKS, type BlockDefinition } from "@StryveForms/forms/blocks";
 import { Button } from "@StryveForms/ui/components/button";
 import { Input } from "@StryveForms/ui/components/input";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@StryveForms/ui/components/tooltip";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
-import { SearchIcon, XIcon } from "lucide-react";
+import { GripVerticalIcon, SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { paletteItemId } from "../dnd/drag-data";
@@ -30,26 +36,31 @@ function PaletteBlockCard({
 	});
 
 	return (
-		<button
-			className={`flex items-start gap-3 rounded-lg border p-2.5 text-left transition-colors hover:border-primary hover:bg-primary/5 ${
-				isDragging ? "opacity-40" : ""
-			}`}
-			onClick={onAdd}
-			ref={setNodeRef}
-			type="button"
-			{...attributes}
-			{...listeners}
-		>
-			<div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-				<BlockIcon className="size-4.5" name={block.icon} />
-			</div>
-			<div className="flex min-w-0 flex-col gap-0.5 pt-0.5">
-				<p className="font-medium text-sm">{block.title}</p>
-				<p className="text-muted-foreground text-xs leading-snug">
-					{block.description}
-				</p>
-			</div>
-		</button>
+		<Tooltip>
+			<TooltipTrigger
+				render={
+					<button
+						className={cn(
+							"flex flex-col items-center gap-2 rounded-lg border p-3 text-center transition-colors hover:border-primary hover:bg-primary-soft",
+							isDragging ? "opacity-40" : ""
+						)}
+						onClick={onAdd}
+						ref={setNodeRef}
+						type="button"
+						{...attributes}
+						{...listeners}
+					/>
+				}
+			>
+				<div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-soft-foreground">
+					<BlockIcon className="size-4.5" name={block.icon} />
+				</div>
+				<p className="font-medium text-xs">{block.title}</p>
+			</TooltipTrigger>
+			<TooltipContent align="center" side="top">
+				{block.description}
+			</TooltipContent>
+		</Tooltip>
 	);
 }
 
@@ -64,6 +75,7 @@ export function AddBlockPanel() {
 	const { addBlockPanel, selectedFieldId, settings } = state;
 	const { open } = addBlockPanel;
 	const [search, setSearch] = useState("");
+	const [category, setCategory] = useState(CATEGORIES[0].value);
 	const panelRef = useRef<HTMLDivElement>(null);
 	const { properties } = settings;
 
@@ -91,21 +103,26 @@ export function AddBlockPanel() {
 		};
 	}, [open, closeAddBlockPanel]);
 
-	const available = useMemo(() => {
+	const availableInStyle = useMemo(
+		() =>
+			BLOCKS.filter((block) =>
+				block.availableIn.includes(settings.presentationStyle)
+			),
+		[settings.presentationStyle]
+	);
+
+	const shown = useMemo(() => {
 		const query = search.trim().toLowerCase();
-		return BLOCKS.filter((block) => {
-			if (!block.availableIn.includes(settings.presentationStyle)) {
-				return false;
-			}
-			if (!query) {
-				return true;
-			}
-			return (
-				block.title.toLowerCase().includes(query) ||
-				block.description.toLowerCase().includes(query)
+		if (query) {
+			// Searching looks across every category at once.
+			return availableInStyle.filter(
+				(block) =>
+					block.title.toLowerCase().includes(query) ||
+					block.description.toLowerCase().includes(query)
 			);
-		});
-	}, [settings.presentationStyle, search]);
+		}
+		return availableInStyle.filter((block) => block.category === category);
+	}, [availableInStyle, category, search]);
 
 	function resolvedInsertIndex(): number {
 		if (addBlockPanel.insertIndex !== null) {
@@ -139,7 +156,7 @@ export function AddBlockPanel() {
 			style={{
 				maxWidth: "90vw",
 				transform: open ? "translateX(0)" : "translateX(-100%)",
-				width: "24rem",
+				width: "26rem",
 				zIndex: 30,
 			}}
 		>
@@ -154,7 +171,7 @@ export function AddBlockPanel() {
 					<XIcon />
 				</Button>
 			</div>
-			<div className="p-3 pb-2">
+			<div className="flex flex-col gap-2 p-3 pb-2">
 				<div className="relative">
 					<SearchIcon className="absolute top-2.5 left-2 size-3.5 text-muted-foreground" />
 					<Input
@@ -164,37 +181,42 @@ export function AddBlockPanel() {
 						value={search}
 					/>
 				</div>
+				<div className="flex flex-wrap gap-1.5">
+					{CATEGORIES.map((c) => (
+						<Button
+							key={c.value}
+							onClick={() => setCategory(c.value)}
+							size="sm"
+							type="button"
+							variant={category === c.value && !search ? "soft" : "outline"}
+						>
+							{c.label}
+						</Button>
+					))}
+				</div>
 			</div>
 			{/* pb-24 (~6rem): the last block card stays clear of the floating
 			 * TanStack devtools button that overlaps the bottom of the page. */}
 			<div className="flex-1 overflow-y-auto p-3 pt-1 pb-24">
-				{CATEGORIES.map((category) => {
-					const blocks = available.filter((b) => b.category === category.value);
-					if (blocks.length === 0) {
-						return null;
-					}
-					return (
-						<div className="mb-4 flex flex-col gap-2" key={category.value}>
-							<p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-								{category.label}
-							</p>
-							<div className="flex flex-col gap-1.5">
-								{blocks.map((block) => (
-									<PaletteBlockCard
-										block={block}
-										key={block.id}
-										onAdd={() => handleAdd(block.id)}
-									/>
-								))}
-							</div>
-						</div>
-					);
-				})}
-				{available.length === 0 ? (
+				{shown.length === 0 ? (
 					<p className="p-6 text-center text-muted-foreground text-xs">
 						No blocks match "{search}".
 					</p>
-				) : null}
+				) : (
+					<div className="grid grid-cols-2 gap-2">
+						{shown.map((block) => (
+							<PaletteBlockCard
+								block={block}
+								key={block.id}
+								onAdd={() => handleAdd(block.id)}
+							/>
+						))}
+					</div>
+				)}
+			</div>
+			<div className="flex items-center gap-1.5 border-t p-3 text-muted-foreground text-xs">
+				<GripVerticalIcon className="size-3.5 shrink-0" />
+				Drag onto the canvas, or click to add at the end
 			</div>
 		</div>
 	);

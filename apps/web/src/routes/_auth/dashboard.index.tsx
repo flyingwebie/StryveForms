@@ -1,4 +1,3 @@
-import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
 import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import {
@@ -26,6 +25,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@StryveForms/ui/components/table";
+import { Tabs, TabsList, TabsTrigger } from "@StryveForms/ui/components/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -34,6 +34,7 @@ import {
 	LayoutTemplateIcon,
 	SearchIcon,
 	TableIcon,
+	TagIcon,
 	UploadCloudIcon,
 	XIcon,
 } from "lucide-react";
@@ -46,9 +47,10 @@ import FormCard, {
 	type FormCardSummary,
 } from "@/components/app/forms/form-card";
 import FormMenu from "@/components/app/forms/form-menu";
+import { formatRelativeTime } from "@/components/app/forms/format";
 import { useBulkSelection } from "@/components/app/forms/use-bulk-selection";
-import FolderMark from "@/components/app/icons/folder-mark";
 import NewFormDialog from "@/components/app/new-form-dialog";
+import PageHeader, { PageBody } from "@/components/app/page-header";
 import StatusBadge from "@/components/app/status-badge";
 import { useWorkspaces } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
@@ -82,13 +84,6 @@ function sortForms(forms: FormCardSummary[], sortBy: SortKey) {
 		return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
 	});
 	return sorted;
-}
-
-function formatUpdated(value: Date | string) {
-	return new Date(value).toLocaleDateString(undefined, {
-		day: "numeric",
-		month: "short",
-	});
 }
 
 function readStoredView(): ViewMode {
@@ -188,22 +183,15 @@ function FormsTable({
 										visibility={form.visibility}
 									/>
 								</TableCell>
-								<TableCell>
-									{folder ? (
-										<Badge className="gap-1" variant="outline">
-											<FolderMark color={folder.color} icon={folder.icon} />
-											{folder.name}
-										</Badge>
-									) : (
-										<span className="text-muted-foreground text-xs">—</span>
-									)}
+								<TableCell className="text-muted-foreground">
+									{folder?.name ?? "No folder"}
 								</TableCell>
 								<TableCell className="text-right">
 									{form.submissionsCount}
 								</TableCell>
 								<TableCell className="text-right">{form.viewsCount}</TableCell>
-								<TableCell className="text-muted-foreground">
-									{formatUpdated(form.updatedAt)}
+								<TableCell className="text-subtle-foreground">
+									{formatRelativeTime(form.updatedAt)}
 								</TableCell>
 								<TableCell>
 									<FormMenu
@@ -254,7 +242,7 @@ function FormsToolbar({
 }) {
 	return (
 		<div className="flex flex-wrap items-center gap-2">
-			<div className="relative max-w-sm flex-1">
+			<div className="relative w-full sm:w-auto sm:max-w-sm sm:flex-1">
 				<SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
 				<Input
 					className="pl-8"
@@ -263,39 +251,31 @@ function FormsToolbar({
 					value={search}
 				/>
 			</div>
-			<Select
-				items={[
-					{ label: "All statuses", value: "all" },
-					{ label: "Live", value: "public" },
-					{ label: "Draft", value: "draft" },
-					{ label: "Closed", value: "closed" },
-				]}
+			<Tabs
 				onValueChange={(value) => onStatusChange(value as StatusFilter)}
 				value={status}
 			>
-				<SelectTrigger className="w-36">
-					<SelectValue />
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value="all">All statuses</SelectItem>
-					<SelectItem value="public">Live</SelectItem>
-					<SelectItem value="draft">Draft</SelectItem>
-					<SelectItem value="closed">Closed</SelectItem>
-				</SelectContent>
-			</Select>
+				<TabsList>
+					<TabsTrigger value="all">All</TabsTrigger>
+					<TabsTrigger value="public">Live</TabsTrigger>
+					<TabsTrigger value="draft">Draft</TabsTrigger>
+					<TabsTrigger value="closed">Closed</TabsTrigger>
+				</TabsList>
+			</Tabs>
 			<Select
 				items={[
-					{ label: "All tags", value: "all" },
+					{ label: "Tags", value: "all" },
 					...tags.map((t) => ({ label: t, value: t })),
 				]}
 				onValueChange={(value) => onTagChange(value ?? "all")}
 				value={tag}
 			>
-				<SelectTrigger className="w-40">
-					<SelectValue placeholder="All tags" />
+				<SelectTrigger>
+					<TagIcon className="size-4 text-muted-foreground" />
+					<SelectValue placeholder="Tags" />
 				</SelectTrigger>
 				<SelectContent>
-					<SelectItem value="all">All tags</SelectItem>
+					<SelectItem value="all">Tags</SelectItem>
 					{tags.map((t) => (
 						<SelectItem key={t} value={t}>
 							{t}
@@ -409,7 +389,9 @@ function FormsListContent({
 					<EmptyMedia variant="icon">
 						<FileTextIcon />
 					</EmptyMedia>
-					<EmptyTitle>No forms yet</EmptyTitle>
+					<EmptyTitle className="font-display font-normal text-3xl tracking-normal">
+						No forms yet
+					</EmptyTitle>
 					<EmptyDescription>
 						Create your first form from scratch, start with a template, or bring
 						your forms over from OpnForm.
@@ -535,46 +517,52 @@ function RouteComponent() {
 
 	if (!activeWorkspaceId) {
 		return (
-			<div className="space-y-3 p-6">
+			<PageBody className="gap-3">
 				<Skeleton className="h-8 w-48" />
 				<Skeleton className="h-10 w-full" />
 				<Skeleton className="h-64 w-full" />
-			</div>
+			</PageBody>
 		);
 	}
 
 	const activeFolder = folders.find((f) => f.id === folder);
 	const activeFolderHasChildren =
 		activeFolder && folders.some((f) => f.parentId === activeFolder.id);
+	const title =
+		folder === NO_FOLDER ? "No folder" : (activeFolder?.name ?? "Forms");
 
 	return (
-		<div className="space-y-6 p-6">
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<div>
-					<h1 className="font-semibold text-2xl">
-						{folder === NO_FOLDER
-							? "No folder"
-							: (activeFolder?.name ?? "Forms")}
-					</h1>
-					{activeFolderHasChildren ? (
-						<p className="text-muted-foreground text-xs">
-							Showing forms in {activeFolder.name} and its subfolders.
-						</p>
-					) : null}
-					{folder ? (
-						<Button
-							className="h-auto p-0 text-muted-foreground text-xs"
-							onClick={() => navigate({ search: {} })}
-							variant="link"
-						>
-							<XIcon className="size-3" /> Clear folder filter
+		<PageBody>
+			<PageHeader
+				actions={
+					<>
+						{folder ? (
+							<Button onClick={() => navigate({ search: {} })} variant="ghost">
+								<XIcon /> Clear folder filter
+							</Button>
+						) : (
+							<Button
+								render={
+									<Link search={{ tab: "import" }} to="/dashboard/settings" />
+								}
+								variant="outline"
+							>
+								<UploadCloudIcon /> Import
+							</Button>
+						)}
+						<Button onClick={() => setNewFormOpen(true)}>
+							<FileTextIcon /> New form
 						</Button>
-					) : null}
-				</div>
-				<Button onClick={() => setNewFormOpen(true)}>
-					<FileTextIcon /> New form
-				</Button>
-			</div>
+					</>
+				}
+				description={
+					activeFolderHasChildren
+						? `Showing forms in ${activeFolder.name} and its subfolders.`
+						: undefined
+				}
+				eyebrow={`${allForms.length} form${allForms.length === 1 ? "" : "s"}`}
+				title={title}
+			/>
 
 			<FormsToolbar
 				allSelected={allSelected}
@@ -625,6 +613,6 @@ function RouteComponent() {
 					workspaces={workspaces}
 				/>
 			) : null}
-		</div>
+		</PageBody>
 	);
 }

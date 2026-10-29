@@ -18,10 +18,12 @@ import {
 } from "@StryveForms/ui/components/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ShieldIcon } from "lucide-react";
+import { MailIcon, SendIcon, ShieldIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import ConfirmDialog from "@/components/app/confirm-dialog";
+import { authClient } from "@/lib/auth-client";
 import { formatTrpcError } from "@/lib/format-trpc-error";
 import type { WorkspaceSummary } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
@@ -33,6 +35,19 @@ const ROLE_LABELS: Record<Role, string> = {
 	readonly: "Read only",
 	user: "Member",
 };
+const WHITESPACE_PATTERN = /\s+/;
+
+/** Initials shown in a member's avatar chip, e.g. "Davide Del Gatto" → "DD". */
+function initialsOf(name: string): string {
+	const parts = name.trim().split(WHITESPACE_PATTERN).filter(Boolean);
+	if (parts.length === 0) {
+		return "?";
+	}
+	if (parts.length === 1) {
+		return parts[0].slice(0, 2).toUpperCase();
+	}
+	return `${parts[0][0]}${parts.at(-1)?.[0] ?? ""}`.toUpperCase();
+}
 
 export default function MembersSettingsTab({
 	workspace,
@@ -41,13 +56,19 @@ export default function MembersSettingsTab({
 }) {
 	const trpc = useTRPC();
 	const queryClient = useQueryClient();
+	const { data: session } = authClient.useSession();
 	const [email, setEmail] = useState("");
 	const [role, setRole] = useState<Role>("user");
+	const [removeTarget, setRemoveTarget] = useState<{
+		name: string;
+		userId: string;
+	} | null>(null);
 
 	const members = useQuery(
 		trpc.workspace.members.queryOptions({ workspaceId: workspace.id })
 	);
 	const isAdmin = workspace.role === "admin";
+	const currentUserId = session?.user.id;
 
 	const invalidate = () =>
 		queryClient.invalidateQueries({
@@ -83,24 +104,26 @@ export default function MembersSettingsTab({
 			onError: (error) => toast.error(formatTrpcError(error)),
 			onSuccess: async () => {
 				await invalidate();
+				setRemoveTarget(null);
 				toast.success("Member removed");
 			},
 		})
 	);
 
 	return (
-		<div className="max-w-2xl space-y-6">
+		<div className="space-y-6">
 			<Link
-				className="inline-flex items-center gap-1.5 text-muted-foreground text-sm underline underline-offset-4 hover:text-foreground"
+				className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground hover:underline hover:underline-offset-4"
 				search={{ tab: "roles" }}
 				to="/dashboard/settings"
 			>
 				<ShieldIcon className="size-3.5" />
 				What can each role do? Manage roles & permissions
 			</Link>
+
 			{isAdmin && (
 				<form
-					className="flex flex-wrap items-end gap-2"
+					className="flex flex-wrap items-center gap-2"
 					onSubmit={(event) => {
 						event.preventDefault();
 						if (email.trim()) {
@@ -112,17 +135,13 @@ export default function MembersSettingsTab({
 						}
 					}}
 				>
-					<div className="flex-1 space-y-1">
-						<label
-							className="text-muted-foreground text-xs"
-							htmlFor="invite-email"
-						>
-							Invite by email
-						</label>
+					<div className="relative min-w-56 flex-1">
+						<MailIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
-							id="invite-email"
+							aria-label="Invite by email"
+							className="pl-9"
 							onChange={(event) => setEmail(event.target.value)}
-							placeholder="teammate@example.com"
+							placeholder="name@company.com"
 							type="email"
 							value={email}
 						/>
@@ -144,7 +163,7 @@ export default function MembersSettingsTab({
 						</SelectContent>
 					</Select>
 					<Button disabled={invite.isPending || !email.trim()} type="submit">
-						Invite
+						<SendIcon /> Send invite
 					</Button>
 				</form>
 			)}
@@ -161,14 +180,27 @@ export default function MembersSettingsTab({
 					{(members.data?.members ?? []).map((member) => (
 						<TableRow key={member.userId}>
 							<TableCell>
-								<div className="font-medium">{member.name}</div>
-								<div className="text-muted-foreground text-xs">
-									{member.email}
+								<div className="flex items-center gap-2.5 py-1">
+									<span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft font-medium text-primary-soft-foreground text-xs">
+										{initialsOf(member.name)}
+									</span>
+									<div className="min-w-0">
+										<p className="truncate font-medium">
+											{member.name}
+											{member.userId === currentUserId ? " (You)" : ""}
+										</p>
+										<p className="truncate text-muted-foreground text-xs">
+											{member.email}
+										</p>
+									</div>
 								</div>
 							</TableCell>
 							<TableCell>
 								{isAdmin ? (
 									<Select
+										disabled={
+											member.userId === currentUserId && member.role === "admin"
+										}
 										items={ROLES.map((r) => ({
 											label: ROLE_LABELS[r],
 											value: r,
@@ -200,10 +232,11 @@ export default function MembersSettingsTab({
 							{isAdmin && (
 								<TableCell className="text-right">
 									<Button
+										className="text-destructive hover:bg-destructive/10 hover:text-destructive"
 										onClick={() =>
-											removeMember.mutate({
+											setRemoveTarget({
+												name: member.name,
 												userId: member.userId,
-												workspaceId: workspace.id,
 											})
 										}
 										size="sm"
@@ -221,37 +254,76 @@ export default function MembersSettingsTab({
 			{(members.data?.invites.length ?? 0) > 0 && (
 				<div className="space-y-2">
 					<h3 className="font-medium text-sm">Pending invites</h3>
-					<ul className="space-y-1">
+					<div className="divide-y divide-border rounded-lg border border-border">
 						{(members.data?.invites ?? []).map((invitation) => (
-							<li
-								className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+							<div
+								className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"
 								key={invitation.id}
 							>
-								<span>
-									{invitation.email} &middot;{" "}
-									<span className="text-muted-foreground">
+								<span className="flex min-w-0 items-center gap-2">
+									<MailIcon className="size-4 shrink-0 text-muted-foreground" />
+									<span className="truncate">{invitation.email}</span>
+									<Badge variant="neutral">
 										{ROLE_LABELS[invitation.role]}
-									</span>
+									</Badge>
 								</span>
 								{isAdmin && (
-									<Button
-										onClick={() =>
-											cancelInvite.mutate({
-												inviteId: invitation.id,
-												workspaceId: workspace.id,
-											})
-										}
-										size="sm"
-										variant="ghost"
-									>
-										Cancel
-									</Button>
+									<span className="flex shrink-0 items-center gap-1">
+										<Button
+											onClick={() =>
+												invite.mutate({
+													email: invitation.email,
+													role: invitation.role,
+													workspaceId: workspace.id,
+												})
+											}
+											size="sm"
+											variant="ghost"
+										>
+											Resend
+										</Button>
+										<Button
+											className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+											onClick={() =>
+												cancelInvite.mutate({
+													inviteId: invitation.id,
+													workspaceId: workspace.id,
+												})
+											}
+											size="sm"
+											variant="ghost"
+										>
+											Cancel
+										</Button>
+									</span>
 								)}
-							</li>
+							</div>
 						))}
-					</ul>
+					</div>
 				</div>
 			)}
+
+			<ConfirmDialog
+				confirmLabel="Remove member"
+				description={
+					<>
+						{removeTarget?.name.split(" ")[0] || "They"} will immediately lose
+						access to {workspace.name} and its forms. You can invite them again
+						later.
+					</>
+				}
+				loading={removeMember.isPending}
+				onConfirm={() =>
+					removeTarget &&
+					removeMember.mutate({
+						userId: removeTarget.userId,
+						workspaceId: workspace.id,
+					})
+				}
+				onOpenChange={(open) => !open && setRemoveTarget(null)}
+				open={removeTarget !== null}
+				title={`Remove ${removeTarget?.name ?? "this member"}?`}
+			/>
 		</div>
 	);
 }

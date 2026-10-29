@@ -1,24 +1,20 @@
-import { useLayoutEffect } from "react";
+import { brandCssVariables } from "@/lib/brand-css";
+import { useInstance } from "@/lib/instance";
 
-import { readableForeground, useInstance } from "@/lib/instance";
-
-/** Applies the instance's primary color to the page's CSS variables. Renders nothing. */
+/**
+ * Applies the instance's brand colours (Admin → Branding) as CSS variables:
+ * one set for light mode and one for dark mode (falling back to the light
+ * colour), including the soft tints used by "soft" buttons and badges.
+ */
 export default function InstanceThemeVars() {
 	const instance = useInstance();
-	const color = instance?.primaryColor;
-
-	useLayoutEffect(() => {
-		const root = document.documentElement;
-		if (!color) {
-			root.style.removeProperty("--primary");
-			root.style.removeProperty("--ring");
-			root.style.removeProperty("--primary-foreground");
-			return;
-		}
-		root.style.setProperty("--primary", color);
-		root.style.setProperty("--ring", color);
-		root.style.setProperty("--primary-foreground", readableForeground(color));
-	}, [color]);
-
-	return null;
+	const css = brandCssVariables(
+		instance?.primaryColor ?? null,
+		instance?.primaryColorDark ?? null
+	);
+	if (!css) {
+		return null;
+	}
+	// biome-ignore lint/security/noDangerouslySetInnerHtml: generated from two validated hex colours (server-side regex), not user HTML
+	return <style dangerouslySetInnerHTML={{ __html: css }} />;
 }

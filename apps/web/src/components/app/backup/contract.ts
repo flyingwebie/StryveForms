@@ -117,10 +117,14 @@ export interface WorkspaceArchiveOverview {
  */
 export interface WorkspaceImportSummary {
 	customDomains: string[];
+	/** From the archive's manifest counts; shown on the final summary tile. */
+	forms: number;
 	invitesCreated: number;
 	membersAdded: number;
 	reconnectCount: number;
 	slugChanges: SlugChange[];
+	/** From the archive's manifest counts; shown on the final summary tile. */
+	submissions: number;
 	workspaceId: string;
 	workspaceName?: string;
 }

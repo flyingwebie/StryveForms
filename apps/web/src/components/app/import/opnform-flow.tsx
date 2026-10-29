@@ -73,7 +73,7 @@ export default function OpnformFlow({
 	let step = 0;
 	let content: ReactNode;
 	if (!connection) {
-		content = <ConnectStep onConnected={setConnection} />;
+		content = <ConnectStep onBack={onCancel} onConnected={setConnection} />;
 	} else if (preview) {
 		step = 2;
 		content = (
@@ -117,15 +117,6 @@ export default function OpnformFlow({
 		<div className="space-y-6">
 			<WizardSteps current={step} />
 			{content}
-			{connection ? null : (
-				<button
-					className="text-muted-foreground text-sm hover:text-foreground"
-					onClick={onCancel}
-					type="button"
-				>
-					← Choose another source
-				</button>
-			)}
 		</div>
 	);
 }

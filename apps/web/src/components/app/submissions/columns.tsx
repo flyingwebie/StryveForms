@@ -2,9 +2,11 @@ import type { SubmissionDto } from "@StryveForms/api/routers/submission";
 import type { FormField } from "@StryveForms/forms/types";
 import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import type { ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 import { useMemo } from "react";
 
 import CellValue from "./cell-value";
+import SubmissionStatusBadge from "./submission-status-badge";
 
 /** The row-checkbox column. Underscores keep it from clashing with a field whose id is "select". */
 export const SELECT_COLUMN_ID = "__select";
@@ -36,14 +38,15 @@ export function useSubmissionColumns(
 			},
 			{
 				accessorKey: "createdAt",
-				cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+				cell: ({ row }) =>
+					format(new Date(row.original.createdAt), "MMM d, h:mm a"),
 				header: "Submitted",
 				id: "createdAt",
 			},
 			{
 				accessorKey: "status",
 				cell: ({ row }) => (
-					<span className="capitalize">{row.original.status}</span>
+					<SubmissionStatusBadge status={row.original.status} />
 				),
 				header: "Status",
 				id: "status",

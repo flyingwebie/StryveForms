@@ -11,6 +11,7 @@ import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
 import { Textarea } from "@StryveForms/ui/components/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { StarIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -156,7 +157,7 @@ export default function SaveAsTemplateDialog({
 						onClick={handleSubmit}
 						type="button"
 					>
-						Save template
+						<StarIcon /> Save template
 					</Button>
 				</DialogFooter>
 			</DialogContent>

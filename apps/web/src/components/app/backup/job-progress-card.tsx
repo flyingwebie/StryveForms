@@ -45,7 +45,7 @@ export default function JobProgressCard({
 	const counters = Object.entries(job.progress.entities ?? {});
 
 	return (
-		<div className="space-y-6 rounded-xl border bg-card p-6">
+		<div className="space-y-6 rounded-2xl border bg-card p-6">
 			<div className="flex items-center gap-2">
 				{isRunning ? (
 					<Loader2Icon className="size-5 animate-spin text-primary" />

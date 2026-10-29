@@ -21,6 +21,8 @@ export const NEUTRAL_PRESETS = [
 	"#09090B",
 ];
 
+const HEX_INPUT = /^#[0-9a-f]{0,6}$/i;
+
 export default function ColorPicker({
 	onChange,
 	presets = PRESETS,
@@ -32,31 +34,12 @@ export default function ColorPicker({
 }) {
 	const isPreset = presets.some((p) => p.toLowerCase() === value.toLowerCase());
 	return (
-		<div className="flex flex-wrap items-center gap-2">
-			{presets.map((preset) => (
-				<button
-					className="size-7 shrink-0 rounded-full border border-black/10 ring-offset-2 ring-offset-background data-selected:ring-2 data-selected:ring-foreground"
-					data-selected={preset.toLowerCase() === value.toLowerCase()}
-					key={preset}
-					onClick={() => onChange(preset)}
-					style={{ backgroundColor: preset }}
-					type="button"
-				>
-					<span className="sr-only">Use {preset}</span>
-				</button>
-			))}
-			<label className="relative flex size-7 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border">
+		<div className="flex flex-wrap items-center gap-3">
+			<label className="relative flex size-8 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-input shadow-xs">
 				<span
 					aria-hidden="true"
 					className="pointer-events-none size-full"
-					style={
-						isPreset
-							? {
-									background:
-										"conic-gradient(#f43f5e, #f59e0b, #22c55e, #06b6d4, #6366f1, #d946ef, #f43f5e)",
-								}
-							: { backgroundColor: value }
-					}
+					style={{ backgroundColor: value }}
 				/>
 				<input
 					aria-label="Custom color"
@@ -66,7 +49,39 @@ export default function ColorPicker({
 					value={value}
 				/>
 			</label>
-			<span className="text-muted-foreground text-xs uppercase">{value}</span>
+			<input
+				aria-label="Hex color value"
+				className="h-8 w-28 rounded-lg border border-input bg-background px-2.5 font-mono text-xs uppercase shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
+				onChange={(event) => {
+					const next = event.target.value;
+					if (HEX_INPUT.test(next)) {
+						onChange(next);
+					}
+				}}
+				spellCheck={false}
+				value={value}
+			/>
+			<div className="flex flex-wrap items-center gap-1.5">
+				{presets.map((preset) => (
+					<button
+						className="size-5 shrink-0 rounded-full border border-black/10 ring-offset-2 ring-offset-background data-selected:ring-2 data-selected:ring-primary"
+						data-selected={preset.toLowerCase() === value.toLowerCase()}
+						key={preset}
+						onClick={() => onChange(preset)}
+						style={{ backgroundColor: preset }}
+						type="button"
+					>
+						<span className="sr-only">Use {preset}</span>
+					</button>
+				))}
+				{!isPreset && (
+					<span
+						aria-hidden="true"
+						className="size-5 shrink-0 rounded-full ring-2 ring-primary ring-offset-2 ring-offset-background"
+						style={{ backgroundColor: value }}
+					/>
+				)}
+			</div>
 		</div>
 	);
 }

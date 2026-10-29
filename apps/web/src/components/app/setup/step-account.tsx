@@ -5,10 +5,17 @@ import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import PasswordInput from "@/components/app/auth/password-input";
 import { authClient } from "@/lib/auth-client";
 
 /** Step 1: create the installation's first user, who becomes its admin. */
-export default function SetupStepAccount({ onDone }: { onDone: () => void }) {
+export default function SetupStepAccount({
+	onBack,
+	onDone,
+}: {
+	onBack: () => void;
+	onDone: () => void;
+}) {
 	const form = useForm({
 		defaultValues: { name: "", email: "", password: "" },
 		onSubmit: async ({ value }) => {
@@ -43,7 +50,7 @@ export default function SetupStepAccount({ onDone }: { onDone: () => void }) {
 			<form.Field name="name">
 				{(field) => (
 					<div className="space-y-2">
-						<Label htmlFor={field.name}>Your name</Label>
+						<Label htmlFor={field.name}>Name</Label>
 						<Input
 							autoComplete="name"
 							id={field.name}
@@ -52,7 +59,7 @@ export default function SetupStepAccount({ onDone }: { onDone: () => void }) {
 							value={field.state.value}
 						/>
 						{field.state.meta.errors.map((error) => (
-							<p className="text-red-500 text-sm" key={error?.message}>
+							<p className="text-destructive text-sm" key={error?.message}>
 								{error?.message}
 							</p>
 						))}
@@ -72,7 +79,7 @@ export default function SetupStepAccount({ onDone }: { onDone: () => void }) {
 							value={field.state.value}
 						/>
 						{field.state.meta.errors.map((error) => (
-							<p className="text-red-500 text-sm" key={error?.message}>
+							<p className="text-destructive text-sm" key={error?.message}>
 								{error?.message}
 							</p>
 						))}
@@ -83,38 +90,44 @@ export default function SetupStepAccount({ onDone }: { onDone: () => void }) {
 				{(field) => (
 					<div className="space-y-2">
 						<Label htmlFor={field.name}>Password</Label>
-						<Input
+						<PasswordInput
 							autoComplete="new-password"
 							id={field.name}
 							onBlur={field.handleBlur}
-							onChange={(event) => field.handleChange(event.target.value)}
-							type="password"
+							onChange={field.handleChange}
 							value={field.state.value}
 						/>
-						{field.state.meta.errors.map((error) => (
-							<p className="text-red-500 text-sm" key={error?.message}>
-								{error?.message}
+						{field.state.meta.errors.length > 0 ? (
+							field.state.meta.errors.map((error) => (
+								<p className="text-destructive text-sm" key={error?.message}>
+									{error?.message}
+								</p>
+							))
+						) : (
+							<p className="text-subtle-foreground text-xs">
+								At least 8 characters
 							</p>
-						))}
+						)}
 					</div>
 				)}
 			</form.Field>
-			<form.Subscribe
-				selector={(state) => ({
-					canSubmit: state.canSubmit,
-					isSubmitting: state.isSubmitting,
-				})}
-			>
-				{({ canSubmit, isSubmitting }) => (
-					<Button
-						className="w-full"
-						disabled={!canSubmit || isSubmitting}
-						type="submit"
-					>
-						{isSubmitting ? "Creating account…" : "Create admin account"}
-					</Button>
-				)}
-			</form.Subscribe>
+			<div className="flex justify-between gap-2">
+				<Button onClick={onBack} type="button" variant="outline">
+					Back
+				</Button>
+				<form.Subscribe
+					selector={(state) => ({
+						canSubmit: state.canSubmit,
+						isSubmitting: state.isSubmitting,
+					})}
+				>
+					{({ canSubmit, isSubmitting }) => (
+						<Button disabled={!canSubmit || isSubmitting} type="submit">
+							{isSubmitting ? "Creating account…" : "Continue"}
+						</Button>
+					)}
+				</form.Subscribe>
+			</div>
 		</form>
 	);
 }

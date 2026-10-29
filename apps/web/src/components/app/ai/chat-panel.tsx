@@ -4,7 +4,7 @@ import { fetchServerSentEvents } from "@tanstack/ai-client";
 import type { UIMessage } from "@tanstack/ai-react";
 import { useChat } from "@tanstack/ai-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CopyIcon, RotateCcwIcon } from "lucide-react";
+import { CopyIcon, RotateCcwIcon, SparklesIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { useTRPC, useTRPCClient } from "@/utils/trpc";
 
 import { ChatComposer } from "./chat-composer";
 import { ChatMessage } from "./chat-message";
-import { FormContextPicker } from "./form-context-picker";
+import { ComposerAttachFormButton } from "./form-context-picker";
 import { FormHeaderCard } from "./form-header-card";
 
 const SAVE_DEBOUNCE_MS = 1000;
@@ -23,7 +23,8 @@ const DEFAULT_TITLE = "New chat";
 /** Tools whose completed call means the attached form changed in the DB — the editor needs to reload. */
 const MUTATING_TOOLS = new Set(["create_form", "update_form_fields"]);
 
-const SUGGESTIONS_GENERAL = [
+/** Starter prompts for a fresh, unattached chat — also used by the Assistant page's home screen. */
+export const SUGGESTIONS_GENERAL = [
 	"Build a customer feedback form",
 	"Build an event signup form with name, email, and ticket type",
 	"What can you help me do here?",
@@ -90,6 +91,7 @@ export function ChatPanel({
 	autoSendMessage,
 	chatId,
 	compact,
+	modelLabel,
 	onFormChanged,
 	workspaceId,
 }: {
@@ -98,6 +100,8 @@ export function ChatPanel({
 	chatId: string;
 	/** Smaller, header-less layout for the editor's narrow "AI" tab. */
 	compact?: boolean;
+	/** The workspace's configured chat model (e.g. "gpt-4o"), shown in the composer as "Using <model>". */
+	modelLabel?: string | null;
 	/** Called once a tool call that mutates the attached form completes — lets the editor reload. */
 	onFormChanged?: () => void;
 	workspaceId: string;
@@ -254,25 +258,18 @@ export function ChatPanel({
 		setFormContext.mutate({ formId: nextFormId, id: chatId });
 	};
 
+	// Only shown once the attached form has loaded — an unattached (general) chat
+	// has no header at all, matching the design; attaching happens from the
+	// composer's "Attach form" button below instead.
 	let headerArea: ReactNode = null;
-	if (!compact) {
-		headerArea =
-			chatFormId && formQuery.data ? (
-				<FormHeaderCard
-					form={formQuery.data}
-					onFormChange={handleFormChange}
-					workspaceId={workspaceId}
-				/>
-			) : (
-				<div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-					<span className="text-muted-foreground text-xs">Form context</span>
-					<FormContextPicker
-						formId={chatFormId}
-						onChange={handleFormChange}
-						workspaceId={workspaceId}
-					/>
-				</div>
-			);
+	if (!compact && chatFormId && formQuery.data) {
+		headerArea = (
+			<FormHeaderCard
+				form={formQuery.data}
+				onFormChange={handleFormChange}
+				workspaceId={workspaceId}
+			/>
+		);
 	}
 
 	const emptyStateText = emptyStateMessage(compact, formTitle);
@@ -300,11 +297,13 @@ export function ChatPanel({
 							<div className="flex flex-wrap justify-center gap-1.5">
 								{suggestionsFor(formTitle, compact).map((suggestion) => (
 									<Button
+										className="h-auto max-w-full shrink whitespace-normal text-left"
 										key={suggestion}
 										onClick={() => sendMessage(suggestion)}
 										size="sm"
 										variant="outline"
 									>
+										<SparklesIcon className="shrink-0 text-primary" />{" "}
 										{suggestion}
 									</Button>
 								))}
@@ -350,7 +349,17 @@ export function ChatPanel({
 				</div>
 			</ScrollArea>
 			<ChatComposer
+				formContext={
+					compact ? undefined : (
+						<ComposerAttachFormButton
+							formId={chatFormId}
+							onChange={handleFormChange}
+							workspaceId={workspaceId}
+						/>
+					)
+				}
 				isStreaming={isLoading}
+				modelLabel={modelLabel}
 				onSend={sendMessage}
 				onStop={stop}
 			/>

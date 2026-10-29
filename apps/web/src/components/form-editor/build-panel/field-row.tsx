@@ -7,16 +7,18 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@StryveForms/ui/components/dropdown-menu";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+	CircleDashedIcon,
 	CopyIcon,
 	EyeIcon,
 	EyeOffIcon,
 	GripVerticalIcon,
-	MoreVerticalIcon,
+	MoreHorizontalIcon,
 	Trash2Icon,
 } from "lucide-react";
 
@@ -25,6 +27,31 @@ import { DropLine } from "../dnd/drop-line";
 import { useCanvasDrag } from "../dnd/editor-dnd-provider";
 import { BlockIcon } from "../shared/block-icon";
 import { useEditor } from "../state/editor-context";
+
+/** Row badges summarising a field's state: its width (non-full), required, logic and hidden flags. */
+function fieldRowBadges(
+	field: FormField,
+	presentationStyle: Parameters<typeof usesFieldWidths>[0]
+): { label: string; variant: "neutral" | "soft" }[] {
+	const badges: { label: string; variant: "neutral" | "soft" }[] = [];
+	if (
+		usesFieldWidths(presentationStyle) &&
+		field.width &&
+		field.width !== "full"
+	) {
+		badges.push({ label: field.width, variant: "neutral" });
+	}
+	if (field.required) {
+		badges.push({ label: "Required", variant: "neutral" });
+	}
+	if (field.logic) {
+		badges.push({ label: "Logic", variant: "soft" });
+	}
+	if (field.hidden) {
+		badges.push({ label: "Hidden", variant: "neutral" });
+	}
+	return badges;
+}
 
 export function FieldRow({ field }: { field: FormField }) {
 	const { duplicateField, readOnly, removeField, select, state, updateField } =
@@ -51,12 +78,12 @@ export function FieldRow({ field }: { field: FormField }) {
 		transition,
 	};
 
+	const badges = fieldRowBadges(field, state.settings.presentationStyle);
+
 	return (
 		<div
-			className={`relative flex items-center gap-1.5 border p-2 text-xs transition-colors ${
-				selected
-					? "border-primary bg-primary/5"
-					: "border-transparent hover:bg-muted/50"
+			className={`relative flex items-center gap-1.5 rounded-md p-2 text-xs transition-colors ${
+				selected ? "bg-primary-soft" : "hover:bg-muted/50"
 			}`}
 			ref={setNodeRef}
 			style={style}
@@ -79,57 +106,50 @@ export function FieldRow({ field }: { field: FormField }) {
 				type="button"
 			>
 				<BlockIcon
-					className="size-4 shrink-0"
+					className="size-4 shrink-0 text-muted-foreground"
 					name={block?.icon ?? "FormInput"}
 				/>
-				<span className="min-w-0 flex-1 truncate">{field.name}</span>
-				{usesFieldWidths(state.settings.presentationStyle) &&
-				field.width &&
-				field.width !== "full" ? (
-					<Badge className="shrink-0" variant="outline">
-						{field.width}
-					</Badge>
-				) : null}
-				{field.required ? (
-					<Badge className="shrink-0" variant="outline">
-						Required
-					</Badge>
-				) : null}
-				{field.logic ? (
-					<Badge className="shrink-0" variant="secondary">
-						Logic
-					</Badge>
-				) : null}
-				{field.hidden ? (
-					<Badge className="shrink-0" variant="outline">
-						Hidden
-					</Badge>
-				) : null}
+				<span className="flex min-w-0 flex-1 flex-col gap-1 py-0.5">
+					<span className="min-w-0 truncate font-medium text-foreground text-sm">
+						{field.name}
+					</span>
+					{badges.length > 0 ? (
+						<span className="flex flex-wrap items-center gap-1">
+							{badges.map((badge) => (
+								<Badge key={badge.label} variant={badge.variant}>
+									{badge.label}
+								</Badge>
+							))}
+						</span>
+					) : null}
+				</span>
 			</button>
 			{readOnly ? null : (
 				<DropdownMenu>
 					<DropdownMenuTrigger
 						render={<Button size="icon-xs" type="button" variant="ghost" />}
 					>
-						<MoreVerticalIcon />
+						<MoreHorizontalIcon />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent>
 						<DropdownMenuItem
 							onClick={() => updateField(field.id, { hidden: !field.hidden })}
 						>
 							{field.hidden ? <EyeIcon /> : <EyeOffIcon />}
-							{field.hidden ? "Show" : "Hide"}
+							{field.hidden ? "Show field" : "Hide field"}
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							onClick={() =>
 								updateField(field.id, { required: !field.required })
 							}
 						>
+							<CircleDashedIcon />
 							{field.required ? "Make optional" : "Make required"}
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => duplicateField(field.id)}>
 							<CopyIcon /> Duplicate
 						</DropdownMenuItem>
+						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							onClick={() => removeField(field.id)}
 							variant="destructive"

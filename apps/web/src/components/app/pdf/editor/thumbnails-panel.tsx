@@ -10,7 +10,6 @@ export default function ThumbnailsPanel({
 	onRemovePage,
 	onSelectPage,
 	pages,
-	zoneCountByPage,
 	canEditPages,
 }: {
 	canEditPages: boolean;
@@ -19,7 +18,6 @@ export default function ThumbnailsPanel({
 	onRemovePage: (index: number) => void;
 	onSelectPage: (index: number) => void;
 	pages: PdfPage[];
-	zoneCountByPage: (index: number) => number;
 }) {
 	return (
 		<div className="flex w-40 flex-col gap-2 overflow-y-auto border-r p-3">
@@ -39,11 +37,8 @@ export default function ThumbnailsPanel({
 					>
 						<span className="text-muted-foreground text-xs">{index + 1}</span>
 					</button>
-					<div className="mt-1 flex items-center justify-between px-0.5 text-[10px] text-muted-foreground">
-						<span>
-							{zoneCountByPage(index)} zone
-							{zoneCountByPage(index) === 1 ? "" : "s"}
-						</span>
+					<div className="mt-1 flex items-center justify-between px-0.5">
+						<span className="font-medium text-xs">Page {index + 1}</span>
 						{canEditPages && pages.length > 1 ? (
 							<button
 								aria-label={`Delete page ${index + 1}`}

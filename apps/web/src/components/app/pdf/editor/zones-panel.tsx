@@ -203,25 +203,20 @@ export default function ZonesPanel({
 						>
 							<PlusIcon /> Add zone
 						</DropdownMenuTrigger>
-						<DropdownMenuContent
-							align="end"
-							// The shared DropdownMenuContent forces `*:whitespace-nowrap`
-							// on every direct child; override it so each item's
-							// two-line label + description can actually wrap.
-							className="w-72 *:whitespace-normal"
-						>
-							{Object.entries(ZONE_TYPE_LABELS).map(([type, label]) => (
-								<DropdownMenuItem
-									className="flex-col items-start gap-0.5 whitespace-normal"
-									key={type}
-									onClick={() => onAddZone(type as PdfZone["type"])}
-								>
-									<span className="font-medium text-xs">{label}</span>
-									<span className="text-[11px] text-muted-foreground">
-										{ZONE_TYPE_DESCRIPTIONS[type as PdfZone["type"]]}
-									</span>
-								</DropdownMenuItem>
-							))}
+						<DropdownMenuContent align="end" className="w-64">
+							{Object.entries(ZONE_TYPE_LABELS).map(([type, label]) => {
+								const Icon = ZONE_ICONS[type as PdfZone["type"]];
+								return (
+									<DropdownMenuItem
+										key={type}
+										onClick={() => onAddZone(type as PdfZone["type"])}
+										title={ZONE_TYPE_DESCRIPTIONS[type as PdfZone["type"]]}
+									>
+										<Icon className="size-3.5 shrink-0" />
+										{label}
+									</DropdownMenuItem>
+								);
+							})}
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>

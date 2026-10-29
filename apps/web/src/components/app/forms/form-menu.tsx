@@ -4,6 +4,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
+	DropdownMenuShortcut,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
@@ -34,6 +35,7 @@ import { useTRPC } from "@/utils/trpc";
 export interface FormMenuTarget {
 	id: string;
 	slug: string;
+	submissionsCount: number;
 	title: string;
 	visibility: string;
 }
@@ -186,6 +188,7 @@ export default function FormMenu({
 					)}
 					<DropdownMenuItem onClick={() => duplicate.mutate({ id: form.id })}>
 						<CopyIcon /> Duplicate
+						<DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={() => setTemplateOpen(true)}>
 						<Share2Icon /> Save as template
@@ -252,12 +255,16 @@ export default function FormMenu({
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<ConfirmDialog
-				description="This hides the form and its submissions. This can't be undone from here."
+				confirmIcon={<Trash2Icon />}
+				confirmLabel="Delete form"
+				description={`This hides the form and its ${form.submissionsCount} submission${
+					form.submissionsCount === 1 ? "" : "s"
+				}. This can't be undone from here.`}
 				loading={remove.isPending}
 				onConfirm={() => remove.mutate({ id: form.id })}
 				onOpenChange={setConfirmOpen}
 				open={confirmOpen}
-				title="Delete this form?"
+				title={`Delete "${form.title}"?`}
 			/>
 			<ShareDialog
 				formId={form.id}

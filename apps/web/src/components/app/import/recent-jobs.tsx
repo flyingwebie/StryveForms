@@ -8,17 +8,26 @@ import { type ImportSourceId, SOURCES, SourceLogo } from "./source-picker";
 
 const STATUS_VARIANT: Record<
 	string,
-	"default" | "secondary" | "outline" | "destructive"
+	"success" | "info" | "neutral" | "danger"
 > = {
-	cancelled: "outline",
-	completed: "secondary",
-	failed: "destructive",
-	pending: "outline",
-	running: "default",
+	cancelled: "neutral",
+	completed: "success",
+	failed: "danger",
+	pending: "neutral",
+	running: "info",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+	cancelled: "Cancelled",
+	completed: "Completed",
+	failed: "Failed",
+	pending: "Pending",
+	running: "Running",
 };
 
 interface JobProgress {
 	forms?: { done: number; total: number };
+	submissions?: { done: number; total: number };
 }
 
 export default function RecentImportJobs({
@@ -34,42 +43,54 @@ export default function RecentImportJobs({
 	}
 
 	return (
-		<div className="space-y-2">
-			<h3 className="font-medium text-sm">Recent imports</h3>
+		<div className="space-y-3">
+			<div className="flex items-center justify-between">
+				<h3 className="font-semibold text-base">Recent imports</h3>
+			</div>
 			<div className="divide-y divide-border overflow-hidden rounded-xl border bg-card">
 				{jobs.data.map((job) => {
 					const progress = (job.progress ?? {}) as unknown as JobProgress;
-					const forms = progress.forms ?? { done: 0, total: 0 };
+					const { forms = { done: 0, total: 0 }, submissions } = progress;
+					const sourceName =
+						SOURCES.find((s) => s.id === job.source)?.name ?? job.source;
+					const meta = [
+						`${forms.total || forms.done} ${forms.total === 1 ? "form" : "forms"}`,
+						submissions
+							? `${submissions.done.toLocaleString()} submissions`
+							: null,
+						`Imported ${new Date(job.createdAt).toLocaleDateString(undefined, {
+							day: "numeric",
+							month: "short",
+						})}`,
+					]
+						.filter(Boolean)
+						.join(" · ");
+
 					return (
 						<div
-							className="flex items-center justify-between gap-3 p-3 text-sm"
+							className="flex items-center justify-between gap-4 px-4 py-3"
 							key={job.id}
 						>
 							<SourceLogo
-								className="size-8 text-xs"
+								className="size-9 text-sm"
 								source={job.source as ImportSourceId}
 							/>
 							<div className="min-w-0 flex-1">
-								<div className="flex items-center gap-2">
-									<span className="font-medium">
-										{SOURCES.find((s) => s.id === job.source)?.name ??
-											job.source}
-									</span>
-									<Badge
-										className="capitalize"
-										variant={STATUS_VARIANT[job.status] ?? "outline"}
-									>
-										{job.status}
-									</Badge>
-									<span className="truncate text-muted-foreground text-xs">
-										{job.sourceUrl}
-									</span>
-								</div>
-								<p className="mt-0.5 text-muted-foreground text-xs">
-									{forms.done}/{forms.total} forms &middot;{" "}
-									{new Date(job.createdAt).toLocaleString()}
+								<p className="truncate font-medium text-sm">
+									{sourceName}
+									{job.sourceUrl ? ` – ${job.sourceUrl}` : ""}
+								</p>
+								<p className="mt-0.5 truncate text-muted-foreground text-xs">
+									{meta}
 								</p>
 							</div>
+							<Badge variant={STATUS_VARIANT[job.status] ?? "neutral"}>
+								<span
+									aria-hidden="true"
+									className="size-1.5 rounded-full bg-current"
+								/>
+								{STATUS_LABEL[job.status] ?? job.status}
+							</Badge>
 							<Button
 								onClick={() => onResume(job.id)}
 								size="sm"

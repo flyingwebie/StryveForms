@@ -96,70 +96,67 @@ export function PresentationPreview({
 	);
 }
 
-const THEME_LOOK: Record<
-	"default" | "simple" | "notion" | "minimal" | "transparent",
-	{ border: boolean; dashed: boolean; filled: boolean; rounded: number }
-> = {
-	default: { border: true, dashed: false, filled: true, rounded: 3 },
-	minimal: { border: false, dashed: false, filled: false, rounded: 0 },
-	notion: { border: true, dashed: false, filled: false, rounded: 1 },
-	simple: { border: true, dashed: false, filled: false, rounded: 3 },
-	transparent: { border: true, dashed: true, filled: false, rounded: 3 },
-};
+type ThemeVariant = "default" | "simple" | "notion" | "minimal" | "transparent";
 
-export function ThemePreview({
-	variant,
-}: {
-	variant: keyof typeof THEME_LOOK;
-}) {
-	const look = THEME_LOOK[variant];
+/**
+ * One simple centered glyph per theme — a plain symbolic hint (square, dash,
+ * hash, circle, crossed-out eye) rather than a form mockup, matching the
+ * design's Theme picker cards.
+ */
+function ThemeGlyph({ variant }: { variant: ThemeVariant }) {
+	switch (variant) {
+		case "simple":
+			return (
+				<line className="stroke-current" x1="15" x2="29" y1="14" y2="14" />
+			);
+		case "notion":
+			return (
+				<text
+					className="fill-current font-semibold"
+					fontSize="15"
+					textAnchor="middle"
+					x="22"
+					y="19"
+				>
+					#
+				</text>
+			);
+		case "minimal":
+			return <circle className="stroke-current" cx="22" cy="14" r="7" />;
+		case "transparent":
+			return (
+				<>
+					<path
+						className="stroke-current"
+						d="M12 14c2.8-4 6.4-6 10-6s7.2 2 10 6c-2.8 4-6.4 6-10 6s-7.2-2-10-6Z"
+					/>
+					<line className="stroke-current" x1="12" x2="32" y1="21" y2="7" />
+				</>
+			);
+		default:
+			return (
+				<rect
+					className="stroke-current"
+					height="14"
+					rx="2"
+					width="14"
+					x="15"
+					y="7"
+				/>
+			);
+	}
+}
+
+export function ThemePreview({ variant }: { variant: ThemeVariant }) {
 	return (
-		<svg aria-hidden="true" className={FRAME} fill="none" viewBox="0 0 44 28">
-			{look.border ? (
-				<rect
-					className="stroke-muted-foreground/40"
-					height="26"
-					rx="3"
-					strokeDasharray={look.dashed ? "2 2" : undefined}
-					width="42"
-					x="1"
-					y="1"
-				/>
-			) : null}
-			<rect
-				className="fill-muted-foreground/30"
-				height="2"
-				rx="1"
-				width="16"
-				x="6"
-				y="6"
-			/>
-			{look.filled ? (
-				<rect
-					className="fill-muted-foreground/10 stroke-muted-foreground/30"
-					height="6"
-					rx={look.rounded}
-					width="32"
-					x="6"
-					y="11"
-				/>
-			) : (
-				<line
-					className="stroke-muted-foreground/30"
-					x1="6"
-					x2="38"
-					y1="15"
-					y2="15"
-				/>
-			)}
-			<rect
-				className="fill-primary"
-				height="3"
-				rx={look.rounded}
-				width="10"
-				x="6"
-				y="21"
-			/>
+		<svg
+			aria-hidden="true"
+			className={`${FRAME} text-muted-foreground`}
+			fill="none"
+			strokeWidth="1.5"
+			viewBox="0 0 44 28"
+		>
+			<ThemeGlyph variant={variant} />
 		</svg>
 	);
 }

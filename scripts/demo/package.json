@@ -1,9 +1,0 @@
-{
-  "name": "stryveforms-demo-scripts",
-  "private": true,
-  "description": "Standalone scripts that seed demo data and capture fumadocs screenshots. Kept outside the Bun workspace (see README.md) so it has its own node_modules and never touches the root bun.lock.",
-  "type": "module",
-  "dependencies": {
-    "playwright-core": "^1.64.1"
-  }
-}

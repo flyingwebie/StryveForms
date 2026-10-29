@@ -1,27 +1,33 @@
 import { Button } from "@StryveForms/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { ShieldCheckIcon } from "lucide-react";
+import {
+	type FileTextIcon,
+	ListChecksIcon,
+	PlusSquareIcon,
+	ShieldCheckIcon,
+	UserIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 
-import InstanceLogo from "@/components/app/instance-logo";
+import AuthShell from "@/components/app/auth/auth-shell";
 import { authClient } from "@/lib/auth-client";
 
-/** Plain-language names for the OAuth scopes this instance issues. "openid"/"profile" are implementation details, not shown. */
-const SCOPE_LABELS: Record<string, string> = {
-	offline_access:
-		"Stay connected (refresh access without you signing in again)",
-	"mcp:read": "View your workspaces, forms and submissions",
-	"mcp:write": "Create, edit and publish forms on your behalf",
+/** Plain-language names (and icons) for the OAuth scopes this instance issues. "openid"/"profile" are implementation details, not shown. */
+const SCOPE_DETAILS: Record<
+	string,
+	{ icon: typeof FileTextIcon; label: string }
+> = {
+	offline_access: {
+		icon: ShieldCheckIcon,
+		label: "Stay connected without you signing in again",
+	},
+	"mcp:read": { icon: ListChecksIcon, label: "Read form submissions" },
+	"mcp:write": {
+		icon: PlusSquareIcon,
+		label: "Create new forms on your behalf",
+	},
 };
 
 const searchSchema = z.object({
@@ -50,6 +56,7 @@ export const Route = createFileRoute("/oauth/consent")({
 
 function RouteComponent() {
 	const { client_id: clientId, scope } = Route.useSearch();
+	const { data: session } = authClient.useSession();
 	const [decision, setDecision] = useState<"allow" | "deny" | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
@@ -69,8 +76,8 @@ function RouteComponent() {
 
 	const scopes = (scope ?? "")
 		.split(" ")
-		.filter((s) => SCOPE_LABELS[s])
-		.map((s) => SCOPE_LABELS[s]);
+		.filter((s) => SCOPE_DETAILS[s])
+		.map((s) => SCOPE_DETAILS[s]);
 
 	async function respond(accept: boolean) {
 		setDecision(accept ? "allow" : "deny");
@@ -90,57 +97,86 @@ function RouteComponent() {
 		client.data?.client_name || client.data?.client_id || "This app";
 
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-			<Card className="w-full max-w-md rounded-xl">
-				<CardHeader className="items-center text-center">
-					<InstanceLogo showName={false} />
-					<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-						<ShieldCheckIcon className="size-6" />
+		<AuthShell showHero={false} size="md">
+			<div className="w-full rounded-2xl border bg-card p-6 text-card-foreground shadow-black/5 shadow-xl sm:p-8 dark:shadow-black/40">
+				<div className="space-y-5">
+					<div className="flex items-start gap-3">
+						<span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
+							<ShieldCheckIcon className="size-5" />
+						</span>
+						<div className="space-y-0.5">
+							<h1 className="font-semibold text-base leading-snug">
+								{client.isLoading
+									? "Loading…"
+									: `${clientName} wants to access your account`}
+							</h1>
+							{client.data?.client_id ? (
+								<p className="text-muted-foreground text-xs">
+									{client.data.client_id}
+								</p>
+							) : null}
+						</div>
 					</div>
-					<CardTitle className="text-xl">
-						{client.isLoading
-							? "Loading…"
-							: `${clientName} wants to access your StryveForms account`}
-					</CardTitle>
-					<CardDescription>
-						Review what this app can do before approving it.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-2">
-					{scopes.length > 0 ? (
-						scopes.map((label) => (
-							<div
-								className="rounded-lg border border-border p-3 text-sm"
-								key={label}
-							>
-								{label}
-							</div>
-						))
-					) : (
-						<p className="text-muted-foreground text-sm">
-							This app is requesting basic access to your account.
+
+					<div className="space-y-2 rounded-xl bg-muted/50 p-3">
+						<p className="text-muted-foreground text-xs">
+							This will allow {clientName} to:
 						</p>
-					)}
+						{scopes.length > 0 ? (
+							<ul className="space-y-2">
+								{scopes.map(({ icon: Icon, label }) => (
+									<li className="flex items-center gap-2 text-sm" key={label}>
+										<Icon className="size-4 text-muted-foreground" />
+										{label}
+									</li>
+								))}
+							</ul>
+						) : (
+							<p className="text-sm">
+								This app is requesting basic access to your account.
+							</p>
+						)}
+					</div>
+
+					{session?.user ? (
+						<div className="flex items-center gap-2 border-t pt-4">
+							<span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft font-medium text-primary-soft-foreground text-xs">
+								{session.user.name ? (
+									session.user.name
+										.split(" ")
+										.map((part) => part.slice(0, 1))
+										.join("")
+										.slice(0, 2)
+										.toUpperCase()
+								) : (
+									<UserIcon className="size-4" />
+								)}
+							</span>
+							<p className="min-w-0 truncate text-sm">{session.user.email}</p>
+						</div>
+					) : null}
+
 					{error ? <p className="text-destructive text-sm">{error}</p> : null}
-				</CardContent>
-				<CardFooter className="flex gap-2">
-					<Button
-						className="flex-1"
-						disabled={decision !== null}
-						onClick={() => respond(false)}
-						variant="outline"
-					>
-						Deny
-					</Button>
-					<Button
-						className="flex-1"
-						disabled={decision !== null}
-						onClick={() => respond(true)}
-					>
-						{decision === "allow" ? "Allowing…" : "Allow"}
-					</Button>
-				</CardFooter>
-			</Card>
-		</div>
+
+					<div className="flex gap-2">
+						<Button
+							className="flex-1"
+							disabled={decision !== null}
+							onClick={() => respond(false)}
+							variant="outline"
+						>
+							Deny
+						</Button>
+						<Button
+							className="flex-1"
+							disabled={decision !== null}
+							onClick={() => respond(true)}
+						>
+							{decision === "allow" ? "Approving…" : "Approve"}
+						</Button>
+					</div>
+				</div>
+			</div>
+		</AuthShell>
 	);
 }

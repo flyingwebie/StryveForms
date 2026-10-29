@@ -1,15 +1,9 @@
 import { Button } from "@StryveForms/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeftIcon, KeyRoundIcon, MailCheckIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -23,6 +17,7 @@ export const Route = createFileRoute("/forgot-password")({
 
 function RouteComponent() {
 	const [sent, setSent] = useState(false);
+	const [sentEmail, setSentEmail] = useState("");
 
 	const form = useForm({
 		defaultValues: { email: "" },
@@ -33,7 +28,10 @@ function RouteComponent() {
 					redirectTo: "/reset-password",
 				},
 				{
-					onSuccess: () => setSent(true),
+					onSuccess: () => {
+						setSentEmail(value.email);
+						setSent(true);
+					},
 					onError: (error) => {
 						toast.error(error.error.message || error.error.statusText);
 					},
@@ -47,19 +45,44 @@ function RouteComponent() {
 
 	return (
 		<AuthShell showHero={false}>
-			<Card className="w-full max-w-sm">
-				<CardHeader>
-					<CardTitle>Reset your password</CardTitle>
-					<CardDescription>
-						Enter your email and we'll send you a link to reset your password.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					{sent ? (
-						<p className="rounded-lg border border-border bg-muted p-4 text-center text-sm">
-							Check your inbox for a reset link.
-						</p>
-					) : (
+			<div className="w-full rounded-2xl border bg-card p-6 text-card-foreground shadow-black/5 shadow-xl sm:p-8 dark:shadow-black/40">
+				{sent ? (
+					<div className="space-y-6 text-center">
+						<span className="inline-flex size-12 items-center justify-center rounded-xl bg-success-soft text-success">
+							<MailCheckIcon className="size-6" />
+						</span>
+						<div className="space-y-1">
+							<h1 className="font-semibold text-xl tracking-tight">
+								Check your inbox
+							</h1>
+							<p className="text-muted-foreground text-sm">
+								We've sent a password reset link to {sentEmail}. The link
+								expires in 1 hour.
+							</p>
+						</div>
+						<Button
+							className="w-full"
+							render={<Link to="/login" />}
+							variant="outline"
+						>
+							<ArrowLeftIcon /> Back to sign in
+						</Button>
+					</div>
+				) : (
+					<div className="space-y-6">
+						<div className="space-y-4 text-center">
+							<span className="inline-flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+								<KeyRoundIcon className="size-6" />
+							</span>
+							<div className="space-y-1">
+								<h1 className="font-semibold text-xl tracking-tight">
+									Forgot your password?
+								</h1>
+								<p className="text-muted-foreground text-sm">
+									Enter your email and we'll send you a link to reset it.
+								</p>
+							</div>
+						</div>
 						<form
 							className="space-y-4"
 							onSubmit={(e) => {
@@ -78,11 +101,15 @@ function RouteComponent() {
 											name={field.name}
 											onBlur={field.handleBlur}
 											onChange={(e) => field.handleChange(e.target.value)}
+											placeholder="you@company.com"
 											type="email"
 											value={field.state.value}
 										/>
 										{field.state.meta.errors.map((error) => (
-											<p className="text-red-500 text-sm" key={error?.message}>
+											<p
+												className="text-destructive text-sm"
+												key={error?.message}
+											>
 												{error?.message}
 											</p>
 										))}
@@ -107,15 +134,15 @@ function RouteComponent() {
 								)}
 							</form.Subscribe>
 						</form>
-					)}
 
-					<p className="text-center text-muted-foreground text-sm">
-						<Link className="text-foreground underline" to="/login">
-							Back to sign in
-						</Link>
-					</p>
-				</CardContent>
-			</Card>
+						<p className="text-center text-sm">
+							<Link className="text-primary hover:underline" to="/login">
+								← Back to sign in
+							</Link>
+						</p>
+					</div>
+				)}
+			</div>
 		</AuthShell>
 	);
 }

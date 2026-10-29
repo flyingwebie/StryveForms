@@ -26,6 +26,7 @@ import {
 	UsersIcon,
 	WandSparklesIcon,
 } from "lucide-react";
+import type { ReactNode } from "react";
 
 /** Friendly label shown while the card is loading or when output has no better summary. */
 const TOOL_LABELS: Record<string, string> = {
@@ -140,14 +141,12 @@ function openFormLink(name: string, output: unknown) {
 
 export function ToolCallCard({
 	compact,
-	input,
 	name,
 	output,
 	state,
 }: {
 	/** Smaller padding/text — for the narrow editor AI tab. */
 	compact?: boolean;
-	input?: unknown;
 	name: string;
 	output?: unknown;
 	state: string;
@@ -159,9 +158,27 @@ export function ToolCallCard({
 	const isDone = state === "complete" || isError;
 	const formId = isDone ? openFormLink(name, output) : null;
 
+	let statusBadge: ReactNode = null;
+	if (isError) {
+		statusBadge = (
+			<Badge variant="danger">
+				<TriangleAlertIcon /> Failed
+			</Badge>
+		);
+	} else if (isDone) {
+		statusBadge = <Badge variant="success">Done</Badge>;
+	} else {
+		statusBadge = (
+			<Badge variant="info">
+				<span className="size-1.5 animate-pulse rounded-full bg-current" />{" "}
+				Working…
+			</Badge>
+		);
+	}
+
 	return (
 		<Item
-			className={compact ? "bg-muted/40 text-xs" : "bg-muted/40"}
+			className={compact ? "rounded-lg bg-card text-xs" : "rounded-xl bg-card"}
 			size="sm"
 			variant="outline"
 		>
@@ -175,21 +192,14 @@ export function ToolCallCard({
 			<ItemContent>
 				<ItemTitle className={compact ? "text-xs" : undefined}>
 					{isDone ? describeOutput(name, output) : (TOOL_LABELS[name] ?? name)}
-					{isError ? (
-						<Badge variant="destructive">
-							<TriangleAlertIcon /> failed
-						</Badge>
-					) : null}
 				</ItemTitle>
 				{isError && typeof output === "string" ? (
 					<ItemDescription>{output}</ItemDescription>
 				) : null}
-				{!isDone && isRecord(input) ? (
-					<ItemDescription>Working…</ItemDescription>
-				) : null}
 			</ItemContent>
-			{formId && !compact ? (
-				<ItemActions>
+			<ItemActions className="items-center gap-2">
+				{statusBadge}
+				{formId && !compact ? (
 					<Button
 						render={<Link params={{ formId }} to="/editor/$formId" />}
 						size="sm"
@@ -197,8 +207,8 @@ export function ToolCallCard({
 					>
 						Open in editor
 					</Button>
-				</ItemActions>
-			) : null}
+				) : null}
+			</ItemActions>
 		</Item>
 	);
 }

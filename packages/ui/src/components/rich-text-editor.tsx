@@ -245,7 +245,7 @@ export function RichTextEditor({
 		<div
 			aria-invalid={invalid || undefined}
 			className={cn(
-				"overflow-hidden border border-input bg-background text-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/50",
+				"overflow-hidden border border-input bg-background text-sm transition-colors focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/25",
 				invalid && "border-destructive ring-1 ring-destructive/20",
 				disabled && "cursor-not-allowed opacity-60",
 				className

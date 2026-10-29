@@ -27,7 +27,6 @@
 - [ ] `bun run check-types` passes
 - [ ] Relevant `bun test` suites pass; I added tests for new non-trivial logic
 - [ ] New or changed settings have a plain-language description in the UI
-- [ ] If I changed an `.env.schema`, I updated the matching [deployment doc](../apps/fumadocs/content/docs/deployment/overview.mdx)
 - [ ] I did not commit generated files, secrets, or large binaries
 
 ## Anything reviewers should know?

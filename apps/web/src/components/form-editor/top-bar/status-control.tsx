@@ -9,7 +9,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@StryveForms/ui/components/alert-dialog";
-import { Button } from "@StryveForms/ui/components/button";
+import { badgeVariants } from "@StryveForms/ui/components/badge";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -51,21 +51,25 @@ export function StatusControl() {
 			<DropdownMenu>
 				<DropdownMenuTrigger
 					render={
-						<Button
-							className="rounded-full"
+						<button
+							className={cn(
+								badgeVariants({ variant: META[visibility].badgeVariant }),
+								"cursor-pointer gap-1.5 hover:opacity-80 disabled:pointer-events-none disabled:opacity-50"
+							)}
 							disabled={readOnly}
-							size="sm"
 							type="button"
-							variant="outline"
 						/>
 					}
 				>
 					<span
 						aria-hidden="true"
-						className={cn("size-2 rounded-full", META[visibility].dotClassName)}
+						className={cn(
+							"size-1.5 rounded-full",
+							META[visibility].dotClassName
+						)}
 					/>
 					{META[visibility].label}
-					<ChevronDownIcon className="size-3.5 opacity-60" />
+					<ChevronDownIcon className="size-3 opacity-70" />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-72">
 					{VISIBILITIES.map((option) => (

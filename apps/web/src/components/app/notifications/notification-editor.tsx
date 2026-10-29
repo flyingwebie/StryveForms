@@ -30,13 +30,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-	ArrowLeftIcon,
-	ChevronDownIcon,
-	MoonIcon,
-	SaveIcon,
-	SunIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, ChevronDownIcon, SaveIcon } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -249,19 +243,17 @@ function PreviewPanel({
 				<div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
 					<Button
 						onClick={() => onColorSchemeChange("light")}
-						size="icon-sm"
-						title="Preview in light mode"
+						size="sm"
 						variant={colorScheme === "light" ? "secondary" : "ghost"}
 					>
-						<SunIcon />
+						Light
 					</Button>
 					<Button
 						onClick={() => onColorSchemeChange("dark")}
-						size="icon-sm"
-						title="Preview in dark mode"
+						size="sm"
 						variant={colorScheme === "dark" ? "secondary" : "ghost"}
 					>
-						<MoonIcon />
+						Dark
 					</Button>
 				</div>
 			</div>
@@ -534,13 +526,15 @@ export default function NotificationEditor({
 		<div className="space-y-4">
 			<div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-between gap-3 border-border border-b bg-background/95 px-1 py-3 backdrop-blur">
 				<div className="flex min-w-0 items-center gap-3">
-					<Button onClick={goBack} size="sm" variant="ghost">
-						<ArrowLeftIcon /> Back
+					<Button onClick={goBack} size="icon-sm" title="Back" variant="ghost">
+						<ArrowLeftIcon />
 					</Button>
 					<Separator className="h-6" orientation="vertical" />
 					<div className="min-w-0">
-						<h3 className="truncate font-medium text-sm">
-							{existing ? "Edit email notification" : "New email notification"}
+						<h3 className="truncate font-semibold text-sm">
+							{existing
+								? "Edit submission notification"
+								: "New submission notification"}
 						</h3>
 						<p className="truncate text-muted-foreground text-xs">
 							Sent automatically whenever this form is submitted (unless a
@@ -561,7 +555,11 @@ export default function NotificationEditor({
 						Active
 					</label>
 					{dirty ? (
-						<span className="hidden text-muted-foreground text-xs sm:inline">
+						<span className="hidden items-center gap-1.5 text-warning text-xs sm:inline-flex">
+							<span
+								aria-hidden="true"
+								className="size-1.5 rounded-full bg-warning"
+							/>
 							Unsaved changes
 						</span>
 					) : null}

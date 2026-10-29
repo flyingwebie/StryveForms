@@ -1,7 +1,7 @@
 import type { PublicFormDto } from "@StryveForms/api/lib/serialize";
 import { resolveMentions } from "@StryveForms/forms/mentions";
 import { Button } from "@StryveForms/ui/components/button";
-import { DownloadIcon } from "lucide-react";
+import { CheckIcon, DownloadIcon } from "lucide-react";
 import { useEffect } from "react";
 
 import { apiBase } from "@/lib/api-url";
@@ -59,20 +59,33 @@ export function SuccessScreen({
 	}, [redirectUrl, openInNewTab]);
 
 	return (
-		<div className="flex flex-col items-center gap-4 py-10 text-center">
+		<div className="flex flex-col items-center gap-5 py-10 text-center">
 			<div
-				className="prose prose-sm dark:prose-invert max-w-prose"
+				aria-hidden="true"
+				className="flex size-14 items-center justify-center rounded-full bg-success-soft text-success"
+			>
+				<CheckIcon className="size-6" />
+			</div>
+			<div
+				className="prose prose-sm dark:prose-invert max-w-prose prose-headings:font-display prose-headings:font-normal prose-headings:text-4xl"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: form owner's own HTML success message; mentions are HTML-escaped by resolveMentions
-				dangerouslySetInnerHTML={{ __html: html || `<p>${dict.thankYou}</p>` }}
+				dangerouslySetInnerHTML={{
+					__html: html || `<h1>${dict.thankYou}</h1>`,
+				}}
 			/>
 			<div className="flex flex-wrap items-center justify-center gap-2">
 				{form.reFillable ? (
-					<Button onClick={onRefill} type="button" variant="outline">
+					<Button onClick={onRefill} size="lg" type="button" variant="outline">
 						{form.reFillButtonText || dict.fillAnotherResponse}
 					</Button>
 				) : null}
 				{form.editableSubmissions && submissionId && onEditSubmission ? (
-					<Button onClick={onEditSubmission} type="button" variant="ghost">
+					<Button
+						onClick={onEditSubmission}
+						size="lg"
+						type="button"
+						variant="ghost"
+					>
 						{form.editableSubmissionsButtonText || dict.edit}
 					</Button>
 				) : null}
@@ -83,6 +96,7 @@ export function SuccessScreen({
 								href={`${apiBase()}/api/pdf/respond/${form.id}/${submissionId}`}
 							/>
 						}
+						size="lg"
 						type="button"
 						variant="outline"
 					>

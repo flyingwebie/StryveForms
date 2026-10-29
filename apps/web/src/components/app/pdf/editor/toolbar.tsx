@@ -78,6 +78,7 @@ export default function EditorToolbar({
 				<Undo2Icon />
 			</Button>
 			<div className="flex-1" />
+			<span className="text-muted-foreground text-sm">Preview data</span>
 			<DropdownMenu>
 				<DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
 					{selectedLabel}

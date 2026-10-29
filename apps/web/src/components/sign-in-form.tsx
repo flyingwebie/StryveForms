@@ -9,12 +9,15 @@ import { Label } from "@StryveForms/ui/components/label";
 import { Switch } from "@StryveForms/ui/components/switch";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FingerprintIcon } from "lucide-react";
+import { FingerprintIcon, ShieldCheckIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
 
+import PasswordInput from "@/components/app/auth/password-input";
 import { authClient } from "@/lib/auth-client";
+
+const OTP_SLOTS = [0, 1, 2, 3, 4, 5];
 
 /** The 6-digit authenticator-app / email-OTP code step, with a "use a backup code" fallback. */
 function TwoFactorStep({
@@ -54,16 +57,27 @@ function TwoFactorStep({
 	}
 
 	return (
-		<div className="space-y-4">
-			<p className="text-muted-foreground text-sm">
-				{useBackupCode
-					? "Enter one of your saved backup codes."
-					: "Enter the 6-digit code from your authenticator app."}
-			</p>
+		<div className="space-y-5 text-center">
+			<div className="flex flex-col items-center gap-4">
+				<span className="flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+					<ShieldCheckIcon className="size-6" />
+				</span>
+				<div className="space-y-1">
+					<h2 className="font-semibold text-xl tracking-tight">
+						Two-factor verification
+					</h2>
+					<p className="text-muted-foreground text-sm">
+						{useBackupCode
+							? "Enter one of your saved backup codes."
+							: "Enter the 6-digit code from your authenticator app."}
+					</p>
+				</div>
+			</div>
 
 			{useBackupCode ? (
 				<Input
 					autoFocus
+					className="text-center"
 					onChange={(event) => setCode(event.target.value.trim())}
 					placeholder="xxxxxxxx"
 					value={code}
@@ -72,22 +86,13 @@ function TwoFactorStep({
 				<div className="flex justify-center">
 					<InputOTP maxLength={6} onChange={setCode} value={code}>
 						<InputOTPGroup>
-							{[0, 1, 2, 3, 4, 5].map((i) => (
-								<InputOTPSlot index={i} key={i} />
+							{OTP_SLOTS.map((i) => (
+								<InputOTPSlot className="size-11 text-base" index={i} key={i} />
 							))}
 						</InputOTPGroup>
 					</InputOTP>
 				</div>
 			)}
-
-			<label className="flex items-center gap-2 text-sm" htmlFor="trust-device">
-				<Switch
-					checked={trustDevice}
-					id="trust-device"
-					onCheckedChange={setTrustDevice}
-				/>
-				Trust this device for 30 days
-			</label>
 
 			<Button
 				className="w-full"
@@ -98,9 +103,21 @@ function TwoFactorStep({
 				{submitting ? "Verifying…" : "Verify"}
 			</Button>
 
-			<div className="flex items-center justify-between text-muted-foreground text-xs">
+			<label
+				className="flex items-center justify-center gap-2 text-muted-foreground text-xs"
+				htmlFor="trust-device"
+			>
+				<Switch
+					checked={trustDevice}
+					id="trust-device"
+					onCheckedChange={setTrustDevice}
+				/>
+				Trust this device for 30 days
+			</label>
+
+			<div className="flex flex-col gap-2 text-sm">
 				<button
-					className="hover:underline"
+					className="text-primary hover:underline"
 					onClick={() => {
 						setUseBackupCode((prev) => !prev);
 						setCode("");
@@ -113,7 +130,7 @@ function TwoFactorStep({
 				</button>
 				{otpAvailable && !useBackupCode ? (
 					<button
-						className="hover:underline"
+						className="text-primary hover:underline"
 						onClick={async () => {
 							const { error } = await authClient.twoFactor.sendOtp();
 							if (error) {
@@ -190,14 +207,21 @@ function PasskeySignIn({ redirectTo }: { redirectTo: string }) {
 }
 
 export default function SignInForm({
+	onTwoFactorActiveChange,
 	redirectTo = "/dashboard",
 }: {
+	onTwoFactorActiveChange?: (active: boolean) => void;
 	redirectTo?: string;
 }) {
 	const navigate = useNavigate();
 	const [twoFactorMethods, setTwoFactorMethods] = useState<string[] | null>(
 		null
 	);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only notify the parent when 2FA active state flips
+	useEffect(() => {
+		onTwoFactorActiveChange?.(twoFactorMethods !== null);
+	}, [twoFactorMethods]);
 
 	const form = useForm({
 		defaultValues: {
@@ -266,11 +290,12 @@ export default function SignInForm({
 								name={field.name}
 								onBlur={field.handleBlur}
 								onChange={(e) => field.handleChange(e.target.value)}
+								placeholder="you@company.com"
 								type="email"
 								value={field.state.value}
 							/>
 							{field.state.meta.errors.map((error) => (
-								<p className="text-red-500 text-sm" key={error?.message}>
+								<p className="text-destructive text-sm" key={error?.message}>
 									{error?.message}
 								</p>
 							))}
@@ -290,17 +315,16 @@ export default function SignInForm({
 									Forgot password?
 								</Link>
 							</div>
-							<Input
+							<PasswordInput
 								autoComplete="current-password webauthn"
 								id={field.name}
 								name={field.name}
 								onBlur={field.handleBlur}
-								onChange={(e) => field.handleChange(e.target.value)}
-								type="password"
+								onChange={field.handleChange}
 								value={field.state.value}
 							/>
 							{field.state.meta.errors.map((error) => (
-								<p className="text-red-500 text-sm" key={error?.message}>
+								<p className="text-destructive text-sm" key={error?.message}>
 									{error?.message}
 								</p>
 							))}

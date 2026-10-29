@@ -9,21 +9,30 @@ export type Visibility = (typeof VISIBILITIES)[number];
  */
 export const VISIBILITY_META: Record<
 	Visibility,
-	{ description: string; dotClassName: string; label: string }
+	{
+		badgeVariant: "neutral" | "success" | "warning";
+		description: string;
+		dotClassName: string;
+		label: string;
+	}
 > = {
 	closed: {
-		description: "No longer accepting submissions, but the page still loads.",
-		dotClassName: "bg-muted-foreground",
+		badgeVariant: "warning",
+		description:
+			"The form is visible but no longer accepting responses — submissions stay closed until you publish it again.",
+		dotClassName: "bg-warning",
 		label: "Closed",
 	},
 	draft: {
-		description: "Hidden from respondents. Only you can preview it.",
-		dotClassName: "bg-amber-500",
+		badgeVariant: "neutral",
+		description: "Only you and workspace members can see this form.",
+		dotClassName: "bg-muted-foreground",
 		label: "Draft",
 	},
 	public: {
-		description: "Live — anyone with the link can open and submit it.",
-		dotClassName: "bg-emerald-500",
-		label: "Published",
+		badgeVariant: "success",
+		description: "Published — anyone with the link can view and respond.",
+		dotClassName: "bg-success",
+		label: "Live",
 	},
 };

@@ -1,64 +1,43 @@
 import { Badge } from "@StryveForms/ui/components/badge";
-import { ArrowRightIcon, CheckIcon } from "lucide-react";
+import { cn } from "@StryveForms/ui/lib/utils";
+import { ArrowRightIcon } from "lucide-react";
 
 export type ImportSourceId = "opnform" | "jotform" | "stryveforms";
 
 interface SourceInfo {
-	badge: string;
 	description: string;
 	id: ImportSourceId;
-	includes: string[];
-	initials: string;
+	initial: string;
 	name: string;
+	popular?: boolean;
 	/** Tailwind classes for the logo tile. */
 	tile: string;
 }
 
 export const SOURCES: SourceInfo[] = [
 	{
-		badge: "Cloud or self-hosted",
 		description:
-			"Move everything over from OpnForm, keeping your links working.",
+			"Connect your OpnForm account and bring over forms, submissions and files.",
 		id: "opnform",
-		includes: [
-			"Workspaces and members",
-			"Forms, logic and design",
-			"Submissions and uploaded files",
-			"Integrations",
-		],
-		initials: "Op",
+		initial: "O",
 		name: "OpnForm",
-		tile: "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900",
+		popular: true,
+		tile: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
 	},
 	{
-		badge: "US · EU · HIPAA · Enterprise",
 		description:
-			"Copy forms and every response from your JotForm account with an API key.",
+			"Connect with an API key and import your JotForm forms and responses.",
 		id: "jotform",
-		includes: [
-			"Forms and questions",
-			"Submissions and uploaded files",
-			"Email notifications and autoresponders",
-			"Webhooks",
-		],
-		initials: "Jf",
+		initial: "J",
 		name: "JotForm",
-		tile: "bg-orange-500 text-white",
+		tile: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
 	},
 	{
-		badge: "Workspace export file",
-		description:
-			"Load a .stryve.zip file exported from this or another StryveForms instance as a new workspace.",
+		description: "Upload a .stryve.zip workspace export to restore it here.",
 		id: "stryveforms",
-		includes: [
-			"Forms, submissions and files",
-			"Integrations and PDF templates",
-			"Brand and workspace settings",
-			"Members and pending invites",
-		],
-		initials: "Sf",
+		initial: "S",
 		name: "StryveForms file",
-		tile: "bg-primary text-primary-foreground",
+		tile: "bg-primary-soft text-primary-soft-foreground",
 	},
 ];
 
@@ -73,9 +52,13 @@ export function SourceLogo({
 	return (
 		<span
 			aria-hidden="true"
-			className={`flex shrink-0 items-center justify-center rounded-xl font-bold ${info?.tile ?? ""} ${className}`}
+			className={cn(
+				"flex shrink-0 items-center justify-center rounded-lg font-semibold",
+				info?.tile,
+				className
+			)}
 		>
-			{info?.initials}
+			{info?.initial}
 		</span>
 	);
 }
@@ -89,34 +72,32 @@ export default function SourcePicker({
 		<div className="grid gap-4 md:grid-cols-3">
 			{SOURCES.map((source) => (
 				<button
-					className="group flex flex-col gap-4 rounded-2xl border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+					className="flex flex-col gap-4 rounded-2xl border bg-card p-5 text-left transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 					key={source.id}
 					onClick={() => onPick(source.id)}
 					type="button"
 				>
 					<div className="flex items-start justify-between gap-3">
 						<SourceLogo source={source.id} />
-						<Badge variant="outline">{source.badge}</Badge>
+						{source.popular ? (
+							<Badge variant="soft">
+								<span
+									aria-hidden="true"
+									className="size-1.5 rounded-full bg-current"
+								/>
+								Most popular
+							</Badge>
+						) : null}
 					</div>
 					<div>
-						<h3 className="font-semibold text-base">
-							Import from {source.name}
-						</h3>
+						<h3 className="font-semibold text-base">{source.name}</h3>
 						<p className="mt-1 text-muted-foreground text-sm">
 							{source.description}
 						</p>
 					</div>
-					<ul className="grid gap-1.5 text-sm">
-						{source.includes.map((item) => (
-							<li className="flex items-center gap-2" key={item}>
-								<CheckIcon className="size-3.5 text-primary" />
-								{item}
-							</li>
-						))}
-					</ul>
-					<span className="mt-auto flex items-center gap-1 font-medium text-primary text-sm">
-						Start
-						<ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
+					<span className="mt-auto flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background font-medium text-sm shadow-xs">
+						<ArrowRightIcon className="size-4" />
+						Connect
 					</span>
 				</button>
 			))}

@@ -63,10 +63,7 @@ function HelpText({ html, id }: { html: string; id: string }) {
 
 function RequiredMark() {
 	return (
-		<span
-			aria-hidden="true"
-			className="ml-1 inline-flex size-3 items-center justify-center rounded-full bg-red-500/20 text-red-500 dark:bg-red-500/20 dark:text-red-400"
-		>
+		<span aria-hidden="true" className="ml-0.5 text-red-500 dark:text-red-400">
 			*
 		</span>
 	);
@@ -151,11 +148,12 @@ export function FieldWrapper({
 	const helpAbove = field.help_position === "above_input";
 	const errorId = `${field.id}-error`;
 	const helpId = `${field.id}-help`;
-	const labelClassName = labelTheme({
-		size,
-		theme,
-		uppercase: uppercaseLabels,
-	});
+	// Focused mode shows the question as a page-title-sized heading (Typeform
+	// style) instead of a small form label — classic keeps the compact label.
+	const labelClassName =
+		presentation === "focused"
+			? "font-bold text-2xl text-neutral-900 tracking-tight @lg/page:text-3xl dark:text-white"
+			: labelTheme({ size, theme, uppercase: uppercaseLabels });
 	const Layout = inlineLabel ? InlineLabelLayout : StackedLabelLayout;
 
 	return (

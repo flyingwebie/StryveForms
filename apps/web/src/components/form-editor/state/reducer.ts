@@ -1,6 +1,11 @@
 import type { FormSettings } from "@StryveForms/forms/settings";
 
-import type { CanvasMode, LeftPanelTab, PreviewWidth } from "../types";
+import type {
+	CanvasMode,
+	LeftPanelTab,
+	PreviewScheme,
+	PreviewWidth,
+} from "../types";
 
 const HISTORY_LIMIT = 50;
 
@@ -18,6 +23,7 @@ export interface EditorState {
 	/** Field ids whose "Field ID" box was hand-edited — stops label→id auto-sync for that field. Ephemeral: not persisted, not undoable. */
 	manualIdFieldIds: string[];
 	past: FormSettings[];
+	previewScheme: PreviewScheme;
 	previewWidth: PreviewWidth;
 	savedVersion: number;
 	selectedFieldId: string | null;
@@ -34,6 +40,7 @@ export type EditorAction =
 	| { tab: LeftPanelTab; type: "setLeftTab" }
 	| { type: "markSaved"; version: number }
 	| { width: PreviewWidth; type: "setPreviewWidth" }
+	| { scheme: PreviewScheme; type: "setPreviewScheme" }
 	| { mode: CanvasMode; type: "setCanvasMode" }
 	| { insertIndex: number | null; type: "openAddBlockPanel" }
 	| { type: "closeAddBlockPanel" }
@@ -47,6 +54,7 @@ export function initEditorState(settings: FormSettings): EditorState {
 		leftTab: "build",
 		manualIdFieldIds: [],
 		past: [],
+		previewScheme: "auto",
 		previewWidth: "desktop",
 		savedVersion: 0,
 		selectedFieldId: null,
@@ -144,6 +152,8 @@ export function editorReducer(
 			return { ...state, leftTab: action.tab };
 		case "setPreviewWidth":
 			return { ...state, previewWidth: action.width };
+		case "setPreviewScheme":
+			return { ...state, previewScheme: action.scheme };
 		case "setCanvasMode":
 			return { ...state, canvasMode: action.mode };
 		case "markSaved":

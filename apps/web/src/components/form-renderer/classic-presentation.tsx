@@ -1,10 +1,41 @@
 import type { PublicFormDto } from "@StryveForms/api/lib/serialize";
 import { resolveMentions } from "@StryveForms/forms/mentions";
 import { Progress } from "@StryveForms/ui/components/progress";
+import { AlertCircle, ArrowRight } from "lucide-react";
 import { FieldRenderer } from "./field-renderer";
-import type { FormDictionary } from "./i18n";
+import { type FormDictionary, formatString } from "./i18n";
 import { outlineButtonTheme, submitButtonTheme } from "./theme";
 import type { FormEngine } from "./use-form-engine";
+
+/** "3 fields need your attention — Full name, rating and consent are required…" — shown after a failed submit attempt, listing only the current page's invalid fields. */
+function ErrorSummary({
+	currentPage,
+	dict,
+	errors,
+}: {
+	currentPage: ClassicPresentationProps["engine"]["currentPage"];
+	dict: FormDictionary;
+	errors: Record<string, string>;
+}) {
+	const invalid = currentPage.filter((f) => errors[f.id]);
+	if (invalid.length === 0) {
+		return null;
+	}
+	const names = invalid.map((f) => f.name).join(", ");
+	return (
+		<div className="flex items-start gap-2 rounded-lg bg-destructive-soft px-4 py-3 text-destructive text-sm">
+			<AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+			<div>
+				<p className="font-semibold">
+					{formatString(dict.fieldsNeedAttention, { count: invalid.length })}
+				</p>
+				<p className="text-destructive/80">
+					{names} {dict.reviewHighlighted}
+				</p>
+			</div>
+		</div>
+	);
+}
 
 export interface ClassicPresentationProps {
 	dict: FormDictionary;
@@ -45,7 +76,18 @@ export function ClassicPresentation({
 	return (
 		<div className="flex flex-col gap-6">
 			{form.showProgressBar && pages.length > 1 ? (
-				<Progress value={((pageIndex + 1) / pages.length) * 100} />
+				<div className="flex items-center gap-3">
+					<Progress
+						className="flex-1"
+						value={((pageIndex + 1) / pages.length) * 100}
+					/>
+					<span className="shrink-0 whitespace-nowrap font-mono text-subtle-foreground text-xs">
+						{formatString(dict.pageOf, {
+							current: pageIndex + 1,
+							total: pages.length,
+						})}
+					</span>
+				</div>
 			) : null}
 			<div className="grid grid-cols-12 gap-x-4 gap-y-5">
 				{currentPage.map((field) => {
@@ -71,6 +113,7 @@ export function ClassicPresentation({
 					);
 				})}
 			</div>
+			<ErrorSummary currentPage={currentPage} dict={dict} errors={errors} />
 			<div className="flex items-center justify-between gap-3">
 				{pageIndex > 0 ? (
 					<button
@@ -103,6 +146,7 @@ export function ClassicPresentation({
 						type="button"
 					>
 						{resolveMentions(nextLabel, mergedContext) || nextLabel}
+						<ArrowRight aria-hidden="true" className="size-4" />
 					</button>
 				)}
 			</div>

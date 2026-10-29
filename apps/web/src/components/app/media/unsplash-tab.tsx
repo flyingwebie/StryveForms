@@ -1,4 +1,3 @@
-import { Button } from "@StryveForms/ui/components/button";
 import {
 	Empty,
 	EmptyDescription,
@@ -16,7 +15,7 @@ import {
 import { Skeleton } from "@StryveForms/ui/components/skeleton";
 import { cn } from "@StryveForms/ui/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ExternalLinkIcon, SearchIcon, SparklesIcon } from "lucide-react";
+import { SearchIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { RouterOutputs } from "@/utils/trpc";
 import { useTRPC } from "@/utils/trpc";
@@ -25,7 +24,6 @@ import type { PickedImage } from "./types";
 
 type UnsplashPhoto =
 	RouterOutputs["media"]["unsplash"]["search"]["photos"][number];
-type FreeFilter = "free" | "premium" | "all";
 type Orientation = "any" | "landscape" | "portrait" | "squarish";
 
 const SEARCH_DEBOUNCE_MS = 500;
@@ -36,11 +34,6 @@ const ORIENTATIONS: { label: string; value: Orientation }[] = [
 	{ label: "Square", value: "squarish" },
 ];
 const UNSPLASH_UTM = "?utm_source=stryveforms&utm_medium=referral";
-const FREE_FILTER_LABELS: Record<FreeFilter, string> = {
-	all: "All",
-	free: "Free",
-	premium: "Premium",
-};
 
 /** Debounces a value — used so search doesn't fire on every keystroke (and to respect Unsplash's rate limit). */
 function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -77,41 +70,6 @@ function NotConfigured() {
 	);
 }
 
-/**
- * The "Premium" tab: Unsplash's own API has no documented way to fetch or
- * filter in actual Unsplash+ content (see README.md's research write-up) —
- * so rather than faking results, this explains that plainly and links out.
- */
-function PremiumNotAvailable() {
-	return (
-		<Empty>
-			<EmptyMedia variant="icon">
-				<SparklesIcon />
-			</EmptyMedia>
-			<EmptyTitle>Premium isn't available through this picker</EmptyTitle>
-			<EmptyDescription>
-				Unsplash+ (Premium) photos aren't available through the public API this
-				app uses — only Unsplash's free, standard-licensed library is searchable
-				here. Browse and license Unsplash+ photos directly on Unsplash instead.
-			</EmptyDescription>
-			<Button
-				render={
-					<a
-						href={`https://unsplash.com/plus${UNSPLASH_UTM}`}
-						rel="noopener"
-						target="_blank"
-					>
-						Browse Unsplash+
-						<ExternalLinkIcon />
-					</a>
-				}
-				size="sm"
-				variant="outline"
-			/>
-		</Empty>
-	);
-}
-
 function PhotoCredit({ photo }: { photo: UnsplashPhoto }) {
 	return (
 		<p className="truncate text-muted-foreground text-xs">
@@ -139,7 +97,7 @@ function PhotoCredit({ photo }: { photo: UnsplashPhoto }) {
 	);
 }
 
-/** Search Unsplash's free photo library, with an orientation filter and the Free/Premium/All control. */
+/** Search Unsplash's free photo library, with an orientation filter. */
 export function UnsplashTab({
 	onPick,
 	workspaceId,
@@ -151,7 +109,6 @@ export function UnsplashTab({
 	const status = useQuery(trpc.media.unsplash.status.queryOptions());
 	const [query, setQuery] = useState("");
 	const [orientation, setOrientation] = useState<Orientation>("any");
-	const [freeFilter, setFreeFilter] = useState<FreeFilter>("free");
 	const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
 
 	const search = useQuery({
@@ -220,30 +177,12 @@ export function UnsplashTab({
 				</Select>
 			</div>
 
-			<div className="flex gap-1.5">
-				{(["free", "premium", "all"] as const).map((filter) => (
-					<Button
-						className="rounded-full"
-						key={filter}
-						onClick={() => setFreeFilter(filter)}
-						size="sm"
-						variant={freeFilter === filter ? "default" : "outline"}
-					>
-						{FREE_FILTER_LABELS[filter]}
-					</Button>
-				))}
-			</div>
 			<p className="text-muted-foreground text-xs">
-				{freeFilter === "premium"
-					? "Unsplash+ licensing isn't available through this picker — see below."
-					: "Searches Unsplash's free, standard-licensed library. Attribution is added automatically."}
+				Free photos from Unsplash. The photographer credit is added
+				automatically.
 			</p>
 
-			{freeFilter === "premium" ? (
-				<PremiumNotAvailable />
-			) : (
-				<UnsplashResults onPick={pick} query={debouncedQuery} search={search} />
-			)}
+			<UnsplashResults onPick={pick} query={debouncedQuery} search={search} />
 		</div>
 	);
 }

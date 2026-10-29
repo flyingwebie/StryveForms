@@ -1,18 +1,7 @@
 import { validateComputedVariables } from "@StryveForms/forms/computed";
 import type { ComputedVariable, FormField } from "@StryveForms/forms/types";
 import { Button } from "@StryveForms/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
-import {
-	Field,
-	FieldDescription,
-	FieldSet,
-} from "@StryveForms/ui/components/field";
+import { FieldDescription } from "@StryveForms/ui/components/field";
 import { Input } from "@StryveForms/ui/components/input";
 import { Textarea } from "@StryveForms/ui/components/textarea";
 import { PlusIcon, Trash2Icon } from "lucide-react";
@@ -20,6 +9,7 @@ import { nanoid } from "nanoid";
 import { useMemo } from "react";
 
 import { useEditor } from "../state/editor-context";
+import { SettingsSection } from "./settings-row";
 
 const FUNCTION_NAMES = [
 	"SUM",
@@ -67,10 +57,10 @@ function VariableRow({
 	}
 
 	return (
-		<FieldSet className="gap-2 rounded-lg border border-input p-2.5">
+		<div className="flex flex-col gap-2 rounded-lg border border-primary/30 p-3">
 			<div className="flex items-center gap-2">
 				<Input
-					className="flex-1"
+					className="flex-1 font-medium"
 					onChange={(e) => update({ name: e.target.value })}
 					placeholder="Variable name"
 					value={variable.name}
@@ -85,12 +75,23 @@ function VariableRow({
 				placeholder={`SUM({${fieldIds[0] ?? "field_id"}}, 10)`}
 				value={variable.formula}
 			/>
+			<div className="flex flex-wrap items-center gap-1.5">
+				<span className="text-muted-foreground text-xs">Functions</span>
+				{FUNCTION_NAMES.map((name) => (
+					<span
+						className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
+						key={name}
+					>
+						{name}
+					</span>
+				))}
+			</div>
 			{errors.length > 0 ? (
 				<FieldDescription className="text-destructive">
 					{errors.join(" ")}
 				</FieldDescription>
 			) : null}
-		</FieldSet>
+		</div>
 	);
 }
 
@@ -120,36 +121,20 @@ export function VariablesSection() {
 	}
 
 	return (
-		<fieldset className="flex flex-col gap-5" disabled={readOnly}>
-			<Card>
-				<CardHeader>
-					<CardTitle>Computed variables</CardTitle>
-					<CardDescription>
-						Calculated values derived from field answers — usable anywhere
-						mentions are, including the redirect URL, success message, and
-						emails.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<Field>
-						<FieldDescription>
-							Reference a field or another variable with{" "}
-							<code>
-								{"{"}field_id{"}"}
-							</code>
-							. Available functions: {FUNCTION_NAMES.join(", ")}.
-						</FieldDescription>
-					</Field>
-					<div className="flex flex-col gap-2">
-						{variables.map((variable) => (
-							<VariableRow
-								errors={errorsByVariable.get(variable.id) ?? []}
-								fieldIds={fieldIds}
-								key={variable.id}
-								variable={variable}
-							/>
-						))}
-					</div>
+		<fieldset className="flex flex-col gap-8" disabled={readOnly}>
+			<SettingsSection
+				description={
+					<>
+						Reference a field or another variable with{" "}
+						<code>
+							{"{"}field_id{"}"}
+						</code>
+						. Available functions: {FUNCTION_NAMES.join(", ")}.
+					</>
+				}
+				title="Variables"
+			>
+				<div className="flex items-center justify-end">
 					<Button
 						onClick={addVariable}
 						size="sm"
@@ -158,8 +143,18 @@ export function VariablesSection() {
 					>
 						<PlusIcon /> Add variable
 					</Button>
-				</CardContent>
-			</Card>
+				</div>
+				<div className="flex flex-col gap-2 pt-3">
+					{variables.map((variable) => (
+						<VariableRow
+							errors={errorsByVariable.get(variable.id) ?? []}
+							fieldIds={fieldIds}
+							key={variable.id}
+							variable={variable}
+						/>
+					))}
+				</div>
+			</SettingsSection>
 		</fieldset>
 	);
 }

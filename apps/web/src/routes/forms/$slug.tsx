@@ -1,12 +1,20 @@
 import { resolveMentions } from "@StryveForms/forms/mentions";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
+import {
+	CalendarClockIcon,
+	EyeOffIcon,
+	type LucideIcon,
+	SearchXIcon,
+	UsersIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { FormRenderer } from "@/components/form-renderer/form-renderer";
 import { getDictionary } from "@/components/form-renderer/i18n";
 import { PasswordGate } from "@/components/form-renderer/password-gate";
 import Loader from "@/components/loader";
+import { googleFontCssUrl } from "@/lib/google-fonts";
 import type { RouterAppContext } from "@/routes/__root";
 import { useTRPC } from "@/utils/trpc";
 
@@ -98,6 +106,23 @@ const searchSchema = z
 	})
 	.passthrough();
 
+/** Preconnect + stylesheet for the form's Google Font, so it's there on first paint. */
+function formFontLinks(fontFamily: string | null | undefined) {
+	const href = googleFontCssUrl(fontFamily);
+	if (!href) {
+		return [];
+	}
+	return [
+		{ href: "https://fonts.googleapis.com", rel: "preconnect" },
+		{
+			crossOrigin: "anonymous" as const,
+			href: "https://fonts.gstatic.com",
+			rel: "preconnect",
+		},
+		{ href, rel: "stylesheet" },
+	];
+}
+
 export const Route = createFileRoute("/forms/$slug")({
 	component: PublicFormPage,
 	validateSearch: searchSchema,
@@ -120,7 +145,10 @@ export const Route = createFileRoute("/forms/$slug")({
 			page_title?: string | null;
 		};
 		return {
-			links: seo.page_favicon ? [{ href: seo.page_favicon, rel: "icon" }] : [],
+			links: [
+				...(seo.page_favicon ? [{ href: seo.page_favicon, rel: "icon" }] : []),
+				...formFontLinks(dto.fontFamily),
+			],
 			meta: [
 				{ title: seo.page_title || dto.title },
 				seo.page_description
@@ -134,7 +162,13 @@ export const Route = createFileRoute("/forms/$slug")({
 		};
 	},
 	notFoundComponent: () => (
-		<ClosedOrFullScreen html="<p>This form could not be found.</p>" />
+		<main className="flex min-h-svh items-center justify-center bg-app">
+			<ClosedOrFullScreen
+				eyebrow="404"
+				html="<p>This form could not be found. The link may be broken, or the form may have been moved or deleted.</p>"
+				icon={SearchXIcon}
+			/>
+		</main>
 	),
 	loader: async ({ context, params }) => {
 		try {
@@ -145,11 +179,28 @@ export const Route = createFileRoute("/forms/$slug")({
 	},
 });
 
-function ClosedOrFullScreen({ html }: { html: string }) {
+function ClosedOrFullScreen({
+	eyebrow,
+	html,
+	icon: Icon,
+}: {
+	eyebrow?: string;
+	html: string;
+	icon: LucideIcon;
+}) {
 	return (
-		<div className="mx-auto max-w-lg py-20 text-center">
+		<div className="mx-auto flex max-w-md flex-col items-center gap-3 py-24 text-center">
 			<div
-				className="prose prose-sm dark:prose-invert mx-auto"
+				aria-hidden="true"
+				className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground"
+			>
+				<Icon className="size-5" />
+			</div>
+			{eyebrow ? (
+				<p className="font-mono text-subtle-foreground text-xs">{eyebrow}</p>
+			) : null}
+			<div
+				className="prose prose-sm dark:prose-invert mx-auto prose-headings:font-semibold prose-p:text-muted-foreground"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: form owner's own closed/limit-reached message
 				dangerouslySetInnerHTML={{ __html: html }}
 			/>
@@ -314,7 +365,15 @@ function PublicFormPage() {
 		return <Loader />;
 	}
 	if (!data) {
-		return <ClosedOrFullScreen html="<p>This form could not be found.</p>" />;
+		return (
+			<main className="flex min-h-svh items-center justify-center bg-app">
+				<ClosedOrFullScreen
+					eyebrow="404"
+					html="<p>This form could not be found.</p>"
+					icon={SearchXIcon}
+				/>
+			</main>
+		);
 	}
 
 	if (data.passwordRequired) {
@@ -322,7 +381,7 @@ function PublicFormPage() {
 			<main
 				className={embedAwareMainClass(
 					isEmbed,
-					"flex items-center justify-center p-6"
+					"flex items-center justify-center bg-app p-6"
 				)}
 			>
 				<PasswordGate
@@ -342,24 +401,36 @@ function PublicFormPage() {
 
 	if (data.isClosed && !data.isOwner) {
 		return (
-			<main className={embedAwareMainClass(isEmbed, "p-6")}>
+			<main
+				className={embedAwareMainClass(
+					isEmbed,
+					"flex items-center justify-center bg-app p-6"
+				)}
+			>
 				<ClosedOrFullScreen
 					html={
 						resolveMentions(data.form.closedText, {}) ||
 						`<p>${dict.formClosed}</p>`
 					}
+					icon={CalendarClockIcon}
 				/>
 			</main>
 		);
 	}
 	if (data.maxSubmissionsReached && !data.isOwner) {
 		return (
-			<main className={embedAwareMainClass(isEmbed, "p-6")}>
+			<main
+				className={embedAwareMainClass(
+					isEmbed,
+					"flex items-center justify-center bg-app p-6"
+				)}
+			>
 				<ClosedOrFullScreen
 					html={
 						resolveMentions(data.form.maxSubmissionsReachedText, {}) ||
 						`<p>${dict.maxReached}</p>`
 					}
+					icon={UsersIcon}
 				/>
 			</main>
 		);
@@ -373,7 +444,8 @@ function PublicFormPage() {
 	return (
 		<main ref={embedRef}>
 			{data.isOwner && data.form.visibility === "draft" ? (
-				<div className="mx-auto mt-4 mb-0 max-w-2xl rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-amber-800 text-sm dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+				<div className="flex items-center justify-center gap-2 border-warning/30 border-b bg-warning-soft px-4 py-2 text-center font-medium text-sm text-warning">
+					<EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
 					This form is a draft — only you can see it.
 				</div>
 			) : null}

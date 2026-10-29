@@ -55,6 +55,7 @@ import {
 	buildSubmissionSections,
 	type SubmissionSection,
 } from "./submission-sections";
+import SubmissionStatusBadge from "./submission-status-badge";
 
 function isAnswerEmpty(value: unknown) {
 	return value === undefined || value === null || value === "";
@@ -127,9 +128,13 @@ function DetailRow({
 }) {
 	return (
 		<div className="space-y-1">
-			<span className="block text-muted-foreground text-xs">{label}</span>
+			<span className="block font-medium text-muted-foreground text-xs">
+				{label}
+			</span>
 			<div className="flex items-center justify-between gap-2">
-				<span className="truncate text-sm">{value}</span>
+				<span className="truncate font-medium text-foreground text-sm">
+					{value}
+				</span>
 				{copyLabel ? <CopyButton label={copyLabel} text={value} /> : null}
 			</div>
 		</div>
@@ -158,27 +163,29 @@ function DetailsPanel({
 
 	return (
 		<div className="space-y-4">
-			<h3 className="font-medium text-sm">Details</h3>
+			<h3 className="font-semibold text-sm">Details</h3>
 			<DetailRow
 				copyLabel="Copy submission id"
 				label="Submission ID"
 				value={submission.publicId}
 			/>
 			{editUrl ? (
-				<div className="space-y-1">
-					<span className="block text-muted-foreground text-xs">
-						Respondent's edit link — lets them come back and change their
-						answers
-					</span>
+				<div className="space-y-1.5">
+					<a
+						className="inline-flex items-center gap-1.5 font-medium text-primary text-sm hover:underline"
+						href={editUrl}
+						rel="noopener noreferrer"
+						target="_blank"
+					>
+						<PencilIcon className="size-3.5" /> Edit response
+					</a>
 					<div className="flex items-center gap-1">
-						<a
-							className="flex-1 truncate text-primary text-xs underline underline-offset-2"
-							href={editUrl}
-							rel="noopener noreferrer"
-							target="_blank"
+						<span
+							className="flex-1 truncate text-muted-foreground text-xs"
+							title="Respondent's edit link — lets them come back and change their answers"
 						>
 							{editUrl}
-						</a>
+						</span>
 						<CopyButton label="Copy edit link" text={editUrl} />
 						<Button
 							render={
@@ -239,32 +246,47 @@ function SectionAnswers({
 		return null;
 	}
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center gap-2">
-				<h3 className="font-medium text-sm">{section.title}</h3>
+		<div className="space-y-3">
+			<div className="flex items-center gap-3">
+				<h3 className="shrink-0 font-semibold text-foreground text-xs uppercase tracking-wider">
+					{section.title}
+				</h3>
 				{section.kind === "hidden" || section.kind === "removed" ? (
 					<Badge variant="outline">
 						{section.kind === "hidden" ? "Hidden" : "Removed"}
 					</Badge>
 				) : null}
+				<span aria-hidden="true" className="h-px flex-1 bg-border" />
 			</div>
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<div className="flex flex-col gap-2">
 				{visible.map((field) => {
 					const value = submission.data[field.id];
+					const empty = isAnswerEmpty(value);
 					return (
-						<div className="space-y-1.5" key={field.id}>
-							<div className="flex items-center justify-between gap-2">
-								<span className="block font-medium text-muted-foreground text-xs">
+						<div
+							className="group/answer flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-xs"
+							key={field.id}
+						>
+							<div className="min-w-0 flex-1 space-y-1">
+								<span className="block font-medium text-[13px] text-muted-foreground">
 									{field.name}
 								</span>
-								{isAnswerEmpty(value) ? null : (
-									<CopyButton
-										label={`Copy ${field.name}`}
-										text={answerValueText(field, value)}
-									/>
-								)}
+								<div
+									className={
+										empty
+											? "text-sm text-subtle-foreground italic"
+											: "break-words font-medium text-[15px] text-foreground"
+									}
+								>
+									<AnswerValue field={field} value={value} />
+								</div>
 							</div>
-							<AnswerValue field={field} value={value} />
+							{empty ? null : (
+								<CopyButton
+									label={`Copy ${field.name}`}
+									text={answerValueText(field, value)}
+								/>
+							)}
 						</div>
 					);
 				})}
@@ -464,26 +486,14 @@ export default function SubmissionModal({
 			>
 				{submission ? (
 					<>
-						{/* Header: form title, status, timing, and prev/next navigation. */}
+						{/* Header: submission id, status, timing, and prev/next navigation. */}
 						<div className="flex items-start justify-between gap-4 border-border border-b p-5">
 							<div className="min-w-0 space-y-1.5">
 								<div className="flex flex-wrap items-center gap-2">
-									<h2 className="font-heading font-medium text-base">
-										{form.title}
-									</h2>
-									<Badge variant="outline">
-										#{submission.publicId.slice(0, 8).toUpperCase()}
-									</Badge>
-									<Badge
-										className="capitalize"
-										variant={
-											submission.status === "completed"
-												? "default"
-												: "secondary"
-										}
-									>
-										{submission.status}
-									</Badge>
+									<span className="font-medium text-muted-foreground text-sm">
+										#{submission.publicId}
+									</span>
+									<SubmissionStatusBadge status={submission.status} />
 								</div>
 								<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
 									<span>
@@ -544,8 +554,11 @@ export default function SubmissionModal({
 										{editing ? (
 											<div className="space-y-4">
 												{editFields.map((field) => (
-													<div className="space-y-1.5" key={field.id}>
-														<span className="block text-muted-foreground text-xs">
+													<div
+														className="space-y-2 rounded-xl border border-border bg-card px-4 py-3"
+														key={field.id}
+													>
+														<span className="block font-medium text-[13px] text-foreground">
 															{field.name}
 														</span>
 														<SubmissionFieldInput
@@ -586,7 +599,7 @@ export default function SubmissionModal({
 											</>
 										)}
 									</div>
-									<div className="min-w-0 space-y-6 print:hidden">
+									<div className="min-w-0 space-y-6 self-start rounded-xl border border-border bg-subtle p-4 print:hidden">
 										<DetailsPanel form={form} submission={submission} />
 										<Separator />
 										<div className="space-y-3">

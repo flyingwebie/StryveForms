@@ -1,7 +1,12 @@
 import type { FormField } from "@StryveForms/forms/types";
 import { Button } from "@StryveForms/ui/components/button";
 import { Link } from "@tanstack/react-router";
-import { ExternalLinkIcon, PencilIcon } from "lucide-react";
+import {
+	ExternalLinkIcon,
+	FileTextIcon,
+	PencilIcon,
+	XIcon,
+} from "lucide-react";
 
 import { FormThumbnail } from "@/components/app/forms/form-thumbnail";
 import StatusBadge from "@/components/app/status-badge";
@@ -22,8 +27,8 @@ export interface ChatFormSummary {
 
 /**
  * The form the chat is grounded in, shown prominently above the transcript:
- * a thumbnail, its status, field/submission counts, and quick links —
- * plus the existing switch/detach picker.
+ * an eyebrow + thumbnail + status, quick links to the form, and the
+ * existing switch/detach picker.
  */
 export function FormHeaderCard({
 	form,
@@ -40,7 +45,10 @@ export function FormHeaderCard({
 	const fieldsCount = form.properties.length;
 
 	return (
-		<div className="flex flex-wrap items-center gap-3 border-b bg-muted/30 px-4 py-2.5">
+		<div className="m-3 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-primary-soft/40 px-3 py-2.5">
+			<div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
+				<FileTextIcon className="size-4" />
+			</div>
 			<div className="h-10 w-14 shrink-0 overflow-hidden rounded-lg border">
 				<FormThumbnail
 					className="h-full w-full"
@@ -51,8 +59,9 @@ export function FormHeaderCard({
 				/>
 			</div>
 			<div className="min-w-0 flex-1">
+				<p className="text-subtle-foreground text-xs">Form context</p>
 				<div className="flex flex-wrap items-center gap-2">
-					<span className="truncate font-medium text-sm">{form.title}</span>
+					<span className="truncate font-semibold text-sm">{form.title}</span>
 					<StatusBadge isClosed={isClosed} visibility={form.visibility} />
 				</div>
 				<p className="text-muted-foreground text-xs">
@@ -83,6 +92,14 @@ export function FormHeaderCard({
 					onChange={onFormChange}
 					workspaceId={workspaceId}
 				/>
+				<Button
+					aria-label="Remove form context"
+					onClick={() => onFormChange(null)}
+					size="icon-sm"
+					variant="ghost"
+				>
+					<XIcon />
+				</Button>
 			</div>
 		</div>
 	);

@@ -19,6 +19,9 @@ export const config: AppConfig = {
 		hcaptchaSecret: ENV.HCAPTCHA_SECRET_KEY || undefined,
 		recaptchaSecret: ENV.RECAPTCHA_SECRET_KEY || undefined,
 		turnstileSecret: ENV.TURNSTILE_SECRET_KEY || undefined,
+		hcaptchaSiteKey: ENV.HCAPTCHA_SITE_KEY || undefined,
+		recaptchaSiteKey: ENV.RECAPTCHA_SITE_KEY || undefined,
+		turnstileSiteKey: ENV.TURNSTILE_SITE_KEY || undefined,
 	},
 	importRateLimitPerMinute:
 		ENV.OPNFORM_IMPORT_RATE_LIMIT ?? DEFAULT_IMPORT_RATE,

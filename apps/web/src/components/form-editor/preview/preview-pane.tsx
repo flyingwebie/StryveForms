@@ -16,15 +16,21 @@ const WIDTH_CLASS: Record<"desktop" | "mobile", string> = {
  */
 export function PreviewPane() {
 	const { state } = useEditor();
-	const form = usePreviewForm();
+	const previewForm = usePreviewForm();
+	// The light/dark toggle in the top bar overrides the form's dark mode
+	// setting for this preview only; it's never saved.
+	const form =
+		state.previewScheme === "auto"
+			? previewForm
+			: { ...previewForm, darkMode: state.previewScheme };
 
 	return (
-		<div className="flex h-full justify-center overflow-y-auto bg-muted/30 px-6 pt-20 pb-6">
+		<div className="flex h-full justify-center overflow-y-auto bg-app px-6 py-10">
 			<div
 				className={`flex w-full flex-col ${WIDTH_CLASS[state.previewWidth]}`}
 			>
 				<FormRenderer
-					className="flex-1 overflow-hidden rounded-xl px-4 py-8 ring-1 ring-border"
+					className="flex-1 overflow-hidden bg-background"
 					form={form}
 					mode="preview"
 				/>

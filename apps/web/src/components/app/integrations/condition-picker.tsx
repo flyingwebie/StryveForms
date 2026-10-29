@@ -57,7 +57,10 @@ export default function ConditionPicker({
 		OPERATORS.find((o) => o.value === condition.operator)?.needsValue ?? true;
 
 	return (
-		<div className="flex flex-wrap items-center gap-2">
+		<div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 p-3">
+			<span className="shrink-0 text-muted-foreground text-sm">
+				Only send if
+			</span>
 			<Select
 				items={fields.map((field) => ({ label: field.name, value: field.id }))}
 				onValueChange={(fieldId) =>

@@ -4,7 +4,6 @@ import {
 	AlertTitle,
 } from "@StryveForms/ui/components/alert";
 import { Button } from "@StryveForms/ui/components/button";
-import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
 import { Switch } from "@StryveForms/ui/components/switch";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,6 +12,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import PasswordInput from "@/components/app/auth/password-input";
 import type { WorkspaceSummary } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
 
@@ -38,11 +38,11 @@ function OptionRow({
 	onChange: (checked: boolean) => void;
 }) {
 	return (
-		<div className="rounded-xl border p-3">
+		<div className="rounded-xl border border-border p-3.5">
 			<label className="flex items-start justify-between gap-4" htmlFor={id}>
 				<span>
 					<span className="font-medium text-sm">{label}</span>
-					<span className="block text-muted-foreground text-xs">
+					<span className="block text-subtle-foreground text-xs">
 						{description}
 					</span>
 				</span>
@@ -132,7 +132,7 @@ export default function BackupExportSection({
 				workspace.
 			</p>
 
-			<div className="space-y-4 rounded-2xl border bg-card p-6">
+			<div className="space-y-4 rounded-2xl border border-border bg-card p-6">
 				<OptionRow
 					checked={includeUploads}
 					description="Files people uploaded with their submissions, and signatures. Usually the biggest part of the file. Brand logos, PDF templates and option images are always included."
@@ -158,12 +158,10 @@ export default function BackupExportSection({
 							<div className="grid gap-3 sm:grid-cols-2">
 								<div className="space-y-1.5">
 									<Label htmlFor="export-passphrase">Passphrase</Label>
-									<Input
+									<PasswordInput
 										autoComplete="new-password"
 										id="export-passphrase"
-										minLength={MIN_PASSPHRASE_LENGTH}
-										onChange={(event) => setPassphrase(event.target.value)}
-										type="password"
+										onChange={setPassphrase}
 										value={passphrase}
 									/>
 									{passphraseTooShort ? (
@@ -176,13 +174,10 @@ export default function BackupExportSection({
 									<Label htmlFor="export-passphrase-confirm">
 										Confirm passphrase
 									</Label>
-									<Input
+									<PasswordInput
 										autoComplete="new-password"
 										id="export-passphrase-confirm"
-										onChange={(event) =>
-											setConfirmPassphrase(event.target.value)
-										}
-										type="password"
+										onChange={setConfirmPassphrase}
 										value={confirmPassphrase}
 									/>
 									{passphraseMismatch ? (

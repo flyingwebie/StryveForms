@@ -34,6 +34,10 @@ export const CLASSIC_LAYOUTS = [
 ] as const;
 export type ClassicLayout = (typeof CLASSIC_LAYOUTS)[number];
 
+/** Where the brand logo sits above the form. Unset: centred in a card, left on a frameless Focused screen. */
+export const LOGO_ALIGNMENTS = ["left", "center", "right"] as const;
+export type LogoAlignment = (typeof LOGO_ALIGNMENTS)[number];
+
 /**
  * Attribution for a photo picked from Unsplash (T's `ImagePicker`,
  * `PickedImage.credit` — see apps/web/src/components/app/media/README.md).
@@ -198,6 +202,10 @@ export const formSettingsSchema = z.object({
 			pageBackgroundColor: z.string().max(30).nullable().optional(),
 			frameBackgroundColor: z.string().max(30).nullable().optional(),
 			frameBorderColor: z.string().max(30).nullable().optional(),
+			/** Dark-scheme counterparts of the three colours above. */
+			pageBackgroundColorDark: z.string().max(30).nullable().optional(),
+			frameBackgroundColorDark: z.string().max(30).nullable().optional(),
+			frameBorderColorDark: z.string().max(30).nullable().optional(),
 			frameBorderWidth: z.number().min(0).max(12).optional(),
 			frameShadow: z.enum(FRAME_SHADOWS).optional(),
 			backgroundImage: z.string().max(2000).nullable().optional(),
@@ -218,6 +226,8 @@ export const formSettingsSchema = z.object({
 			classicLayout: z.enum(CLASSIC_LAYOUTS).optional(),
 			/** Shows the resolved brand logo for the Classic layout. Defaults to true. */
 			showBrandLogo: z.boolean().optional(),
+			/** Brand logo position: left / center / right. */
+			logoAlignment: z.enum(LOGO_ALIGNMENTS).optional(),
 		})
 		.passthrough(),
 

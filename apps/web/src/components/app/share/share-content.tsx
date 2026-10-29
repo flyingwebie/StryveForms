@@ -20,6 +20,12 @@ import {
 	AlertDialogTitle,
 } from "@StryveForms/ui/components/alert-dialog";
 import { Button } from "@StryveForms/ui/components/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@StryveForms/ui/components/dropdown-menu";
 import { Input } from "@StryveForms/ui/components/input";
 import {
 	Tabs,
@@ -33,6 +39,7 @@ import {
 	CopyIcon,
 	ExternalLinkIcon,
 	Mail,
+	MoreHorizontalIcon,
 	RefreshCwIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -141,13 +148,14 @@ function LinkSection({ form }: { form: FormDto }) {
 	return (
 		<div className="space-y-3">
 			<StatusWarning form={form} />
+			<h2 className="font-semibold text-base">Share link</h2>
 			<div className="flex flex-wrap items-center gap-2">
 				<Input
 					className="min-w-0 flex-1 font-mono text-xs"
 					readOnly
 					value={form.shareUrl}
 				/>
-				<Button onClick={() => copy(form.shareUrl)} variant="outline">
+				<Button onClick={() => copy(form.shareUrl)}>
 					<CopyIcon /> Copy
 				</Button>
 				<Button
@@ -158,11 +166,20 @@ function LinkSection({ form }: { form: FormDto }) {
 				>
 					<ExternalLinkIcon /> Open
 				</Button>
+				<DropdownMenu>
+					<DropdownMenuTrigger
+						render={<Button size="icon" variant="outline" />}
+					>
+						<MoreHorizontalIcon />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem onClick={() => setConfirmOpen(true)}>
+							<RefreshCwIcon /> Regenerate link
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
 			<AlertDialogRoot onOpenChange={setConfirmOpen} open={confirmOpen}>
-				<Button onClick={() => setConfirmOpen(true)} size="sm" variant="ghost">
-					<RefreshCwIcon /> Regenerate link
-				</Button>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Regenerate the share link?</AlertDialogTitle>
@@ -192,27 +209,30 @@ function LinkSection({ form }: { form: FormDto }) {
 function SocialSection({ form }: { form: FormDto }) {
 	const links = buildSocialLinks(form.shareUrl, form.title);
 	return (
-		<div className="grid gap-2 sm:grid-cols-2">
-			{links.map((link) => {
-				const Icon = SOCIAL_ICONS[link.id];
-				return (
-					<a
-						className="flex items-center gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-muted"
-						href={link.url}
-						key={link.id}
-						rel="noopener noreferrer"
-						target="_blank"
-					>
-						<span
-							className="flex size-8 shrink-0 items-center justify-center rounded-full text-white"
-							style={{ backgroundColor: link.bg }}
+		<div className="space-y-3">
+			<h2 className="font-semibold text-base">Share directly</h2>
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+				{links.map((link) => {
+					const Icon = SOCIAL_ICONS[link.id];
+					return (
+						<a
+							className="flex flex-col items-center gap-3 rounded-xl border border-border p-4 text-center text-sm transition-colors hover:border-foreground/20 hover:bg-muted"
+							href={link.url}
+							key={link.id}
+							rel="noopener noreferrer"
+							target="_blank"
 						>
-							<Icon className="size-4" />
-						</span>
-						Share on {link.name}
-					</a>
-				);
-			})}
+							<span
+								className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft"
+								style={{ color: link.bg }}
+							>
+								<Icon className="size-4" />
+							</span>
+							{link.name}
+						</a>
+					);
+				})}
+			</div>
 		</div>
 	);
 }
@@ -258,20 +278,20 @@ export function ShareContent({ form }: { form: FormDto }) {
 					<TabsTrigger value="prefill">Prefill link</TabsTrigger>
 					<TabsTrigger value="embed">Embed</TabsTrigger>
 				</TabsList>
-				<TabsContent className="min-w-0" value="social">
+				<TabsContent className="min-w-0 pt-5" value="social">
 					<SocialSection form={form} />
 				</TabsContent>
-				<TabsContent className="min-w-0" value="qr">
+				<TabsContent className="min-w-0 pt-5" value="qr">
 					<QrPanel
 						color={form.color}
 						shareUrl={form.shareUrl}
 						slug={form.slug}
 					/>
 				</TabsContent>
-				<TabsContent className="min-w-0" value="prefill">
+				<TabsContent className="min-w-0 pt-5" value="prefill">
 					<PrefillPanel fields={fields} shareUrl={form.shareUrl} />
 				</TabsContent>
-				<TabsContent className="min-w-0" value="embed">
+				<TabsContent className="min-w-0 pt-5" value="embed">
 					<EmbedPanel
 						appOrigin={appOrigin}
 						brandColor={brandColor}
@@ -279,14 +299,6 @@ export function ShareContent({ form }: { form: FormDto }) {
 					/>
 				</TabsContent>
 			</Tabs>
-
-			<p className="text-center text-muted-foreground text-xs">
-				Need more detail? Read the{" "}
-				<a className="underline underline-offset-2" href="/docs/sharing">
-					sharing &amp; embed docs
-				</a>
-				.
-			</p>
 		</div>
 	);
 }

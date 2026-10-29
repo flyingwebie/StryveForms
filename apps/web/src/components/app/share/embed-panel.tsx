@@ -2,10 +2,6 @@ import type { FormDto } from "@StryveForms/api/lib/serialize";
 import { Button } from "@StryveForms/ui/components/button";
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
-import {
-	NativeSelect,
-	NativeSelectOption,
-} from "@StryveForms/ui/components/native-select";
 import { Switch } from "@StryveForms/ui/components/switch";
 import {
 	Tabs,
@@ -72,9 +68,9 @@ const CURATED_ICONS = [
 type EmbedIconId = (typeof CURATED_ICONS)[number]["id"];
 const ICON_IDS = new Set<string>(CURATED_ICONS.map((icon) => icon.id));
 const SIZE_PRESETS = [
-	{ label: "Small (48px)", value: 48 },
-	{ label: "Medium (56px)", value: 56 },
-	{ label: "Large (64px)", value: 64 },
+	{ label: "S · 48", value: 48 },
+	{ label: "M · 56", value: 56 },
+	{ label: "L · 64", value: 64 },
 ] as const;
 
 /** Defaults baked into embed.js — kept out of the generated snippet when matched, so it stays short. */
@@ -475,21 +471,23 @@ function PopupCustomizer({
 					</div>
 				</div>
 				<div className="space-y-1.5">
-					<Label htmlFor="embed-popup-size">Button size</Label>
+					<Label>Button size</Label>
 					<p className="text-muted-foreground text-xs">
 						How big the launcher button is.
 					</p>
-					<NativeSelect
-						id="embed-popup-size"
-						onChange={(event) => patch({ size: Number(event.target.value) })}
-						value={settings.size}
-					>
+					<div className="flex gap-2">
 						{SIZE_PRESETS.map((preset) => (
-							<NativeSelectOption key={preset.value} value={preset.value}>
+							<Button
+								key={preset.value}
+								onClick={() => patch({ size: preset.value })}
+								size="sm"
+								type="button"
+								variant={settings.size === preset.value ? "default" : "outline"}
+							>
 								{preset.label}
-							</NativeSelectOption>
+							</Button>
 						))}
-					</NativeSelect>
+					</div>
 				</div>
 			</div>
 
@@ -637,77 +635,85 @@ export function EmbedPanel({
 		<Tabs className="min-w-0" defaultValue="iframe">
 			<TabsList>
 				<TabsTrigger value="iframe">Iframe</TabsTrigger>
-				<TabsTrigger value="popup">Embed as popup</TabsTrigger>
+				<TabsTrigger value="popup">Popup launcher</TabsTrigger>
 			</TabsList>
-			<TabsContent className="min-w-0 space-y-3" value="iframe">
-				<label
-					className="flex items-center gap-2 text-sm"
-					htmlFor="fixed-height"
-				>
-					<input
-						checked={fixedHeight}
-						className="size-4 accent-primary"
-						id="fixed-height"
-						onChange={(event) => setFixedHeight(event.target.checked)}
-						type="checkbox"
-					/>
-					Use a fixed height instead of auto-resizing
-				</label>
-				{fixedHeight ? (
-					<div className="flex items-center gap-2">
-						<Label className="text-muted-foreground" htmlFor="embed-height">
-							Height (px)
-						</Label>
-						<Input
-							className="w-24"
-							id="embed-height"
-							min={200}
-							onChange={(event) =>
-								setHeight(Number(event.target.value) || DEFAULT_HEIGHT)
-							}
-							type="number"
-							value={height}
-						/>
+			<TabsContent className="min-w-0" value="iframe">
+				<div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
+					<div className="min-w-0 space-y-3">
+						<label
+							className="flex items-center gap-2 text-sm"
+							htmlFor="fixed-height"
+						>
+							<input
+								checked={fixedHeight}
+								className="size-4 accent-primary"
+								id="fixed-height"
+								onChange={(event) => setFixedHeight(event.target.checked)}
+								type="checkbox"
+							/>
+							Fixed height
+						</label>
+						{fixedHeight ? (
+							<div className="flex items-center gap-2">
+								<Label className="text-muted-foreground" htmlFor="embed-height">
+									Height (px)
+								</Label>
+								<Input
+									className="w-24"
+									id="embed-height"
+									min={200}
+									onChange={(event) =>
+										setHeight(Number(event.target.value) || DEFAULT_HEIGHT)
+									}
+									type="number"
+									value={height}
+								/>
+							</div>
+						) : (
+							<p className="text-muted-foreground text-xs">
+								Turn off fixed height to auto-resize the iframe to fit the form
+								content.
+							</p>
+						)}
+						<Label>Embed code</Label>
+						<CodeBlock code={iframeCode} filename="embed.html" />
 					</div>
-				) : (
-					<p className="text-muted-foreground text-sm">
-						The iframe resizes itself to fit the form's content, as it grows or
-						shrinks across pages.
-					</p>
-				)}
-				<CodeBlock code={iframeCode} filename="embed.html" />
-				<p className="font-medium text-sm">Preview</p>
-				<EmbedPreviewFrame height={360} snippetHtml={iframeCode} />
-			</TabsContent>
-			<TabsContent className="min-w-0 space-y-3" value="popup">
-				<p className="text-muted-foreground text-sm">
-					Shows a floating button that opens the form in a panel. Paste this
-					once anywhere on the page.
-				</p>
-				<p className="font-medium text-sm">Preview</p>
-				<EmbedPreviewFrame height={360} snippetHtml={popupCode} />
-				<div className="flex items-center justify-between gap-3 pt-2">
-					<p className="font-medium text-sm">Customize</p>
-					<Button
-						disabled={!dirty || save.isPending}
-						onClick={() =>
-							save.mutate({
-								data: { settings: { ...rawSettings, embedPopup: draft } },
-								id: form.id,
-							})
-						}
-						size="sm"
-					>
-						{save.isPending ? "Saving…" : "Save customization"}
-					</Button>
+					<div className="min-w-0 space-y-3">
+						<Label>Live preview</Label>
+						<EmbedPreviewFrame height={420} snippetHtml={iframeCode} />
+					</div>
 				</div>
-				<PopupCustomizer
-					brandColor={brandColor}
-					onChange={setDraft}
-					settings={draft}
-				/>
-				<p className="font-medium text-sm">Snippet</p>
-				<CodeBlock code={popupCode} filename="popup.html" />
+			</TabsContent>
+			<TabsContent className="min-w-0" value="popup">
+				<div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
+					<div className="min-w-0 space-y-5">
+						<PopupCustomizer
+							brandColor={brandColor}
+							onChange={setDraft}
+							settings={draft}
+						/>
+						<Button
+							className="w-full"
+							disabled={!dirty || save.isPending}
+							onClick={() =>
+								save.mutate({
+									data: { settings: { ...rawSettings, embedPopup: draft } },
+									id: form.id,
+								})
+							}
+						>
+							{save.isPending ? "Saving…" : "Save customization"}
+						</Button>
+						<div className="space-y-2">
+							<Label>Embed code</Label>
+							<CodeBlock code={popupCode} filename="popup.html" />
+						</div>
+					</div>
+					<div className="min-w-0 space-y-3">
+						<Label>Live preview</Label>
+						<EmbedPreviewFrame height={520} snippetHtml={popupCode} />
+					</div>
+				</div>
 			</TabsContent>
 		</Tabs>
 	);

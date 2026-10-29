@@ -1,11 +1,13 @@
 import {
+	SidebarGroupAction,
+	SidebarGroupLabel,
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 } from "@StryveForms/ui/components/sidebar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { FolderPlusIcon } from "lucide-react";
+import { FolderPlusIcon, InboxIcon, PlusIcon } from "lucide-react";
 import type { DragEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -30,6 +32,8 @@ export interface FolderTreeProps {
 	/** Route to link folders to, e.g. "/dashboard" or "/dashboard/templates". */
 	basePath: "/dashboard" | "/dashboard/templates";
 	kind: "form" | "template";
+	/** Group heading (e.g. "Folders"); renders it with a "+ New folder" action. */
+	label?: string;
 	workspaceId: string;
 }
 
@@ -62,6 +66,7 @@ export default function FolderTree({
 	activeFolderId,
 	basePath,
 	kind,
+	label,
 	workspaceId,
 }: FolderTreeProps) {
 	const trpc = useTRPC();
@@ -297,24 +302,24 @@ export default function FolderTree({
 
 	return (
 		<>
-			<SidebarMenuSub>
-				<SidebarMenuSubItem>
-					<SidebarMenuSubButton
-						className={
-							noFolderDragOver
-								? "bg-sidebar-accent ring-1 ring-sidebar-ring"
-								: ""
-						}
-						isActive={activeFolderId === NO_FOLDER}
-						onDragLeave={() => setDragOver(null)}
-						onDragOver={(event) => handleDragOver(event, NO_FOLDER)}
-						onDrop={(event) => handleDrop(event, NO_FOLDER)}
-						render={<Link search={{ folder: NO_FOLDER }} to={basePath} />}
+			{label ? (
+				<>
+					<SidebarGroupLabel className="text-[11px] uppercase tracking-wider">
+						{label}
+					</SidebarGroupLabel>
+					<SidebarGroupAction
+						aria-label="New folder"
+						onClick={() => {
+							setNewSubfolderParentId(null);
+							setEditTarget(null);
+						}}
+						title="New folder"
 					>
-						<span>No folder</span>
-					</SidebarMenuSubButton>
-				</SidebarMenuSubItem>
-
+						<PlusIcon />
+					</SidebarGroupAction>
+				</>
+			) : null}
+			<SidebarMenuSub className="mx-0 translate-x-0 gap-0.5 border-l-0 px-0">
 				{tree.map((node, index) => (
 					<FolderRow
 						activeFolderId={activeFolderId}
@@ -345,6 +350,25 @@ export default function FolderTree({
 
 				<SidebarMenuSubItem>
 					<SidebarMenuSubButton
+						className={
+							noFolderDragOver
+								? "h-8 bg-sidebar-accent ring-1 ring-sidebar-ring"
+								: "h-8 data-active:font-medium data-active:shadow-xs data-active:ring-1 data-active:ring-sidebar-border"
+						}
+						isActive={activeFolderId === NO_FOLDER}
+						onDragLeave={() => setDragOver(null)}
+						onDragOver={(event) => handleDragOver(event, NO_FOLDER)}
+						onDrop={(event) => handleDrop(event, NO_FOLDER)}
+						render={<Link search={{ folder: NO_FOLDER }} to={basePath} />}
+					>
+						<InboxIcon />
+						<span>No folder</span>
+					</SidebarMenuSubButton>
+				</SidebarMenuSubItem>
+
+				<SidebarMenuSubItem>
+					<SidebarMenuSubButton
+						className="mt-1 h-8 w-full border border-sidebar-border border-dashed text-muted-foreground hover:border-primary/40 hover:bg-sidebar-accent hover:text-foreground"
 						onClick={() => {
 							setNewSubfolderParentId(null);
 							setEditTarget(null);

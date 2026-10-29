@@ -1,13 +1,7 @@
 import type { FormField } from "@StryveForms/forms/types";
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Checkbox } from "@StryveForms/ui/components/checkbox";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@StryveForms/ui/components/tooltip";
 import { Link } from "@tanstack/react-router";
-import { EyeIcon, MessageSquareIcon } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import FolderMark from "@/components/app/icons/folder-mark";
@@ -16,6 +10,7 @@ import StatusBadge from "@/components/app/status-badge";
 import { FORM_DRAG_MIME } from "../folders/folder-constants";
 import FormMenu, { type FormMenuTarget } from "./form-menu";
 import { FormThumbnail } from "./form-thumbnail";
+import { formatRelativeTime } from "./format";
 
 export interface FormCardSummary extends FormMenuTarget {
 	closesAt: Date | string | null;
@@ -34,13 +29,6 @@ export interface FolderChip {
 	color: string | null;
 	icon: string | null;
 	name: string;
-}
-
-function formatUpdated(value: Date | string) {
-	return new Date(value).toLocaleDateString(undefined, {
-		day: "numeric",
-		month: "short",
-	});
 }
 
 export default function FormCard({
@@ -75,11 +63,17 @@ export default function FormCard({
 				);
 			}}
 		>
+			<span
+				aria-hidden="true"
+				className="absolute inset-x-0 top-0 z-10 h-1"
+				style={{ backgroundColor: form.color }}
+			/>
+
 			<button
 				aria-label={
 					selected ? `Deselect ${form.title}` : `Select ${form.title}`
 				}
-				className="absolute top-2 left-2 z-10 rounded-sm bg-background/80 p-0.5 opacity-100 backdrop-blur-sm transition-opacity sm:opacity-0 sm:data-[selected=true]:opacity-100 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+				className="absolute top-3 left-2 z-10 rounded-sm bg-background/80 p-0.5 opacity-100 backdrop-blur-sm transition-opacity sm:opacity-0 sm:data-[selected=true]:opacity-100 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
 				data-selected={selected}
 				onClick={onToggleSelect}
 				type="button"
@@ -97,7 +91,6 @@ export default function FormCard({
 					color={form.color}
 					coverPicture={form.coverPicture}
 					logoPicture={form.logoPicture}
-					properties={form.properties ?? []}
 				/>
 			</Link>
 
@@ -129,23 +122,11 @@ export default function FormCard({
 					) : null}
 				</div>
 
-				<div className="mt-auto flex items-center gap-3 text-muted-foreground text-xs">
-					<span className="flex items-center gap-1">
-						<MessageSquareIcon className="size-3.5" />
-						{form.submissionsCount}
+				<div className="mt-auto flex flex-col gap-0.5 text-subtle-foreground text-xs">
+					<span>
+						{form.submissionsCount} submissions · {form.viewsCount} views
 					</span>
-					<span className="flex items-center gap-1">
-						<EyeIcon className="size-3.5" />
-						{form.viewsCount}
-					</span>
-					<Tooltip>
-						<TooltipTrigger className="ml-auto">
-							Updated {formatUpdated(form.updatedAt)}
-						</TooltipTrigger>
-						<TooltipContent>
-							{new Date(form.updatedAt).toLocaleString()}
-						</TooltipContent>
-					</Tooltip>
+					<span>Updated {formatRelativeTime(form.updatedAt)}</span>
 				</div>
 			</div>
 		</div>

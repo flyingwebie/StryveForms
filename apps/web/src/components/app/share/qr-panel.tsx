@@ -65,24 +65,26 @@ export function QrPanel({
 	};
 
 	return (
-		<div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+		<div className="flex flex-col items-start gap-6 sm:flex-row">
 			{pngUrl ? (
 				<img
 					alt="QR code linking to the form"
-					className="size-40 rounded-lg ring-1 ring-foreground/10"
+					className="size-56 shrink-0 rounded-xl border border-border p-3"
 					height={320}
 					src={pngUrl}
 					width={320}
 				/>
 			) : (
-				<Skeleton className="size-40 rounded-lg" />
+				<Skeleton className="size-56 shrink-0 rounded-xl" />
 			)}
-			<div className="flex flex-col gap-2">
-				<p className="text-muted-foreground text-sm">
-					Scan to open the form on a phone. The code uses the form's own colour.
+			<div className="flex flex-col gap-3 pt-1">
+				<h2 className="font-semibold text-base">Scan to open</h2>
+				<p className="max-w-sm text-muted-foreground text-sm">
+					Print this code on flyers, posters, or receipts so people can open the
+					form straight from their phone camera.
 				</p>
 				<div className="flex flex-wrap gap-2">
-					<Button disabled={!pngUrl} onClick={copyImage} variant="outline">
+					<Button disabled={!pngUrl} onClick={copyImage}>
 						{copied ? <CheckIcon /> : <CopyIcon />} Copy image
 					</Button>
 					<Button

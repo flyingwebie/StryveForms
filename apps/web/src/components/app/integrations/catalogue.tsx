@@ -3,7 +3,7 @@ import { PlusIcon } from "lucide-react";
 import { IntegrationBadge } from "./brand-icons";
 
 /** One-line, plain-language description of what each integration does. */
-const DESCRIPTIONS: Record<string, string> = {
+export const DESCRIPTIONS: Record<string, string> = {
 	activepieces: "Trigger an Activepieces flow with the submission data.",
 	albato: "Trigger an Albato automation with the submission data.",
 	discord: "Post new submissions to a Discord channel.",
@@ -36,7 +36,9 @@ export function IntegrationCatalogue({
 	return (
 		<div className="space-y-3">
 			<div className="flex flex-wrap items-center justify-between gap-2">
-				<h3 className="font-medium text-sm">{title}</h3>
+				<h3 className="font-medium text-subtle-foreground text-xs uppercase tracking-wide">
+					{title}
+				</h3>
 				{note ? (
 					<a
 						className="text-muted-foreground text-xs hover:text-foreground hover:underline"

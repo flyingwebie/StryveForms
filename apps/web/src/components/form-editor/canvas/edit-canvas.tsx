@@ -3,7 +3,6 @@ import { restructureForStyle } from "@StryveForms/forms/presentation";
 import type { BlockImage, FormField } from "@StryveForms/forms/types";
 import { Button } from "@StryveForms/ui/components/button";
 import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable";
-import { PlusIcon } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
 import {
@@ -21,25 +20,6 @@ const WIDTH_CLASS: Record<"desktop" | "mobile", string> = {
 	desktop: "max-w-3xl",
 	mobile: "max-w-sm",
 };
-
-/** Always-visible shortcut to the add-block panel, independent of scroll position or selection. */
-function FloatingAddBlockButton() {
-	const { openAddBlockPanel, readOnly } = useEditor();
-	if (readOnly) {
-		return null;
-	}
-	return (
-		<Button
-			className="absolute right-6 bottom-6 z-20 rounded-full shadow-lg"
-			onClick={() => openAddBlockPanel(null)}
-			size="icon-lg"
-			title="Add a block"
-			type="button"
-		>
-			<PlusIcon />
-		</Button>
-	);
-}
 
 /**
  * Classic forms have no pages, but one imported or created before that rule
@@ -123,64 +103,68 @@ export function EditCanvas() {
 	let pageNumber = 1;
 
 	return (
-		<div className="relative flex h-full justify-center overflow-y-auto bg-muted/30 px-6 pt-20 pb-10">
+		<div className="relative flex h-full justify-center overflow-y-auto bg-app px-6 py-10">
 			{/* `@container`: field widths respond to this box's own width (the
 			 * desktop/mobile preview toggle below), matching the real form root. */}
 			<div className={`@container w-full ${WIDTH_CLASS[state.previewWidth]}`}>
-				{hasPages && !isFocused ? (
-					<ClassicPageBreaksNotice count={pageBreakCount} />
-				) : null}
-				<SortableContext
-					items={properties.map((f) => canvasItemId(f.id))}
-					strategy={rectSortingStrategy}
-				>
-					<div className="grid grid-cols-12 gap-x-4 gap-y-4">
-						{properties.length === 0 ? <EmptyCanvasDropZone /> : null}
-						{hasPages ? <PageDivider pageNumber={1} /> : null}
-						{properties.map((field, index) => {
-							const isBreak = field.type === "nf-page-break";
-							const fieldState = resolveFieldState(field, engine.mergedContext);
-							const node = (
-								<FieldBlock
-									disabled={fieldState.disabled}
-									effectiveHidden={fieldState.hidden}
-									field={field}
-									key={field.id}
-									mentionValues={engine.mergedContext}
-									onChange={(value) => engine.setValue(field.id, value)}
-									onInsertAfter={
-										readOnly ? undefined : () => openAddBlockPanel(index + 1)
-									}
-									rendererBase={rendererBase}
-									required={fieldState.required}
-									value={engine.values[field.id]}
-								/>
-							);
-							const screen = screenStarts.get(field.id);
-							if (screen !== undefined) {
-								return (
-									<Fragment key={field.id}>
-										<PageDivider pageNumber={screen} />
-										{node}
-									</Fragment>
+				<div className="rounded-2xl bg-card p-10 shadow-sm">
+					{hasPages && !isFocused ? (
+						<ClassicPageBreaksNotice count={pageBreakCount} />
+					) : null}
+					<SortableContext
+						items={properties.map((f) => canvasItemId(f.id))}
+						strategy={rectSortingStrategy}
+					>
+						<div className="grid grid-cols-12 gap-x-4 gap-y-4">
+							{properties.length === 0 ? <EmptyCanvasDropZone /> : null}
+							{hasPages ? <PageDivider pageNumber={1} /> : null}
+							{properties.map((field, index) => {
+								const isBreak = field.type === "nf-page-break";
+								const fieldState = resolveFieldState(
+									field,
+									engine.mergedContext
 								);
-							}
-							if (isBreak) {
-								pageNumber += 1;
-								return (
-									<div className="col-span-12" key={field.id}>
-										{node}
-										<PageDivider pageNumber={pageNumber} />
-									</div>
+								const node = (
+									<FieldBlock
+										disabled={fieldState.disabled}
+										effectiveHidden={fieldState.hidden}
+										field={field}
+										key={field.id}
+										mentionValues={engine.mergedContext}
+										onChange={(value) => engine.setValue(field.id, value)}
+										onInsertAfter={
+											readOnly ? undefined : () => openAddBlockPanel(index + 1)
+										}
+										rendererBase={rendererBase}
+										required={fieldState.required}
+										value={engine.values[field.id]}
+									/>
 								);
-							}
-							return node;
-						})}
-						<CanvasEndDropZone />
-					</div>
-				</SortableContext>
+								const screen = screenStarts.get(field.id);
+								if (screen !== undefined) {
+									return (
+										<Fragment key={field.id}>
+											<PageDivider pageNumber={screen} />
+											{node}
+										</Fragment>
+									);
+								}
+								if (isBreak) {
+									pageNumber += 1;
+									return (
+										<div className="col-span-12" key={field.id}>
+											{node}
+											<PageDivider pageNumber={pageNumber} />
+										</div>
+									);
+								}
+								return node;
+							})}
+							<CanvasEndDropZone />
+						</div>
+					</SortableContext>
+				</div>
 			</div>
-			<FloatingAddBlockButton />
 		</div>
 	);
 }

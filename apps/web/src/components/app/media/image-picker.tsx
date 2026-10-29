@@ -12,7 +12,6 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "@StryveForms/ui/components/tabs";
-import { ImageIcon, SparklesIcon, UploadIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 
 import { LibraryTab } from "./library-tab";
@@ -73,7 +72,7 @@ function ImagePicker({
 							)
 						}
 					/>
-					<DialogContent className="sm:max-w-lg">
+					<DialogContent className="sm:max-w-3xl">
 						<DialogHeader>
 							<DialogTitle>Choose an image</DialogTitle>
 						</DialogHeader>
@@ -81,28 +80,25 @@ function ImagePicker({
 							onValueChange={(value_) => setTab(value_ as ImagePickerTab)}
 							value={tab}
 						>
-							<TabsList className="w-full">
-								<TabsTrigger value="upload">
-									<UploadIcon /> Upload
-								</TabsTrigger>
-								<TabsTrigger value="library">
-									<ImageIcon /> Library
-								</TabsTrigger>
-								<TabsTrigger value="unsplash">
-									<SparklesIcon /> Unsplash
-								</TabsTrigger>
+							<TabsList
+								className="w-full justify-start border-b"
+								variant="line"
+							>
+								<TabsTrigger value="upload">Upload</TabsTrigger>
+								<TabsTrigger value="library">Library</TabsTrigger>
+								<TabsTrigger value="unsplash">Unsplash</TabsTrigger>
 							</TabsList>
-							<TabsContent value="upload">
+							<TabsContent className="pt-1" value="upload">
 								<UploadTab
 									accept={accept}
 									onUploaded={pick}
 									workspaceId={workspaceId}
 								/>
 							</TabsContent>
-							<TabsContent value="library">
+							<TabsContent className="pt-1" value="library">
 								<LibraryTab onPick={pick} workspaceId={workspaceId} />
 							</TabsContent>
-							<TabsContent value="unsplash">
+							<TabsContent className="pt-1" value="unsplash">
 								<UnsplashTab onPick={pick} workspaceId={workspaceId} />
 							</TabsContent>
 						</Tabs>

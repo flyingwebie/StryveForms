@@ -1,9 +1,0 @@
-{
-  "name": "stryveforms-marketing-assets",
-  "private": true,
-  "description": "Composition source for .github/assets/*. Not part of the Bun workspace.",
-  "type": "module",
-  "dependencies": {
-    "playwright-core": "^1.64.1"
-  }
-}

@@ -8,13 +8,13 @@ import {
 } from "@StryveForms/forms/types";
 import { validateSubmission } from "@StryveForms/forms/validation";
 import { Button } from "@StryveForms/ui/components/button";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { FieldRenderer } from "./field-renderer";
-import type { FormDictionary } from "./i18n";
+import { type FormDictionary, formatString } from "./i18n";
 import { ImageCredit } from "./image-credit";
 import { normalizeImageLayout } from "./image-layout";
-import { outlineButtonTheme, submitButtonTheme } from "./theme";
+import { kbdHintTheme, outlineButtonTheme, submitButtonTheme } from "./theme";
 import type { FormEngine } from "./use-form-engine";
 import { focusableSteps } from "./use-form-engine";
 
@@ -27,6 +27,9 @@ const AUTO_NEXT_TYPES = new Set([
 	"multi_select",
 ]);
 
+/** A single letter key with no modifiers — the Typeform-style option shortcut. */
+const SINGLE_LETTER_KEY = /^[a-zA-Z]$/;
+
 export interface FocusedPresentationProps {
 	dict: FormDictionary;
 	disabled: boolean;
@@ -34,6 +37,8 @@ export interface FocusedPresentationProps {
 	fields: FormField[];
 	form: PublicFormDto;
 	formSlug: string;
+	/** Called with the 0–1 completion fraction (null = no progress bar for this form/step count), so the page can render it full-bleed at its own top instead of inset inside this component. */
+	onProgressChange?: (fraction: number | null) => void;
 	/** Called when the current question's split photo changes (null = none), so the page can show it across half the screen. */
 	onSplitImageChange?: (split: SplitImage | null) => void;
 	onSubmit: () => void;
@@ -182,6 +187,7 @@ function StepBody({
 
 /** The step's fields, plus a "stack" image above them when the page/lead field has one. */
 function StepFields({
+	dict,
 	disabled,
 	errors,
 	form,
@@ -193,8 +199,10 @@ function StepFields({
 	size,
 	step,
 	stateFor,
+	totalSteps,
 	values,
 }: {
+	dict: FormDictionary;
 	disabled: boolean;
 	errors: Record<string, string>;
 	form: PublicFormDto;
@@ -206,6 +214,7 @@ function StepFields({
 	size: PublicFormDto["size"];
 	step: FormField[];
 	stateFor: FormEngine["stateFor"];
+	totalSteps: number;
 	values: Record<string, unknown>;
 }) {
 	return (
@@ -213,6 +222,14 @@ function StepFields({
 			className="fade-in slide-in-from-bottom-2 flex animate-in flex-col gap-5 duration-300"
 			key={index}
 		>
+			{totalSteps > 1 ? (
+				<p className="font-mono text-[var(--color-form)] text-xs tracking-wide">
+					{formatString(dict.questionOf, {
+						current: index + 1,
+						total: totalSteps,
+					})}
+				</p>
+			) : null}
 			{image.isStack && image.image?.url ? (
 				<div className="relative">
 					<img
@@ -259,6 +276,7 @@ export function FocusedPresentation({
 	fields,
 	form,
 	formSlug,
+	onProgressChange,
 	onSplitImageChange,
 	onSubmit,
 	submitting,
@@ -300,6 +318,11 @@ export function FocusedPresentation({
 			splitUrl && image.image ? { image: image.image, side: splitSide } : null
 		);
 	}, [splitUrl, splitSide, onSplitImageChange, image.image]);
+
+	const showProgress = form.showProgressBar && steps.length > 1;
+	useEffect(() => {
+		onProgressChange?.(showProgress ? (index + 1) / steps.length : null);
+	}, [onProgressChange, showProgress, index, steps.length]);
 
 	// A multi-field page only auto-advances when it has exactly one
 	// real (non-layout) question — the same rule a single-question screen
@@ -349,6 +372,7 @@ export function FocusedPresentation({
 
 	const stepFields: ReactNode = (
 		<StepFields
+			dict={dict}
 			disabled={disabled}
 			errors={errors}
 			form={form}
@@ -360,12 +384,16 @@ export function FocusedPresentation({
 			size={form.size}
 			stateFor={stateFor}
 			step={step.fields}
+			totalSteps={steps.length}
 			values={values}
 		/>
 	);
 	const nav: ReactNode = (
 		<div className="flex items-center justify-between gap-3">
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-3">
+				<span aria-hidden="true" className={kbdHintTheme}>
+					{dict.pressEnter}
+				</span>
 				{index > 0 ? (
 					<button
 						className={outlineButtonTheme()}
@@ -416,28 +444,43 @@ export function FocusedPresentation({
 					type="button"
 				>
 					{resolveMentions(nextLabel, mergedContext) || nextLabel}
+					<ArrowRight aria-hidden="true" className="size-4" />
 				</button>
 			)}
 		</div>
 	);
 
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: Enter-to-advance shortcut on the step container; every focusable control inside remains independently operable
+		// biome-ignore lint/a11y/noStaticElementInteractions: Enter-to-advance / lettered-option keyboard shortcuts on the step container; every focusable control inside remains independently operable
 		// biome-ignore lint/a11y/noNoninteractiveElementInteractions: same as above
 		<div
 			className={
 				"flex min-h-80 flex-col justify-between gap-6 transition-all duration-300"
 			}
 			onKeyDown={(e) => {
-				if (
-					e.key === "Enter" &&
-					(e.target as HTMLElement).tagName !== "TEXTAREA"
-				) {
+				const tag = (e.target as HTMLElement).tagName;
+				if (e.key === "Enter" && tag !== "TEXTAREA") {
 					e.preventDefault();
 					if (isLast) {
 						onSubmit();
 					} else {
 						advance();
+					}
+					return;
+				}
+				// Typeform-style "press A/B/C…" shortcut for the current step's
+				// lettered choice options (see `data-option-letter` on `ChoiceOption`).
+				if (
+					SINGLE_LETTER_KEY.test(e.key) &&
+					tag !== "TEXTAREA" &&
+					tag !== "INPUT"
+				) {
+					const option = e.currentTarget.querySelector<HTMLButtonElement>(
+						`[data-option-letter="${e.key.toUpperCase()}"]`
+					);
+					if (option) {
+						e.preventDefault();
+						option.click();
 					}
 				}
 			}}

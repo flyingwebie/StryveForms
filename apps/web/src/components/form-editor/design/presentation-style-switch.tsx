@@ -173,7 +173,7 @@ export function PresentationStyleSwitch() {
 		<>
 			<Field>
 				<FieldLabel>Form style</FieldLabel>
-				<OptionCardGrid>
+				<OptionCardGrid columns={2}>
 					{PRESENTATION_OPTIONS.map((option) => (
 						<OptionCard
 							illustration={<PresentationPreview variant={option.value} />}

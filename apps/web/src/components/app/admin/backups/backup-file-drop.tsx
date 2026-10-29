@@ -44,8 +44,8 @@ export default function BackupFileDrop({
 				className={cn(
 					"flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors",
 					dragging
-						? "border-primary bg-primary/5"
-						: "cursor-pointer hover:bg-muted/50",
+						? "border-primary bg-primary-soft/40"
+						: "cursor-pointer hover:bg-subtle",
 					inactive && "pointer-events-none opacity-70"
 				)}
 				disabled={inactive}

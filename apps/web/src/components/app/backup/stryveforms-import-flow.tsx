@@ -233,12 +233,15 @@ export default function StryveformsImportFlow({
 						setWorkspaceId(workspaceId);
 						navigate({ to: "/dashboard" });
 					}}
+					onStartAnother={onCancel}
 					summary={{
 						customDomains: stage.overview.customDomains,
+						forms: stage.overview.counts.forms,
 						invitesCreated: result.membersInvited ?? 0,
 						membersAdded: result.membersAdded ?? 0,
 						reconnectCount: result.reconnectCount ?? 0,
 						slugChanges: result.slugChanges ?? stage.overview.slugChanges,
+						submissions: stage.overview.counts.submissions,
 						workspaceId,
 						workspaceName: result.workspaceName,
 					}}

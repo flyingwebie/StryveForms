@@ -1,5 +1,6 @@
+import { Button } from "@StryveForms/ui/components/button";
 import { Link } from "@tanstack/react-router";
-import { XIcon } from "lucide-react";
+import { ShieldAlertIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
@@ -23,20 +24,26 @@ export default function TwoFactorNudgeBanner() {
 	}
 
 	return (
-		<div className="flex items-center justify-between gap-3 border-b bg-primary/10 px-4 py-2 text-sm">
-			<p>
-				Protect your account with two-factor authentication &mdash;{" "}
-				<Link
-					className="font-medium underline"
-					search={{ tab: "account" }}
-					to="/dashboard/settings"
-				>
-					turn it on in Settings → Account
-				</Link>
-				.
+		<div className="flex items-center gap-3 border-b bg-warning-soft px-4 py-2.5 text-sm text-warning">
+			<ShieldAlertIcon className="size-4 shrink-0" />
+			<p className="min-w-0 flex-1 truncate">
+				<span className="font-medium">Secure your account</span>
+				<span className="hidden text-warning/80 sm:inline">
+					{" "}
+					— Add two-factor authentication to protect your account from
+					unauthorized access.
+				</span>
 			</p>
+			<Button
+				render={<Link search={{ tab: "account" }} to="/dashboard/settings" />}
+				size="sm"
+				variant="outline"
+			>
+				Enable 2FA
+			</Button>
 			<button
 				aria-label="Dismiss"
+				className="shrink-0 text-warning/70 hover:text-warning"
 				onClick={() => {
 					window.localStorage.setItem(DISMISSED_KEY, "1");
 					setDismissed(true);

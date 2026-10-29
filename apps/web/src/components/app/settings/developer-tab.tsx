@@ -1,13 +1,6 @@
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
-import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -34,13 +27,20 @@ import {
 	TableRow,
 } from "@StryveForms/ui/components/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyIcon, PlusIcon, TerminalIcon, TrashIcon } from "lucide-react";
+import {
+	AlertTriangleIcon,
+	CheckIcon,
+	CopyIcon,
+	KeyIcon,
+	PlusIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import McpInstructions from "@/components/app/admin/mcp-instructions";
 import { CodeBlock } from "@/components/app/code-block";
 import ConfirmDialog from "@/components/app/confirm-dialog";
+import { SettingsSection } from "@/components/app/settings-shell";
 import { formatTrpcError } from "@/lib/format-trpc-error";
 import { useTRPC } from "@/utils/trpc";
 
@@ -106,7 +106,7 @@ function CreateTokenDialog({
 			<DialogTrigger
 				render={
 					<Button size="sm">
-						<PlusIcon /> New token
+						<PlusIcon /> Create token
 					</Button>
 				}
 			/>
@@ -114,8 +114,8 @@ function CreateTokenDialog({
 				<DialogHeader>
 					<DialogTitle>Create a personal API token</DialogTitle>
 					<DialogDescription>
-						Used to authenticate the CLI or any HTTP client that connects as
-						you. It's shown once — copy it before closing this dialog.
+						Generates an API token scoped to you. It's shown once — copy it
+						before closing this dialog.
 					</DialogDescription>
 				</DialogHeader>
 				<div className="space-y-4">
@@ -155,7 +155,7 @@ function CreateTokenDialog({
 						</p>
 					</div>
 					<div className="space-y-2">
-						<Label>Expires</Label>
+						<Label>Expiry</Label>
 						<Select
 							items={EXPIRY_OPTIONS}
 							onValueChange={(value) => value && setExpiry(value)}
@@ -193,6 +193,80 @@ function CreateTokenDialog({
 	);
 }
 
+/** "Token created" dialog: the plaintext token is shown exactly once. */
+function TokenCreatedDialog({
+	onOpenChange,
+	token,
+}: {
+	onOpenChange: (open: boolean) => void;
+	token: string | null;
+}) {
+	const [copied, setCopied] = useState(false);
+
+	async function copy() {
+		if (!token) {
+			return;
+		}
+		await navigator.clipboard.writeText(token);
+		setCopied(true);
+		toast.success("Token copied");
+	}
+
+	return (
+		<Dialog
+			onOpenChange={(open) => {
+				if (!open) {
+					setCopied(false);
+				}
+				onOpenChange(open);
+			}}
+			open={token !== null}
+		>
+			<DialogContent className="sm:max-w-lg">
+				<DialogHeader>
+					<div className="mb-1 flex size-10 items-center justify-center rounded-xl bg-success-soft text-success">
+						<KeyIcon className="size-5" />
+					</div>
+					<DialogTitle>Token created</DialogTitle>
+					<DialogDescription>
+						Copy it now and store it somewhere safe, like a password manager.
+					</DialogDescription>
+				</DialogHeader>
+				{token ? (
+					<div className="space-y-3">
+						<span className="sr-only">Your new API token:</span>
+						<code className="block select-all break-all rounded-lg border border-border bg-subtle px-3.5 py-3 font-mono text-[13px] leading-relaxed">
+							{token}
+						</code>
+						<p className="flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2.5 text-warning text-xs">
+							<AlertTriangleIcon className="mt-px size-3.5 shrink-0" />
+							This is the only time the token is shown. If you lose it, revoke
+							it and create a new one.
+						</p>
+					</div>
+				) : null}
+				<DialogFooter>
+					<Button
+						onClick={copy}
+						type="button"
+						variant={copied ? "outline" : "default"}
+					>
+						{copied ? <CheckIcon /> : <CopyIcon />}
+						{copied ? "Copied" : "Copy token"}
+					</Button>
+					<Button
+						onClick={() => onOpenChange(false)}
+						type="button"
+						variant={copied ? "default" : "outline"}
+					>
+						Done
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
 /** The settings page's "API tokens / Developers" section: personal tokens, CLI instructions, and MCP connect instructions (when enabled). */
 export default function DeveloperSettingsTab() {
 	const trpc = useTRPC();
@@ -216,44 +290,23 @@ export default function DeveloperSettingsTab() {
 	);
 
 	return (
-		<div className="max-w-3xl space-y-6">
-			<Card className="rounded-xl">
-				<CardHeader className="flex flex-row items-start justify-between gap-4">
-					<div>
-						<CardTitle className="flex items-center gap-2">
-							<KeyIcon className="size-4" /> API tokens
-						</CardTitle>
-						<CardDescription>
-							Personal tokens that act as you — for the CLI, scripts, or any
-							HTTP client that doesn't use the OAuth sign-in flow.
-						</CardDescription>
-					</div>
-					{publicInfo.data?.allowApiTokens ? (
-						<CreateTokenDialog onCreated={setNewToken} />
-					) : null}
-				</CardHeader>
-				<CardContent>
+		<div className="space-y-10">
+			<SettingsSection
+				title={
+					<span className="flex items-center justify-between gap-3">
+						API tokens
+						{publicInfo.data?.allowApiTokens ? (
+							<CreateTokenDialog onCreated={setNewToken} />
+						) : null}
+					</span>
+				}
+			>
+				<div className="py-4">
 					{publicInfo.data && !publicInfo.data.allowApiTokens ? (
 						<p className="rounded-lg border border-border border-dashed p-4 text-muted-foreground text-sm">
 							Personal API tokens are turned off for this instance by an
 							administrator.
 						</p>
-					) : null}
-
-					{newToken ? (
-						<div className="mb-4 space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-							<p className="font-medium text-sm">
-								Your new token — copy it now, it won't be shown again:
-							</p>
-							<CodeBlock code={newToken} filename="token" language="text" />
-							<Button
-								onClick={() => setNewToken(null)}
-								size="sm"
-								variant="ghost"
-							>
-								Done, I've copied it
-							</Button>
-						</div>
 					) : null}
 
 					{tokens.data && tokens.data.length > 0 ? (
@@ -262,21 +315,26 @@ export default function DeveloperSettingsTab() {
 								<TableRow>
 									<TableHead>Name</TableHead>
 									<TableHead>Access</TableHead>
+									<TableHead>Created</TableHead>
 									<TableHead>Last used</TableHead>
 									<TableHead>Expires</TableHead>
-									<TableHead className="w-10" />
+									<TableHead className="w-16" />
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{tokens.data.map((t) => (
 									<TableRow key={t.id}>
-										<TableCell className="font-medium">{t.name}</TableCell>
+										<TableCell className="flex items-center gap-2 font-medium">
+											<KeyIcon className="size-4 text-muted-foreground" />
+											{t.name}
+										</TableCell>
 										<TableCell>
-											<Badge
-												variant={t.scope === "write" ? "default" : "secondary"}
-											>
+											<Badge variant={t.scope === "write" ? "soft" : "neutral"}>
 												{t.scope === "write" ? "Read & write" : "Read only"}
 											</Badge>
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{relativeDate(t.createdAt)}
 										</TableCell>
 										<TableCell className="text-muted-foreground">
 											{t.lastUsedAt ? relativeDate(t.lastUsedAt) : "Never"}
@@ -284,13 +342,14 @@ export default function DeveloperSettingsTab() {
 										<TableCell className="text-muted-foreground">
 											{relativeDate(t.expiresAt)}
 										</TableCell>
-										<TableCell>
+										<TableCell className="text-right">
 											<Button
+												className="text-destructive hover:bg-destructive/10 hover:text-destructive"
 												onClick={() => setRevokeId(t.id)}
-												size="icon-sm"
+												size="sm"
 												variant="ghost"
 											>
-												<TrashIcon className="text-destructive" />
+												Revoke
 											</Button>
 										</TableCell>
 									</TableRow>
@@ -302,27 +361,38 @@ export default function DeveloperSettingsTab() {
 							No personal API tokens yet.
 						</p>
 					)}
-				</CardContent>
-			</Card>
+				</div>
+			</SettingsSection>
 
-			<Card className="rounded-xl">
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<TerminalIcon className="size-4" /> Command-line (CLI)
-					</CardTitle>
-					<CardDescription>
-						Install the StryveForms CLI, sign in once, then script forms,
-						submissions and exports from your terminal or CI.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					<CodeBlock
-						code={
-							"bunx stryveforms login\nbunx stryveforms workspaces list\nbunx stryveforms forms list --json"
-						}
-						filename="terminal"
-						language="bash"
-					/>
+			<SettingsSection
+				description="Manage forms and submissions from your terminal."
+				title="StryveForms CLI"
+			>
+				<div className="space-y-4 py-4">
+					<div className="space-y-1.5">
+						<p className="font-medium text-[13px]">Run it</p>
+						<CodeBlock
+							code="bunx stryveforms --help"
+							filename="terminal"
+							language="bash"
+						/>
+					</div>
+					<div className="space-y-1.5">
+						<p className="font-medium text-[13px]">Sign in</p>
+						<CodeBlock
+							code={`stryveforms login --token ${newToken ?? "sfpat_…"}`}
+							filename="terminal"
+							language="bash"
+						/>
+					</div>
+					<div className="space-y-1.5">
+						<p className="font-medium text-[13px]">List your forms</p>
+						<CodeBlock
+							code="stryveforms forms list --workspace <id>"
+							filename="terminal"
+							language="bash"
+						/>
+					</div>
 					<p className="text-muted-foreground text-sm">
 						<code className="rounded bg-muted px-1 py-0.5 text-xs">login</code>{" "}
 						opens a browser to approve the CLI, or pass{" "}
@@ -335,8 +405,8 @@ export default function DeveloperSettingsTab() {
 						<code className="rounded bg-muted px-1 py-0.5 text-xs">--help</code>
 						.
 					</p>
-				</CardContent>
-			</Card>
+				</div>
+			</SettingsSection>
 
 			{publicInfo.data?.mcpEnabled ? (
 				<McpInstructions
@@ -344,6 +414,11 @@ export default function DeveloperSettingsTab() {
 					token={newToken ?? undefined}
 				/>
 			) : null}
+
+			<TokenCreatedDialog
+				onOpenChange={(open) => !open && setNewToken(null)}
+				token={newToken}
+			/>
 
 			<ConfirmDialog
 				description="This token will stop working immediately. Anything using it (the CLI, a script) will need a new one."

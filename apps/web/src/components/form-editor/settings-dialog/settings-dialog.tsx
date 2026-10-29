@@ -12,12 +12,12 @@ import {
 	TabsTrigger,
 } from "@StryveForms/ui/components/tabs";
 import {
-	BarChart3Icon,
-	Code2Icon,
-	SearchIcon,
-	SendIcon,
-	ShieldCheckIcon,
-	SigmaIcon,
+	CodeIcon,
+	GlobeIcon,
+	InboxIcon,
+	LineChartIcon,
+	LockIcon,
+	SettingsIcon,
 	SlidersHorizontalIcon,
 	XIcon,
 } from "lucide-react";
@@ -34,57 +34,49 @@ import { VariablesSection } from "./variables-section";
 
 const SECTIONS: {
 	component: ComponentType;
-	description: string;
 	icon: ComponentType<{ className?: string }>;
 	label: string;
 	value: string;
 }[] = [
 	{
 		component: GeneralSection,
-		description: "Title, visibility, tags, and link",
-		icon: SlidersHorizontalIcon,
+		icon: SettingsIcon,
 		label: "General",
 		value: "general",
 	},
 	{
 		component: SubmissionsSection,
-		description: "What happens after someone submits",
-		icon: SendIcon,
+		icon: InboxIcon,
 		label: "Submissions",
 		value: "submissions",
 	},
 	{
 		component: AccessSection,
-		description: "Password, captcha, close dates, limits",
-		icon: ShieldCheckIcon,
+		icon: LockIcon,
 		label: "Access & security",
 		value: "access",
 	},
 	{
 		component: SeoSection,
-		description: "Search engine title, description, previews",
-		icon: SearchIcon,
+		icon: GlobeIcon,
 		label: "SEO",
 		value: "seo",
 	},
 	{
 		component: AnalyticsSection,
-		description: "Connect Meta Pixel, GA, or GTM",
-		icon: BarChart3Icon,
+		icon: LineChartIcon,
 		label: "Analytics",
 		value: "analytics",
 	},
 	{
 		component: CustomCodeSection,
-		description: "Your own CSS and head code",
-		icon: Code2Icon,
+		icon: CodeIcon,
 		label: "Custom code",
 		value: "code",
 	},
 	{
 		component: VariablesSection,
-		description: "Formulas computed from answers",
-		icon: SigmaIcon,
+		icon: SlidersHorizontalIcon,
 		label: "Variables",
 		value: "variables",
 	},
@@ -132,30 +124,25 @@ export function SettingsDialog({
 						</DialogClose>
 					</div>
 					<div className="flex min-h-0 flex-1">
-						{/* Icon + description nav, arrow-key navigable (Base UI tablist). */}
-						<TabsList className="h-full w-64 shrink-0 flex-col items-stretch justify-start gap-1 overflow-y-auto rounded-none border-r bg-muted/20 p-2">
+						{/* Icon + label nav, arrow-key navigable (Base UI tablist). */}
+						<TabsList className="h-full w-52 shrink-0 flex-col items-stretch justify-start gap-0.5 overflow-y-auto rounded-none border-r bg-muted/20 p-2">
 							{SECTIONS.map((section) => {
 								const Icon = section.icon;
 								return (
 									<TabsTrigger
-										className="h-auto flex-col items-start gap-0.5 whitespace-normal px-3 py-2 text-left"
+										className="h-auto justify-start gap-2 whitespace-normal px-2.5 py-2 text-left font-medium"
 										key={section.value}
 										value={section.value}
 									>
-										<span className="flex items-center gap-2 font-medium text-sm">
-											<Icon className="size-4 shrink-0" />
-											{section.label}
-										</span>
-										<span className="pl-6 text-left font-normal text-muted-foreground text-xs">
-											{section.description}
-										</span>
+										<Icon className="size-4 shrink-0" />
+										{section.label}
 									</TabsTrigger>
 								);
 							})}
 						</TabsList>
 						{/* Scrolls independently of the nav; capped to a readable width. */}
 						<div className="min-h-0 flex-1 overflow-y-auto">
-							<div className="mx-auto max-w-2xl px-6 py-6">
+							<div className="mx-auto max-w-2xl px-8 py-7">
 								{SECTIONS.map((section) => {
 									const SectionComponent = section.component;
 									return (

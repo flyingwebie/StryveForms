@@ -1,13 +1,6 @@
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
-import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -32,6 +25,7 @@ import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { SettingsRow, SettingsSection } from "@/components/app/settings-shell";
 import { authClient } from "@/lib/auth-client";
 import { useInstance } from "@/lib/instance";
 
@@ -478,48 +472,47 @@ export default function AccountTwoFactorCard() {
 	const enabled = Boolean(session?.user.twoFactorEnabled);
 
 	return (
-		<Card className="rounded-xl">
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<ShieldCheckIcon className="size-4" />
-					Two-factor authentication
+		<SettingsSection
+			description="Add an extra layer of security to your account."
+			title="Two-factor authentication"
+		>
+			<SettingsRow
+				description="Protect your account with an authenticator app."
+				label={
+					<span className="flex items-center gap-1.5">
+						{enabled ? (
+							<Badge variant="success">Enabled</Badge>
+						) : (
+							<Badge variant="neutral">Not enabled</Badge>
+						)}
+					</span>
+				}
+			>
+				<div className="flex flex-wrap justify-end gap-2 sm:justify-start">
 					{enabled ? (
-						<Badge variant="secondary">Enabled</Badge>
+						<>
+							<Button
+								onClick={() => setRegenerateOpen(true)}
+								type="button"
+								variant="outline"
+							>
+								Regenerate backup codes
+							</Button>
+							<Button
+								onClick={() => setDisableOpen(true)}
+								type="button"
+								variant="outline"
+							>
+								Turn off
+							</Button>
+						</>
 					) : (
-						<Badge variant="outline">Recommended</Badge>
+						<Button onClick={() => setEnableOpen(true)} type="button">
+							<ShieldCheckIcon /> Enable two-factor authentication
+						</Button>
 					)}
-				</CardTitle>
-				<CardDescription>
-					A second step at sign-in, on top of your password, using a free
-					authenticator app on your phone (like Google Authenticator or
-					1Password). It's optional, but strongly recommended — it stops someone
-					from getting in even if they learn your password.
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-wrap gap-2">
-				{enabled ? (
-					<>
-						<Button
-							onClick={() => setRegenerateOpen(true)}
-							type="button"
-							variant="outline"
-						>
-							Regenerate backup codes
-						</Button>
-						<Button
-							onClick={() => setDisableOpen(true)}
-							type="button"
-							variant="outline"
-						>
-							Turn off
-						</Button>
-					</>
-				) : (
-					<Button onClick={() => setEnableOpen(true)} type="button">
-						Turn on two-factor authentication
-					</Button>
-				)}
-			</CardContent>
+				</div>
+			</SettingsRow>
 
 			<EnableTwoFactorDialog
 				onEnabled={() => refetch()}
@@ -535,6 +528,6 @@ export default function AccountTwoFactorCard() {
 				onOpenChange={setRegenerateOpen}
 				open={regenerateOpen}
 			/>
-		</Card>
+		</SettingsSection>
 	);
 }

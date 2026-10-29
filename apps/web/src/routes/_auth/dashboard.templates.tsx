@@ -16,6 +16,7 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "@StryveForms/ui/components/tabs";
+import { cn } from "@StryveForms/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LayoutTemplateIcon, PlusIcon, SearchIcon } from "lucide-react";
@@ -25,6 +26,7 @@ import { z } from "zod";
 
 import ConfirmDialog from "@/components/app/confirm-dialog";
 import { subtreeIds } from "@/components/app/folders/folder-tree-utils";
+import PageHeader, { PageBody } from "@/components/app/page-header";
 import NewTemplateDialog from "@/components/app/templates/new-template-dialog";
 import TemplateCard, {
 	type TemplateCardData,
@@ -33,8 +35,13 @@ import TemplateDetailsDialog, {
 	type TemplateDetailsTarget,
 } from "@/components/app/templates/template-details-dialog";
 import TemplatePreviewDialog from "@/components/app/templates/template-preview-dialog";
+import { useInstance } from "@/lib/instance";
 import { useWorkspaces } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
+
+/** The instance's default primary colour (see `primaryColor` default in the forms DB schema) —
+ * used to decide whether the hero may use the fixed brand gradient, or must follow `bg-primary`. */
+const DEFAULT_BRAND_COLOR = "#7c3aed";
 
 export const Route = createFileRoute("/_auth/dashboard/templates")({
 	component: RouteComponent,
@@ -45,6 +52,62 @@ export const Route = createFileRoute("/_auth/dashboard/templates")({
 });
 
 const SKELETON_IDS = ["t-1", "t-2", "t-3", "t-4", "t-5", "t-6"];
+
+/** "Use template": creates a form from a built-in (slug) or custom (id) template, then opens it. */
+function useTemplateCreation(workspaceId: string | null) {
+	const trpc = useTRPC();
+	const navigate = useNavigate();
+	const create = useMutation(
+		trpc.form.create.mutationOptions({
+			onError: (error) => toast.error(error.message),
+			onSuccess: (data) => {
+				navigate({ to: "/editor/$formId", params: { formId: data.id } });
+			},
+		})
+	);
+	const createFromId = (id: string) => {
+		if (workspaceId) {
+			create.mutate({ templateId: id, workspaceId });
+		}
+	};
+	const createFromSlug = (slug: string) => {
+		if (workspaceId) {
+			create.mutate({ templateSlug: slug, workspaceId });
+		}
+	};
+	return {
+		create,
+		createFromId,
+		createFromSlug,
+		/** Dispatches "Use template" for the preview dialog's (built-in or custom) target. */
+		createFromPreview: (preview: { id?: string; slug?: string } | null) => {
+			const slugOrId = preview?.slug ?? preview?.id;
+			if (!slugOrId) {
+				return;
+			}
+			if (preview?.slug) {
+				createFromSlug(slugOrId);
+			} else {
+				createFromId(slugOrId);
+			}
+		},
+	};
+}
+
+/** Narrows `mine` to one folder (and its subfolders) for the sidebar's folder view. */
+function filterByFolder<T extends { folderId: string | null }>(
+	items: T[],
+	folder: string | undefined,
+	subtree: Set<string> | null
+): T[] {
+	if (!folder) {
+		return items;
+	}
+	if (folder === "none") {
+		return items.filter((t) => !t.folderId);
+	}
+	return items.filter((t) => Boolean(t.folderId && subtree?.has(t.folderId)));
+}
 
 function filterTemplates<
 	T extends {
@@ -75,7 +138,7 @@ function CategoryChips({
 			<Badge
 				className="cursor-pointer"
 				onClick={() => onSelect(null)}
-				variant={selected === null ? "default" : "outline"}
+				variant={selected === null ? "soft" : "outline"}
 			>
 				All
 			</Badge>
@@ -84,10 +147,98 @@ function CategoryChips({
 					className="cursor-pointer"
 					key={category}
 					onClick={() => onSelect(category)}
-					variant={selected === category ? "default" : "outline"}
+					variant={selected === category ? "soft" : "outline"}
 				>
 					{category}
 				</Badge>
+			))}
+		</div>
+	);
+}
+
+/**
+ * The editorial hero banner: Instrument Serif headline + search. Uses the
+ * fixed brand gradient only on a default-branded instance — a white-labelled
+ * one (custom `primaryColor`) gets a flat `bg-primary` instead.
+ */
+function TemplatesHero({
+	onSearchChange,
+	search,
+	templateCount,
+}: {
+	onSearchChange: (value: string) => void;
+	search: string;
+	templateCount: number;
+}) {
+	const instance = useInstance();
+	const isDefaultBrand =
+		!instance?.primaryColor ||
+		instance.primaryColor.toLowerCase() === DEFAULT_BRAND_COLOR;
+
+	return (
+		<div
+			className={cn(
+				"relative overflow-hidden rounded-2xl px-6 py-8 text-white sm:px-10 sm:py-10",
+				isDefaultBrand
+					? "bg-gradient-to-br from-[#8B5CF6] to-[#4338CA]"
+					: "bg-primary"
+			)}
+		>
+			<div className="flex flex-wrap items-center justify-between gap-6">
+				<div className="max-w-xl">
+					<h2 className="font-display text-3xl leading-tight sm:text-4xl">
+						Start with a form that already works
+					</h2>
+					<p className="mt-2 text-sm text-white/80">
+						Browse {templateCount} templates built by the StryveForms team, or
+						start from one of your own.
+					</p>
+				</div>
+				<div className="relative w-full max-w-xs">
+					<SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+					<Input
+						aria-label="Search templates"
+						className="border-0 bg-white pl-8 text-foreground shadow-sm placeholder:text-muted-foreground"
+						onChange={(event) => onSearchChange(event.target.value)}
+						placeholder="Search…"
+						value={search}
+					/>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function BuiltInTemplatesTab({
+	isLoading,
+	onPreview,
+	onUse,
+	templates,
+}: {
+	isLoading: boolean;
+	onPreview: (template: TemplateCardData) => void;
+	onUse: (slug: string) => void;
+	templates: TemplateCardData[];
+}) {
+	if (isLoading) {
+		return (
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				{SKELETON_IDS.map((id) => (
+					<Skeleton className="h-64 w-full rounded-xl" key={id} />
+				))}
+			</div>
+		);
+	}
+	return (
+		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{templates.map((template) => (
+				<TemplateCard
+					isCustom={false}
+					key={template.slug}
+					onPreview={() => onPreview(template)}
+					onUse={() => template.slug && onUse(template.slug)}
+					template={template}
+				/>
 			))}
 		</div>
 	);
@@ -185,7 +336,6 @@ function MyTemplatesTab({
 function RouteComponent() {
 	const trpc = useTRPC();
 	const queryClient = useQueryClient();
-	const navigate = useNavigate();
 	const { activeWorkspaceId } = useWorkspaces();
 	const { folder } = Route.useSearch();
 	const [tab, setTab] = useState<"builtin" | "mine">("builtin");
@@ -224,14 +374,8 @@ function RouteComponent() {
 		enabled: Boolean(activeWorkspaceId),
 	});
 
-	const create = useMutation(
-		trpc.form.create.mutationOptions({
-			onError: (error) => toast.error(error.message),
-			onSuccess: (data) => {
-				navigate({ to: "/editor/$formId", params: { formId: data.id } });
-			},
-		})
-	);
+	const { createFromId, createFromPreview, createFromSlug } =
+		useTemplateCreation(activeWorkspaceId);
 	const deleteTemplate = useMutation(
 		trpc.template.delete.mutationOptions({
 			onError: (error) => toast.error(error.message),
@@ -288,51 +432,43 @@ function RouteComponent() {
 		? new Set(subtreeIds(folders, activeFolder.id))
 		: null;
 	const mineFiltered = filterTemplates(
-		folder
-			? mine.filter((t) => {
-					if (folder === "none") {
-						return !t.folderId;
-					}
-					return Boolean(t.folderId && activeFolderSubtree?.has(t.folderId));
-				})
-			: mine,
+		filterByFolder(mine, folder, activeFolderSubtree),
 		search,
 		category
 	);
 	const builtInFiltered = filterTemplates(builtIn, search, category);
 
-	function handleUseTemplate(slug: string) {
-		if (!activeWorkspaceId) {
-			return;
-		}
-		create.mutate({ templateSlug: slug, workspaceId: activeWorkspaceId });
+	function handleUsePreview() {
+		createFromPreview(preview);
+		setPreview(null);
 	}
 
-	function handleUseCustomTemplate(id: string) {
-		if (!activeWorkspaceId) {
-			return;
-		}
-		create.mutate({ templateId: id, workspaceId: activeWorkspaceId });
-	}
+	const activeCount = tab === "builtin" ? builtIn.length : mine.length;
 
 	return (
-		<div className="space-y-6 p-6">
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<div>
-					<h1 className="font-semibold text-2xl">Templates</h1>
-					<p className="text-muted-foreground text-sm">
-						Start from a ready-made form and customize it to your needs.
-					</p>
-					{activeFolderHasChildren ? (
-						<p className="text-muted-foreground text-xs">
-							Showing templates in {activeFolder?.name} and its subfolders.
-						</p>
-					) : null}
-				</div>
-				<Button onClick={() => setNewOpen(true)}>
-					<PlusIcon /> New template
-				</Button>
-			</div>
+		<PageBody>
+			<PageHeader
+				actions={
+					<Button onClick={() => setNewOpen(true)}>
+						<PlusIcon /> New template
+					</Button>
+				}
+				description="Start from a template built by the StryveForms team, or save one of your own."
+				eyebrow={`${activeCount} template${activeCount === 1 ? "" : "s"}`}
+				title="Templates"
+			/>
+
+			{activeFolderHasChildren ? (
+				<p className="-mt-4 text-muted-foreground text-xs">
+					Showing templates in {activeFolder?.name} and its subfolders.
+				</p>
+			) : null}
+
+			<TemplatesHero
+				onSearchChange={setSearch}
+				search={search}
+				templateCount={builtIn.length}
+			/>
 
 			<Tabs
 				onValueChange={(value) => {
@@ -341,24 +477,13 @@ function RouteComponent() {
 				}}
 				value={tab}
 			>
-				<TabsList>
+				<TabsList variant="line">
 					<TabsTrigger value="builtin">Built-in</TabsTrigger>
 					<TabsTrigger value="mine">My templates</TabsTrigger>
 				</TabsList>
 
-				<div className="flex flex-wrap items-center gap-2 pt-4">
-					<div className="relative max-w-sm flex-1">
-						<SearchIcon className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-						<Input
-							className="pl-8"
-							onChange={(event) => setSearch(event.target.value)}
-							placeholder="Search templates…"
-							value={search}
-						/>
-					</div>
-				</div>
 				{categories.length > 0 ? (
-					<div className="pt-2">
+					<div className="pt-4">
 						<CategoryChips
 							categories={categories}
 							onSelect={setCategory}
@@ -368,26 +493,12 @@ function RouteComponent() {
 				) : null}
 
 				<TabsContent className="pt-4" value="builtin">
-					{/* biome-ignore lint/suspicious/noUnnecessaryConditions: isLoading is a runtime query-status flag */}
-					{builtInQuery.isLoading ? (
-						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-							{SKELETON_IDS.map((id) => (
-								<Skeleton className="h-64 w-full rounded-xl" key={id} />
-							))}
-						</div>
-					) : (
-						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-							{builtInFiltered.map((template) => (
-								<TemplateCard
-									isCustom={false}
-									key={template.slug}
-									onPreview={() => setPreview(template)}
-									onUse={() => handleUseTemplate(template.slug)}
-									template={template}
-								/>
-							))}
-						</div>
-					)}
+					<BuiltInTemplatesTab
+						isLoading={builtInQuery.isLoading}
+						onPreview={setPreview}
+						onUse={createFromSlug}
+						templates={builtInFiltered}
+					/>
 				</TabsContent>
 
 				<TabsContent className="pt-4" value="mine">
@@ -401,7 +512,7 @@ function RouteComponent() {
 							moveToFolder.mutate({ id, folderId })
 						}
 						onPreview={(template) => setPreview(template)}
-						onUse={handleUseCustomTemplate}
+						onUse={createFromId}
 						templates={mineFiltered}
 					/>
 				</TabsContent>
@@ -409,12 +520,14 @@ function RouteComponent() {
 
 			{preview ? (
 				<TemplatePreviewDialog
+					category={preview.category}
 					name={preview.name}
 					onOpenChange={(open) => {
 						if (!open) {
 							setPreview(null);
 						}
 					}}
+					onUse={activeWorkspaceId ? handleUsePreview : undefined}
 					open={preview !== null}
 					structure={
 						"structure" in preview
@@ -458,6 +571,6 @@ function RouteComponent() {
 				open={deleteTarget !== null}
 				title="Delete this template?"
 			/>
-		</div>
+		</PageBody>
 	);
 }

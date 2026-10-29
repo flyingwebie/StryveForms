@@ -116,15 +116,22 @@ export default function BulkActionBar({
 
 	return (
 		<>
-			<div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-border bg-popover/95 px-2 py-1.5 shadow-lg backdrop-blur-sm">
+			<div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-xl bg-foreground px-2 py-1.5 text-background shadow-lg">
 				<span className="px-2 font-medium text-sm">
 					{selectedIds.length} selected
 				</span>
-				<Separator className="h-5" orientation="vertical" />
+				<Separator className="h-5 bg-background/20" orientation="vertical" />
 
 				<DropdownMenu>
 					<DropdownMenuTrigger
-						render={<Button disabled={pending} size="sm" variant="ghost" />}
+						render={
+							<Button
+								className="text-background hover:bg-background/10 hover:text-background"
+								disabled={pending}
+								size="sm"
+								variant="ghost"
+							/>
+						}
 					>
 						<FolderInputIcon /> Folder
 					</DropdownMenuTrigger>
@@ -157,7 +164,14 @@ export default function BulkActionBar({
 
 				<DropdownMenu>
 					<DropdownMenuTrigger
-						render={<Button disabled={pending} size="sm" variant="ghost" />}
+						render={
+							<Button
+								className="text-background hover:bg-background/10 hover:text-background"
+								disabled={pending}
+								size="sm"
+								variant="ghost"
+							/>
+						}
 					>
 						<UploadIcon /> Status
 					</DropdownMenuTrigger>
@@ -187,6 +201,7 @@ export default function BulkActionBar({
 				</DropdownMenu>
 
 				<Button
+					className="text-background hover:bg-background/10 hover:text-background"
 					disabled={pending}
 					onClick={() => bulkDuplicate.mutate({ ids: selectedIds })}
 					size="sm"
@@ -198,7 +213,14 @@ export default function BulkActionBar({
 				{otherWorkspaces.length > 0 ? (
 					<DropdownMenu>
 						<DropdownMenuTrigger
-							render={<Button disabled={pending} size="sm" variant="ghost" />}
+							render={
+								<Button
+									className="text-background hover:bg-background/10 hover:text-background"
+									disabled={pending}
+									size="sm"
+									variant="ghost"
+								/>
+							}
 						>
 							<FolderInputIcon /> Move to workspace
 						</DropdownMenuTrigger>
@@ -220,9 +242,9 @@ export default function BulkActionBar({
 					</DropdownMenu>
 				) : null}
 
-				<Separator className="h-5" orientation="vertical" />
+				<Separator className="h-5 bg-background/20" orientation="vertical" />
 				<Button
-					className="text-destructive hover:text-destructive"
+					className="text-destructive hover:bg-background/10 hover:text-destructive"
 					onClick={() => setDeleteOpen(true)}
 					size="sm"
 					variant="ghost"
@@ -231,6 +253,7 @@ export default function BulkActionBar({
 				</Button>
 				<Button
 					aria-label="Clear selection"
+					className="text-background hover:bg-background/10 hover:text-background"
 					onClick={onClear}
 					size="icon-sm"
 					variant="ghost"
@@ -239,6 +262,8 @@ export default function BulkActionBar({
 				</Button>
 			</div>
 			<ConfirmDialog
+				confirmIcon={<Trash2Icon />}
+				confirmLabel="Delete forms"
 				description={`This hides ${selectedIds.length} form(s) and their submissions. This can't be undone from here.`}
 				loading={bulkDelete.isPending}
 				onConfirm={() => bulkDelete.mutate({ ids: selectedIds })}

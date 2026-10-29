@@ -22,7 +22,7 @@ import { workspacesCommand } from "./commands/workspaces";
 import { configPath } from "./config";
 import { printLine } from "./output";
 
-const VERSION = "0.1.0";
+const VERSION = "1.0.0";
 
 const HELP = `stryveforms — command-line access to your StryveForms instance
 

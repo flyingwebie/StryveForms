@@ -203,6 +203,26 @@ export default function CommandMenu({
 						</CommandItem>
 					</CommandGroup>
 				</CommandList>
+				<div className="flex items-center gap-3 border-border border-t px-3 py-2 text-subtle-foreground text-xs">
+					<span className="flex items-center gap-1">
+						<kbd className="rounded border border-border bg-muted px-1 font-sans">
+							↑↓
+						</kbd>
+						Navigate
+					</span>
+					<span className="flex items-center gap-1">
+						<kbd className="rounded border border-border bg-muted px-1 font-sans">
+							↵
+						</kbd>
+						Select
+					</span>
+					<span className="flex items-center gap-1">
+						<kbd className="rounded border border-border bg-muted px-1 font-sans">
+							esc
+						</kbd>
+						Close
+					</span>
+				</div>
 			</Command>
 		</CommandDialog>
 	);

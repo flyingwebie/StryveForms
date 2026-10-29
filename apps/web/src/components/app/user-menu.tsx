@@ -14,7 +14,7 @@ import {
 } from "@StryveForms/ui/components/dropdown-menu";
 import { Skeleton } from "@StryveForms/ui/components/skeleton";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOutIcon, SettingsIcon } from "lucide-react";
+import { EllipsisIcon, LogOutIcon, SettingsIcon } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -45,16 +45,22 @@ export default function UserMenu() {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 text-left outline-none hover:bg-sidebar-accent">
+			<DropdownMenuTrigger className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 text-left outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:p-0.5">
 				<Avatar className="size-7 rounded-full">
 					<AvatarImage src={session.user.image ?? undefined} />
-					<AvatarFallback className="rounded-full text-xs">
+					<AvatarFallback className="rounded-full bg-primary-soft font-semibold text-[11px] text-primary-soft-foreground">
 						{initials(session.user.name)}
 					</AvatarFallback>
 				</Avatar>
-				<span className="min-w-0 flex-1 truncate text-xs group-data-[collapsible=icon]:hidden">
-					{session.user.name}
+				<span className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
+					<span className="truncate font-medium text-[13px]">
+						{session.user.name}
+					</span>
+					<span className="truncate text-muted-foreground text-xs">
+						{session.user.email}
+					</span>
 				</span>
+				<EllipsisIcon className="size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-56">
 				<DropdownMenuGroup>

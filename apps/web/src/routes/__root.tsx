@@ -56,13 +56,28 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 			],
 			links: [
 				{ href: appCss, rel: "stylesheet" },
-				{ href: data?.instance.faviconUrl || "/favicon.svg", rel: "icon" },
+				...faviconLinks(
+					data?.instance.faviconUrl ?? null,
+					data?.instance.faviconDarkUrl ?? null
+				),
 				{ href: "/apple-touch-icon.png", rel: "apple-touch-icon" },
 			],
 		};
 	},
 	component: RootDocument,
 });
+
+/** Favicon links: one per colour scheme when a dark-mode icon is set. */
+function faviconLinks(light: string | null, dark: string | null) {
+	const lightHref = light || "/favicon.svg";
+	if (!dark) {
+		return [{ href: lightHref, rel: "icon" }];
+	}
+	return [
+		{ href: lightHref, media: "(prefers-color-scheme: light)", rel: "icon" },
+		{ href: dark, media: "(prefers-color-scheme: dark)", rel: "icon" },
+	];
+}
 
 function RootDocument() {
 	return (

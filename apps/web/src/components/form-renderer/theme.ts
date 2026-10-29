@@ -1,6 +1,7 @@
 import type { PublicFormDto } from "@StryveForms/api/lib/serialize";
 import { useEffect, useState } from "react";
 import { tv } from "tailwind-variants";
+import { fontFamilyValue } from "@/lib/google-fonts";
 
 export type FormTheme = PublicFormDto["theme"];
 export type FormSize = PublicFormDto["size"];
@@ -159,18 +160,34 @@ export const labelTheme = tv({
 });
 
 export const choiceOptionTheme = tv({
-	base: "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors",
+	base: "flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors",
 	variants: {
 		selected: {
-			true: "border-[var(--color-form)] bg-[color-mix(in_srgb,var(--bg-form-color)_12%,transparent)]",
+			true: "border-[var(--color-form)] bg-[color-mix(in_srgb,var(--bg-form-color)_10%,transparent)]",
 			false:
 				"border-neutral-300 hover:bg-neutral-50 dark:border-neutral-600 dark:hover:bg-neutral-800",
 		},
 	},
 });
 
+/** Lettered indicator badge for a focused-mode choice option (A/B/C…): filled accent when selected. */
+export const choiceLetterTheme = tv({
+	base: "flex size-6 shrink-0 items-center justify-center rounded-md font-medium text-xs transition-colors",
+	variants: {
+		selected: {
+			true: "bg-[var(--color-form)] text-[var(--primary-foreground)]",
+			false:
+				"bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400",
+		},
+	},
+});
+
+/** Outlined keyboard-shortcut hint pill ("A", "Press Enter ↵"…) used in focused mode. */
+export const kbdHintTheme =
+	"shrink-0 rounded-md border border-neutral-300 px-1.5 py-0.5 font-mono text-[11px] text-neutral-400 dark:border-neutral-600 dark:text-neutral-500";
+
 export const submitButtonTheme = tv({
-	base: "inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-form)] px-5 py-2.5 font-medium text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
+	base: "inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-form)] px-5 py-3 font-semibold text-[var(--primary-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
 });
 
 /** Height/radius for composite controls that can't take `inputTheme` directly (PhoneInput's own wrapper). */
@@ -189,15 +206,33 @@ export function compositeInputClass(
 
 /** Previous/secondary button: accent-coloured outline instead of a filled fill. */
 export const outlineButtonTheme = tv({
-	base: "inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--color-form)] px-5 py-2.5 font-medium text-[var(--color-form)] transition-colors hover:bg-[color-mix(in_srgb,var(--bg-form-color)_10%,transparent)] disabled:cursor-not-allowed disabled:opacity-50",
+	base: "inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--color-form)] px-5 py-3 font-semibold text-[var(--color-form)] transition-colors hover:bg-[color-mix(in_srgb,var(--bg-form-color)_10%,transparent)] disabled:cursor-not-allowed disabled:opacity-50",
 });
 
-/** Google-Fonts-ready font stack for `settings.fontFamily`. */
+/**
+ * The "Notion" theme is monochrome (black/white controls, no brand colour) —
+ * everything else uses the form's own accent. Feeding this into
+ * {@link formColorVars} instead of `form.color` makes every component that
+ * reads `--color-form`/`--primary` (buttons, radios, stars, focus rings…)
+ * switch automatically, with no per-component theme branching needed.
+ */
+export function effectiveAccentColor(
+	theme: FormTheme,
+	color: string,
+	scheme: ResolvedScheme
+): string {
+	if (theme !== "notion") {
+		return color;
+	}
+	return scheme === "dark" ? "#f5f5f5" : "#171717";
+}
+
+/** Font stack for `settings.fontFamily` (a Google Fonts family, loaded by `useGoogleFont`). */
 export function fontFamilyStack(fontFamily: string | null): string | undefined {
 	if (!fontFamily) {
 		return;
 	}
-	return `"${fontFamily}", ui-sans-serif, system-ui, sans-serif`;
+	return fontFamilyValue(fontFamily);
 }
 
 /**

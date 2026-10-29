@@ -15,6 +15,8 @@ export interface EditorFormMeta {
 export type SaveStatus = "error" | "saved" | "saving" | "unsaved";
 
 export type PreviewWidth = "desktop" | "mobile";
+/** Preview-only colour scheme override; "auto" follows the form's own dark mode setting. */
+export type PreviewScheme = "auto" | "light" | "dark";
 
 export type LeftPanelTab = "ai" | "build" | "design" | "pages";
 

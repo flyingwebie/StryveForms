@@ -2,6 +2,7 @@ import { type FormField, fieldOptions } from "@StryveForms/forms/types";
 import { Button } from "@StryveForms/ui/components/button";
 import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import { Input } from "@StryveForms/ui/components/input";
+import { Label } from "@StryveForms/ui/components/label";
 import {
 	Select,
 	SelectContent,
@@ -10,7 +11,7 @@ import {
 	SelectValue,
 } from "@StryveForms/ui/components/select";
 import { Switch } from "@StryveForms/ui/components/switch";
-import { CopyIcon } from "lucide-react";
+import { CopyIcon, ExternalLinkIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -137,39 +138,55 @@ export function PrefillPanel({
 	}
 
 	return (
-		<div className="space-y-4">
-			<p className="text-muted-foreground text-sm">
-				Pick values below to pre-fill the form when it's opened from this link.
-				Each parameter uses the field's id, not its label — the link still works
-				if you rename a field later.
-			</p>
-			<div className="space-y-3">
-				{fields.map((field) => (
-					<div className="grid grid-cols-3 items-center gap-3" key={field.id}>
-						<label
-							className="truncate text-muted-foreground text-sm"
-							htmlFor={`prefill-${field.id}`}
-							title={`Param: ${field.id}`}
-						>
-							{field.name}
-						</label>
-						<div className="col-span-2" id={`prefill-${field.id}`}>
-							<PrefillRow
-								field={field}
-								onChange={(value) =>
-									setValues((prev) => ({ ...prev, [field.id]: value }))
-								}
-								value={values[field.id]}
-							/>
+		<div className="grid gap-8 lg:grid-cols-2">
+			<div className="min-w-0 space-y-4">
+				<div>
+					<h2 className="font-semibold text-base">Prefill values</h2>
+					<p className="text-muted-foreground text-sm">
+						Set a value for any field and we'll build a link that opens the form
+						with it already filled in.
+					</p>
+				</div>
+				<div className="space-y-4">
+					{fields.map((field) => (
+						<div className="space-y-1.5" key={field.id}>
+							<Label
+								htmlFor={`prefill-${field.id}`}
+								title={`Param: ${field.id}`}
+							>
+								{field.name}
+							</Label>
+							<div id={`prefill-${field.id}`}>
+								<PrefillRow
+									field={field}
+									onChange={(value) =>
+										setValues((prev) => ({ ...prev, [field.id]: value }))
+									}
+									value={values[field.id]}
+								/>
+							</div>
 						</div>
-					</div>
-				))}
+					))}
+				</div>
 			</div>
-			<div className="flex gap-2">
-				<Input className="font-mono text-xs" readOnly value={link} />
-				<Button onClick={() => copy(link)} variant="outline">
-					<CopyIcon /> Copy
-				</Button>
+			<div className="min-w-0 space-y-3">
+				<h2 className="font-semibold text-base">Generated link</h2>
+				<div className="flex flex-wrap gap-2">
+					<Input
+						className="min-w-0 flex-1 font-mono text-xs"
+						readOnly
+						value={link}
+					/>
+					<Button onClick={() => copy(link)}>
+						<CopyIcon /> Copy
+					</Button>
+					<Button
+						render={<a href={link} rel="noopener noreferrer" target="_blank" />}
+						variant="outline"
+					>
+						<ExternalLinkIcon /> Open
+					</Button>
+				</div>
 			</div>
 		</div>
 	);

@@ -83,6 +83,7 @@ export default function JotformFlow({
 	if (!(connection && payload)) {
 		content = (
 			<JotformConnectStep
+				onCancel={onCancel}
 				onConnected={(data) => {
 					setConnection(data);
 					setChoice(DEFAULT_CHOICE);
@@ -118,15 +119,6 @@ export default function JotformFlow({
 		<div className="space-y-6">
 			<WizardSteps current={step} />
 			{content}
-			{connection ? null : (
-				<button
-					className="text-muted-foreground text-sm hover:text-foreground"
-					onClick={onCancel}
-					type="button"
-				>
-					← Choose another source
-				</button>
-			)}
 		</div>
 	);
 }

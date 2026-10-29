@@ -89,10 +89,10 @@ function RouteComponent() {
 	}
 
 	return (
-		<div className="max-w-3xl space-y-8">
+		<div className="space-y-8">
 			{integrations.length > 0 ? (
-				<div className="space-y-2">
-					<h3 className="font-medium text-sm">Active integrations</h3>
+				<div className="space-y-3">
+					<h2 className="font-semibold text-base">Active integrations</h2>
 					<ItemGroup>
 						{integrations.map((integration) => (
 							<IntegrationRow
@@ -123,7 +123,7 @@ function RouteComponent() {
 			) : null}
 
 			<div className="space-y-6">
-				<h3 className="font-medium text-sm">Add an integration</h3>
+				<h2 className="font-semibold text-base">Add an integration</h2>
 				<IntegrationCatalogue
 					items={notifications}
 					note={{
@@ -145,6 +145,7 @@ function RouteComponent() {
 					existing={null}
 					form={formQuery.data}
 					integrationId={dialogIntegrationId}
+					name={catalogById.get(dialogIntegrationId)?.name}
 					onOpenChange={(open) => {
 						if (!open) {
 							setDialogIntegrationId(null);
@@ -159,6 +160,7 @@ function RouteComponent() {
 					existing={editing}
 					form={formQuery.data}
 					integrationId={editing.integrationId}
+					name={catalogById.get(editing.integrationId)?.name}
 					onOpenChange={(open) => {
 						if (!open) {
 							setEditing(null);
@@ -171,6 +173,12 @@ function RouteComponent() {
 			<IntegrationEventsSheet
 				formId={formId}
 				integrationId={eventsIntegrationId}
+				integrationName={
+					catalogById.get(
+						integrations.find((i) => i.id === eventsIntegrationId)
+							?.integrationId ?? ""
+					)?.name
+				}
 				onOpenChange={(open) => {
 					if (!open) {
 						setEventsIntegrationId(null);

@@ -173,21 +173,14 @@ export function PagesTab() {
 	}
 
 	return (
-		// pb-24 (~6rem): keeps the last page card clear of the floating
+		// pb-24 (~6rem): keeps the Add page button clear of the floating
 		// TanStack devtools button that overlaps the bottom of this panel.
 		<div className="flex flex-col gap-3 p-3 pb-24">
 			<div className="flex items-center justify-between gap-2">
-				<p className="font-medium text-muted-foreground text-xs">Pages</p>
-				{readOnly ? null : (
-					<Button
-						onClick={handleAddPage}
-						size="sm"
-						type="button"
-						variant="outline"
-					>
-						<PlusIcon /> Add page
-					</Button>
-				)}
+				<p className="font-medium text-subtle-foreground text-xs uppercase tracking-wide">
+					Pages
+				</p>
+				<span className="text-muted-foreground text-xs">{pages.length}</span>
 			</div>
 			<p className="text-muted-foreground text-xs">
 				{implicit
@@ -221,6 +214,11 @@ export function PagesTab() {
 						readOnly={readOnly}
 					/>
 				))
+			)}
+			{readOnly ? null : (
+				<Button onClick={handleAddPage} type="button" variant="outline">
+					<PlusIcon /> Add page
+				</Button>
 			)}
 		</div>
 	);

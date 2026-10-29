@@ -26,7 +26,7 @@ StryveForms doesn't yet have numbered releases or long-term support branches —
 This policy covers the StryveForms application code in this repository (`apps/*`, `packages/*`) and its official Docker images. It does not cover:
 
 - Vulnerabilities in third-party dependencies — report those upstream (though we'd still like to hear about it so we can patch/pin a fix).
-- Security issues in how *you've* deployed or configured an instance (e.g. an exposed database port, a weak `BETTER_AUTH_SECRET`, a missing reverse-proxy TLS config) — see the [Deployment docs](apps/fumadocs/content/docs/deployment/overview.mdx) for the settings that matter.
+- Security issues in how *you've* deployed or configured an instance (e.g. an exposed database port, a weak `BETTER_AUTH_SECRET`, a missing reverse-proxy TLS config) — see the self-hosting section of the README.
 - Social engineering, physical access, or denial-of-service reports without a concrete application-level issue behind them.
 
 ## A note on self-hosting

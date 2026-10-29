@@ -40,7 +40,21 @@ export const FOLDER_EMOJIS = [
 const [firstColor] = FOLDER_COLORS;
 const [firstEmoji] = FOLDER_EMOJIS;
 export const DEFAULT_FOLDER_COLOR = firstColor.value;
-export const DEFAULT_FOLDER_ICON = firstEmoji;
+/** New folders get a Lucide folder icon (tinted with the folder colour). */
+export const DEFAULT_FOLDER_ICON = "lucide:folder";
+
+/** Stored icons that mean "the default folder icon" (older folders saved the 📁 emoji). */
+const DEFAULT_FOLDER_ICON_ALIASES = new Set<string>([
+	DEFAULT_FOLDER_ICON,
+	firstEmoji,
+	"📂",
+	"🗂️",
+]);
+
+/** True when a folder should show the standard Lucide folder icon. */
+export function usesDefaultFolderIcon(icon: string | null | undefined) {
+	return !icon || DEFAULT_FOLDER_ICON_ALIASES.has(icon);
+}
 
 /** Sentinel used in the `?folder=` search param for "items with no folder". */
 export const NO_FOLDER = "none";

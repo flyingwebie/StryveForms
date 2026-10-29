@@ -29,9 +29,11 @@ import {
 import { cn } from "@StryveForms/ui/lib/utils";
 import {
 	AlertTriangleIcon,
+	ArrowLeftIcon,
 	ArrowRightIcon,
 	CheckCircle2Icon,
 	ClockIcon,
+	DownloadIcon,
 	FileStackIcon,
 	FileTextIcon,
 	InboxIcon,
@@ -49,22 +51,11 @@ import { formatBytes, formatDuration, plural } from "./format";
 
 const STATUS_BADGE: Record<
 	PreviewField["status"],
-	{ className: string; label: string }
+	{ label: string; variant: "info" | "success" | "neutral" }
 > = {
-	converted: {
-		className:
-			"border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-		label: "Converted",
-	},
-	ok: {
-		className:
-			"border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-		label: "Ready",
-	},
-	skipped: {
-		className: "border-border bg-muted text-muted-foreground",
-		label: "Skipped",
-	},
+	converted: { label: "Converted", variant: "success" },
+	ok: { label: "Ready", variant: "info" },
+	skipped: { label: "Skipped", variant: "neutral" },
 };
 
 function filesHint(files: number | null, size: number | null) {
@@ -191,9 +182,7 @@ function FieldTable({ fields }: { fields: PreviewField[] }) {
 									{field.targetType ?? "—"}
 								</TableCell>
 								<TableCell className="text-right">
-									<Badge className={badge.className} variant="outline">
-										{badge.label}
-									</Badge>
+									<Badge variant={badge.variant}>{badge.label}</Badge>
 								</TableCell>
 							</TableRow>
 						);
@@ -216,8 +205,8 @@ function FormRow({ form }: { form: FormPreview }) {
 						className={cn(
 							"flex size-8 shrink-0 items-center justify-center rounded-lg",
 							attention
-								? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-								: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+								? "bg-warning-soft text-warning"
+								: "bg-success-soft text-success"
 						)}
 					>
 						{attention ? (
@@ -250,9 +239,7 @@ function FormRow({ form }: { form: FormPreview }) {
 								</span>
 							)}
 							{converted > 0 ? (
-								<span className="text-amber-600 dark:text-amber-400">
-									{converted} converted
-								</span>
+								<span className="text-success">{converted} converted</span>
 							) : null}
 							{skipped > 0 ? <span>{skipped} skipped</span> : null}
 						</div>
@@ -352,7 +339,7 @@ export default function ReviewStep({
 				</p>
 			</div>
 
-			<div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
 				<Stat
 					hint={[
 						totals.create ? `${totals.create} new` : null,
@@ -395,32 +382,26 @@ export default function ReviewStep({
 					label="Integrations"
 					value={totals.integrations}
 				/>
+				<Stat
+					icon={<ClockIcon />}
+					label="Est. time"
+					value={formatDuration(preview.estimatedSeconds)}
+				/>
 			</div>
 
-			<div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-				{preview.notes.length > 0 ? (
-					<Alert>
-						<InfoIcon />
-						<AlertTitle>Good to know</AlertTitle>
-						<AlertDescription>
-							<ul className="list-disc space-y-1 pl-4">
-								{preview.notes.map((note) => (
-									<li key={note}>{note}</li>
-								))}
-							</ul>
-						</AlertDescription>
-					</Alert>
-				) : (
-					<span />
-				)}
-				<div className="flex items-center gap-2 self-start rounded-xl border bg-card px-4 py-3 text-sm">
-					<ClockIcon className="size-4 text-muted-foreground" />
-					<span className="text-muted-foreground">Estimated time</span>
-					<span className="font-medium">
-						{formatDuration(preview.estimatedSeconds)}
-					</span>
-				</div>
-			</div>
+			{preview.notes.length > 0 ? (
+				<Alert>
+					<InfoIcon />
+					<AlertTitle>Good to know</AlertTitle>
+					<AlertDescription>
+						<ul className="list-disc space-y-1 pl-4">
+							{preview.notes.map((note) => (
+								<li key={note}>{note}</li>
+							))}
+						</ul>
+					</AlertDescription>
+				</Alert>
+			) : null}
 
 			{preview.apiUsage ? <ApiUsage usage={preview.apiUsage} /> : null}
 
@@ -440,7 +421,7 @@ export default function ReviewStep({
 							Only show forms that need attention ({attentionCount})
 						</label>
 					) : (
-						<span className="flex items-center gap-1.5 text-emerald-600 text-sm dark:text-emerald-400">
+						<span className="flex items-center gap-1.5 text-sm text-success">
 							<CheckCircle2Icon className="size-4" /> Everything maps cleanly
 						</span>
 					)}
@@ -454,6 +435,7 @@ export default function ReviewStep({
 
 			<div className="sticky bottom-0 -mx-1 flex flex-wrap items-center justify-between gap-3 border-t bg-background/90 px-1 py-4 backdrop-blur">
 				<Button onClick={onBack} variant="outline">
+					<ArrowLeftIcon />
 					Back
 				</Button>
 				<div className="flex flex-wrap items-center gap-3">
@@ -461,6 +443,7 @@ export default function ReviewStep({
 						{options.join(" · ")}
 					</span>
 					<Button disabled={starting} onClick={onStart}>
+						<DownloadIcon />
 						{starting
 							? "Starting…"
 							: `Start import (${plural(totals.forms, "form")})`}

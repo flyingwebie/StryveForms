@@ -12,7 +12,6 @@ import {
 import { useEffect, useState } from "react";
 
 import { AddBlockPanel } from "./build-panel/add-block-panel";
-import { CanvasToolbar } from "./canvas/canvas-toolbar";
 import { EditCanvas } from "./canvas/edit-canvas";
 import { EditorDndProvider } from "./dnd/editor-dnd-provider";
 import { FieldSettingsPanel } from "./field-settings/field-settings-panel";
@@ -54,7 +53,6 @@ function EditorCanvasArea({
 }) {
 	return (
 		<div className="relative h-full">
-			<CanvasToolbar />
 			{state.canvasMode === "edit" ? <EditCanvas /> : <PreviewPane />}
 		</div>
 	);

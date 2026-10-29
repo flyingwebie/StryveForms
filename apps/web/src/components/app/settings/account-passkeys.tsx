@@ -1,12 +1,5 @@
 import { Button } from "@StryveForms/ui/components/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@StryveForms/ui/components/card";
-import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -26,11 +19,12 @@ import {
 } from "@StryveForms/ui/components/table";
 import { getAuthenticatorName } from "@better-auth/passkey";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FingerprintIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { FingerprintIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import ConfirmDialog from "@/components/app/confirm-dialog";
+import { SettingsSection } from "@/components/app/settings-shell";
 import { authClient } from "@/lib/auth-client";
 
 interface PasskeyRow {
@@ -214,60 +208,56 @@ export default function AccountPasskeysCard() {
 		queryClient.invalidateQueries({ queryKey: PASSKEYS_QUERY_KEY });
 
 	return (
-		<Card className="rounded-xl">
-			<CardHeader className="flex flex-row items-start justify-between gap-4">
-				<div>
-					<CardTitle className="flex items-center gap-2">
-						<FingerprintIcon className="size-4" />
-						Passkeys
-					</CardTitle>
-					<CardDescription>
-						A passkey lets you sign in with your fingerprint, face, or device
-						PIN instead of typing a password — it's tied to this device (or
-						synced ones) and can't be phished or guessed.
-					</CardDescription>
-				</div>
-				<Button onClick={() => setAddOpen(true)} size="sm" type="button">
-					Add a passkey
-				</Button>
-			</CardHeader>
-			<CardContent>
+		<SettingsSection
+			description="Sign in without a password using Face ID, Touch ID, or a security key."
+			title={
+				<span className="flex items-center justify-between gap-3">
+					Passkeys
+					<Button onClick={() => setAddOpen(true)} size="sm" type="button">
+						<PlusIcon /> Add passkey
+					</Button>
+				</span>
+			}
+		>
+			<div className="py-4">
 				{passkeys.data && passkeys.data.length > 0 ? (
 					<Table>
 						<TableHeader>
 							<TableRow>
 								<TableHead>Name</TableHead>
-								<TableHead>Type</TableHead>
-								<TableHead>Added</TableHead>
-								<TableHead className="w-20" />
+								<TableHead>Created</TableHead>
+								<TableHead>Last used</TableHead>
+								<TableHead className="w-28" />
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{passkeys.data.map((passkey) => (
 								<TableRow key={passkey.id}>
-									<TableCell className="font-medium">
+									<TableCell className="flex items-center gap-2 font-medium">
+										<FingerprintIcon className="size-4 text-muted-foreground" />
 										{passkeyLabel(passkey)}
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{deviceTypeLabel(passkey.deviceType)}
 									</TableCell>
 									<TableCell className="text-muted-foreground">
 										{new Date(passkey.createdAt).toLocaleDateString()}
 									</TableCell>
-									<TableCell className="flex justify-end gap-1">
+									<TableCell className="text-muted-foreground">
+										{deviceTypeLabel(passkey.deviceType)}
+									</TableCell>
+									<TableCell className="text-right">
 										<Button
 											onClick={() => setRenameTarget(passkey)}
-											size="icon-sm"
+											size="sm"
 											variant="ghost"
 										>
-											<PencilIcon />
+											Rename
 										</Button>
 										<Button
+											className="text-destructive hover:bg-destructive/10 hover:text-destructive"
 											onClick={() => setDeleteTarget(passkey)}
-											size="icon-sm"
+											size="sm"
 											variant="ghost"
 										>
-											<TrashIcon className="text-destructive" />
+											Delete
 										</Button>
 									</TableCell>
 								</TableRow>
@@ -279,7 +269,7 @@ export default function AccountPasskeysCard() {
 						No passkeys yet. Add one to sign in without typing your password.
 					</p>
 				)}
-			</CardContent>
+			</div>
 
 			<AddPasskeyDialog
 				onAdded={invalidate}
@@ -316,6 +306,6 @@ export default function AccountPasskeysCard() {
 				open={deleteTarget !== null}
 				title="Delete this passkey?"
 			/>
-		</Card>
+		</SettingsSection>
 	);
 }

@@ -6,6 +6,11 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@StryveForms/ui/components/sheet";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@StryveForms/ui/components/tooltip";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HistoryIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -43,9 +48,25 @@ export function VersionHistorySheet() {
 
 	return (
 		<Sheet>
-			<SheetTrigger render={<Button size="sm" type="button" variant="ghost" />}>
-				<HistoryIcon /> History
-			</SheetTrigger>
+			<Tooltip>
+				<TooltipTrigger
+					render={
+						<SheetTrigger
+							render={
+								<Button
+									aria-label="Version history"
+									size="icon-sm"
+									type="button"
+									variant="ghost"
+								/>
+							}
+						/>
+					}
+				>
+					<HistoryIcon />
+				</TooltipTrigger>
+				<TooltipContent>Version history</TooltipContent>
+			</Tooltip>
 			<SheetContent>
 				<SheetHeader>
 					<SheetTitle>Version history</SheetTitle>

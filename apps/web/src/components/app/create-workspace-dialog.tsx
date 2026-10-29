@@ -10,6 +10,7 @@ import {
 import { Input } from "@StryveForms/ui/components/input";
 import { Label } from "@StryveForms/ui/components/label";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -53,9 +54,9 @@ export default function CreateWorkspaceDialog({
 		<Dialog onOpenChange={onOpenChange} open={open}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Create workspace</DialogTitle>
+					<DialogTitle>New workspace</DialogTitle>
 					<DialogDescription>
-						Workspaces group forms, members and settings separately.
+						A workspace groups forms, folders, and teammates.
 					</DialogDescription>
 				</DialogHeader>
 				<form
@@ -88,6 +89,7 @@ export default function CreateWorkspaceDialog({
 					</div>
 					<DialogFooter>
 						<Button disabled={!name.trim() || create.isPending} type="submit">
+							<PlusIcon />
 							{create.isPending ? "Creating…" : "Create workspace"}
 						</Button>
 					</DialogFooter>

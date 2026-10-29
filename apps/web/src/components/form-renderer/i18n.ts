@@ -3,6 +3,7 @@
 export interface FormDictionary {
 	clear: string;
 	edit: string;
+	fieldsNeedAttention: string;
 	fillAnotherResponse: string;
 	formClosed: string;
 	loading: string;
@@ -12,8 +13,11 @@ export interface FormDictionary {
 	optional: string;
 	pageOf: string;
 	poweredBy: string;
+	pressEnter: string;
 	previous: string;
+	questionOf: string;
 	required: string;
+	reviewHighlighted: string;
 	scanCode: string;
 	signHere: string;
 	submit: string;
@@ -28,6 +32,7 @@ export interface FormDictionary {
 const EN: FormDictionary = {
 	clear: "Clear",
 	edit: "Edit your answers",
+	fieldsNeedAttention: "{count} field(s) need your attention",
 	fillAnotherResponse: "Fill in another response",
 	formClosed: "This form is now closed.",
 	loading: "Loading…",
@@ -37,8 +42,11 @@ const EN: FormDictionary = {
 	optional: "Optional",
 	pageOf: "Page {current} of {total}",
 	poweredBy: "Powered by",
+	pressEnter: "Press Enter ↵",
 	previous: "Previous",
+	questionOf: "Question {current} of {total}",
 	required: "Required",
+	reviewHighlighted: "Please review the highlighted fields before submitting.",
 	scanCode: "Scan code",
 	signHere: "Sign here",
 	submit: "Submit",

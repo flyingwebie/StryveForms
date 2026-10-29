@@ -15,6 +15,7 @@ import {
 } from "@StryveForms/ui/components/popover";
 import { ChevronDown, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { ChoiceOption, optionLetter } from "../choice-option";
 import { choiceOptionTheme, compositeInputClass } from "../theme";
 import type { FieldComponentProps } from "../types";
 import { toStringArray } from "../value-utils";
@@ -150,7 +151,7 @@ function DropdownMultiSelect({
 
 /** Multi-select: dropdown with chips by default, checkbox list when `without_dropdown`, card grid when focused-mode. */
 export function MultiSelectField(props: FieldComponentProps) {
-	const { disabled, error, field, id, onChange, value } = props;
+	const { disabled, error, field, id, onChange, presentation, value } = props;
 	const options = useMemo(() => fieldOptions(field), [field]);
 	const selected = toStringArray(value);
 	const max = field.max_selection ?? null;
@@ -176,20 +177,21 @@ export function MultiSelectField(props: FieldComponentProps) {
 				className="grid grid-cols-1 gap-2 sm:grid-cols-2"
 				id={id}
 			>
-				{options.map((option) => {
+				{options.map((option, index) => {
 					const checked = selected.includes(option.name);
 					// "image_only" shows just the picture; the label still reaches
 					// screen readers as visually-hidden text instead of a visible span.
 					const imageOnly =
 						field.option_display_mode === "image_only" && Boolean(option.image);
 					return (
-						<button
-							aria-pressed={checked}
-							className={choiceOptionTheme({ selected: checked })}
+						<ChoiceOption
 							disabled={disabled}
 							key={option.id}
+							letter={
+								presentation === "focused" ? optionLetter(index) : undefined
+							}
 							onClick={() => toggle(option.name, !checked)}
-							type="button"
+							selected={checked}
 						>
 							{useImages && option.image ? (
 								<img
@@ -203,7 +205,7 @@ export function MultiSelectField(props: FieldComponentProps) {
 							<span className={imageOnly ? "sr-only" : undefined}>
 								{option.name}
 							</span>
-						</button>
+						</ChoiceOption>
 					);
 				})}
 			</div>
@@ -220,31 +222,32 @@ export function MultiSelectField(props: FieldComponentProps) {
 				{options.map((option) => {
 					const imageOnly =
 						field.option_display_mode === "image_only" && Boolean(option.image);
+					const checked = selected.includes(option.name);
 					return (
 						<label
-							className="flex items-center gap-2"
+							className={choiceOptionTheme({ selected: checked })}
 							htmlFor={`${id}-${option.id}`}
 							key={option.id}
 						>
-							<Checkbox
-								checked={selected.includes(option.name)}
-								disabled={disabled}
-								id={`${id}-${option.id}`}
-								onCheckedChange={(checked) =>
-									toggle(option.name, checked === true)
-								}
-							/>
-							{useImages && option.image ? (
-								<img
-									alt={imageOnly ? option.name : ""}
-									className="size-8 rounded object-cover"
-									height={32}
-									src={option.image}
-									width={32}
+							<span className="flex min-w-0 items-center gap-3">
+								<Checkbox
+									checked={checked}
+									disabled={disabled}
+									id={`${id}-${option.id}`}
+									onCheckedChange={(next) => toggle(option.name, next === true)}
 								/>
-							) : null}
-							<span className={imageOnly ? "sr-only" : "text-sm"}>
-								{option.name}
+								{useImages && option.image ? (
+									<img
+										alt={imageOnly ? option.name : ""}
+										className="size-8 rounded object-cover"
+										height={32}
+										src={option.image}
+										width={32}
+									/>
+								) : null}
+								<span className={imageOnly ? "sr-only" : "min-w-0 truncate"}>
+									{option.name}
+								</span>
 							</span>
 						</label>
 					);
