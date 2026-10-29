@@ -30,19 +30,20 @@ import { sampleValueForField } from "./pdf/model";
 
 /** Draft data for an email notification — a subset of the `formIntegration.data`
  * jsonb shape; every field is optional so a half filled-in draft can still be
- * previewed, and an agent can patch just one field at a time. */
+ * previewed, and an agent can patch just one field at a time. Fields may be
+ * `null` too: forms imported from OpnForm store unset values that way. */
 export const notificationDataSchema = z
 	.object({
-		attach_pdf_template_id: z.string().optional(),
-		email_content: z.string().optional(),
-		include_hidden_fields_submission_data: z.boolean().optional(),
-		include_submission_data: z.boolean().optional(),
-		link_edit_submission: z.boolean().optional(),
-		reply_to: z.string().optional(),
-		send_to: z.string().optional(),
-		sender_name: z.string().optional(),
-		senderId: z.string().nullable().optional(),
-		subject: z.string().optional(),
+		attach_pdf_template_id: z.string().nullish(),
+		email_content: z.string().nullish(),
+		include_hidden_fields_submission_data: z.boolean().nullish(),
+		include_submission_data: z.boolean().nullish(),
+		link_edit_submission: z.boolean().nullish(),
+		reply_to: z.string().nullish(),
+		send_to: z.string().nullish(),
+		sender_name: z.string().nullish(),
+		senderId: z.string().nullish(),
+		subject: z.string().nullish(),
 	})
 	.passthrough();
 

@@ -17,6 +17,7 @@ const CLOUD_HOSTS = new Set([
 const MINUTE_MS = 60_000;
 const MAX_RETRIES = 4;
 const REQUEST_TIMEOUT_MS = 30_000;
+const DOWNLOAD_TIMEOUT_MS = 120_000;
 const PAGE_SIZE = 100;
 const TRAILING_SLASHES = /\/+$/;
 
@@ -152,8 +153,7 @@ export class OpnformClient {
 			});
 		}
 		if (response.status === 429 && attempt < MAX_RETRIES) {
-			const retryAfter = Number(response.headers.get("retry-after") ?? "10");
-			await Bun.sleep((Number.isFinite(retryAfter) ? retryAfter : 10) * 1000);
+			await Bun.sleep(retryAfterMs(response, attempt));
 			return this.request<T>(path, attempt + 1);
 		}
 		if (response.status >= 500 && attempt < MAX_RETRIES) {
@@ -230,11 +230,42 @@ export class OpnformClient {
 		);
 	}
 
-	/** Downloads a file (signed submission file link or public asset). */
-	async download(url: string): Promise<Blob> {
-		const response = await this.fetchFn(url, {
-			signal: AbortSignal.timeout(120_000),
-		});
+	/**
+	 * Downloads a file (signed submission file link or public asset). Goes
+	 * through the rate limiter and retries on 429, 5xx and network errors,
+	 * since file links are served by the same rate-limited API.
+	 */
+	async download(url: string, attempt = 0): Promise<Blob> {
+		if (new URL(url).origin === new URL(this.baseUrl).origin) {
+			await this.limiter.wait();
+		}
+		let response: Response;
+		try {
+			response = await this.fetchFn(url, {
+				signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+			});
+		} catch (error) {
+			if (attempt < MAX_RETRIES) {
+				await Bun.sleep(2 ** attempt * 1000);
+				return this.download(url, attempt + 1);
+			}
+			// biome-ignore lint/style/useErrorCause: the cause is passed in the options argument
+			throw new OpnformError(
+				`Download failed: ${(error as Error).message}`,
+				0,
+				{
+					cause: error,
+				}
+			);
+		}
+		if (response.status === 429 && attempt < MAX_RETRIES) {
+			await Bun.sleep(retryAfterMs(response, attempt));
+			return this.download(url, attempt + 1);
+		}
+		if (response.status >= 500 && attempt < MAX_RETRIES) {
+			await Bun.sleep(2 ** attempt * 1000);
+			return this.download(url, attempt + 1);
+		}
 		if (!response.ok) {
 			throw new OpnformError(
 				`Download failed (${response.status})`,
@@ -243,6 +274,19 @@ export class OpnformClient {
 		}
 		return response.blob();
 	}
+}
+
+/** Wait time for a 429: the Retry-After header, else a growing backoff. */
+function retryAfterMs(response: Response, attempt: number): number {
+	const header = Number(response.headers.get("retry-after"));
+	if (
+		response.headers.has("retry-after") &&
+		Number.isFinite(header) &&
+		header >= 0
+	) {
+		return header * 1000;
+	}
+	return 10_000 * (attempt + 1);
 }
 
 function describeStatus(status: number, path: string): string {
