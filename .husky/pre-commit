@@ -1,4 +1,3 @@
-lint-staged
 # ultracite
 #!/bin/sh
 # Fix only the staged files

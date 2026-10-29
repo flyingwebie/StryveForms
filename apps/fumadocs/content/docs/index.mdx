@@ -1,31 +1,36 @@
 ---
-title: Hello World
-description: Your favourite docs framework.
+title: Introduction
+description: StryveForms is an open-source form builder you can host yourself.
 icon: Rocket
 ---
 
-Hey there! Fumadocs is the docs framework that also works on Tanstack Start!
+StryveForms lets you build forms, share them with a link or embed them on your site, and collect answers — without limits or paywalls. It is free software under the **GNU AGPL v3**.
 
-## Heading
+It is a TypeScript rebuild of [OpnForm](https://github.com/OpnForm/OpnForm) and uses the same form model, so you can [move your OpnForm forms and answers over](/docs/migrating-from-opnform) in a few clicks.
 
-Hello World!
+## Features
+
+- 25+ question types: text, email, phone (with country picker), rich text, dates and ranges, dropdowns, single and multiple choice, checkboxes and toggles, ratings, scales, sliders, matrices, file uploads, signatures, barcode and QR code scanning.
+- Layout blocks: text, images, video, audio, dividers, page breaks and custom HTML.
+- Conditional logic: show, hide, require or disable questions based on earlier answers, plus custom validation rules.
+- Calculated values (formulas with 38 functions) and `@` mentions of answers in messages, emails and redirect links.
+- Two presentation styles: classic multi-page forms and focused one-question-at-a-time forms.
+- Five themes, custom colours, fonts, cover images, dark mode, right-to-left layouts and custom CSS.
+- Password protection, closing dates, submission limits, captcha (hCaptcha, reCAPTCHA, Turnstile), editable and partial submissions.
+- Notifications and automations: email (with your own SMTP), Slack, Discord, Telegram, signed webhooks, n8n, Zapier, Make and more.
+- Submissions table with search, filters and CSV export, analytics and per-question summaries.
+- Workspaces with admin, editor and read-only members.
+- An [MCP server](/docs/mcp-server) and [CLI](/docs/cli) for AI agents to read and edit forms, with [agent skills](/docs/agent-skills) for task-specific guidance.
 
 <Cards>
-  <Card title="Learn more about Tanstack Start" href="https://tanstack.com/start" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card title="Getting started" href="/docs/getting-started" />
+  <Card title="The form editor" href="/docs/forms-editor" />
+  <Card title="Email notifications" href="/docs/email-notifications" />
+  <Card title="Integrations" href="/docs/integrations" />
+  <Card title="AI assistant" href="/docs/ai-assistant" />
+  <Card title="Self-hosting" href="/docs/self-hosting" />
+  <Card title="Migrate from OpnForm" href="/docs/migrating-from-opnform" />
+  <Card title="Webhooks" href="/docs/webhooks" />
+  <Card title="MCP server" href="/docs/mcp-server" />
+  <Card title="CLI" href="/docs/cli" />
 </Cards>
-
-### CodeBlock
-
-```ts
-console.log("Hello World");
-```
-
-#### Table
-
-| Head                            | Description                         |
-| ------------------------------- | ----------------------------------- |
-| `hello`                         | Hello World                         |
-| very **important**              | Hey                                 |
-| _Surprisingly_                  | Fumadocs                            |
-| very long text that looks weird | hello world hello world hello world |

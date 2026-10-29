@@ -1,0 +1,40 @@
+{
+  "name": "@StryveForms/emails",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./mailer": "./src/mailer.ts",
+    "./templates/*": "./src/templates/*.tsx",
+    "./components/*": "./src/components/*.tsx",
+    "./messages": "./src/messages.ts",
+    "./settings": "./src/settings.ts",
+    "./social": "./src/social.ts",
+    "./social-icon": "./src/social-icon.ts",
+    "./color": "./src/color.ts",
+    "./preview": "./src/preview.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "email:dev": "email dev --dir src/templates --port 3030"
+  },
+  "dependencies": {
+    "@StryveForms/forms": "workspace:*",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.1",
+    "@resvg/resvg-wasm": "^2.6.2",
+    "nodemailer": "^10.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "simple-icons": "^16.35.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@StryveForms/config": "workspace:*",
+    "@types/nodemailer": "^8.0.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react-email": "^6.11.3",
+    "typescript": "catalog:"
+  }
+}

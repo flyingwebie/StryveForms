@@ -1,0 +1,99 @@
+---
+title: MCP server
+description: Let AI agents read and edit your forms over the Model Context Protocol.
+icon: Bot
+---
+
+StryveForms can act as a [Model Context Protocol](https://modelcontextprotocol.io) server, so an AI coding tool or agent (Claude Code, Claude Desktop, Cursor, VS Code / Copilot, Codex, Windsurf, or any MCP-compatible client) can list, read, create and publish forms, and read submissions — scoped to your own workspaces and permissions.
+
+<Callout type="warn">
+  MCP is off by default. An instance administrator turns it on in **Admin → AI agents & MCP**.
+</Callout>
+
+## Enabling it
+
+As an administrator, go to **Admin → AI agents & MCP**:
+
+- **Enable MCP server** — the master switch. When off, `/api/mcp` returns `404` and every MCP instruction is hidden from users.
+- **Allow personal API tokens** — lets users authenticate without OAuth (see [CLI](/docs/cli)).
+- **Allow write tools** — when off, every agent connection is read-only instance-wide, regardless of an individual token's scope.
+
+Once enabled, the same tab shows copy-paste connection snippets for every client, and a "Test connection" button.
+
+## Connecting
+
+The MCP endpoint is `<your instance URL>/api/mcp`, served over Streamable HTTP. Two ways to authenticate:
+
+### OAuth (recommended for most clients)
+
+Most MCP clients, including Claude Code, discover the server automatically and open a browser to sign in and approve access — no token to copy:
+
+```bash
+claude mcp add --transport http stryveforms https://your-instance.example.com/api/mcp
+```
+
+The server implements OAuth 2.1 with PKCE, RFC 8414 authorization-server metadata, RFC 9728 protected-resource metadata, and dynamic client registration (RFC 7591) for clients that need it.
+
+### Personal API token (Bearer)
+
+For clients without an OAuth flow, create a personal API token in **Settings → Developers** and send it as a header:
+
+```json
+{
+  "mcpServers": {
+    "stryveforms": {
+      "type": "http",
+      "url": "https://your-instance.example.com/api/mcp",
+      "headers": { "Authorization": "Bearer sfpat_…" }
+    }
+  }
+}
+```
+
+A token's scope (read, or read & write, chosen when you create it) limits which tools it can call — a read-only token gets a clear error if it tries a write tool.
+
+## Tools
+
+| Tool | Access | What it does |
+| --- | --- | --- |
+| `list_workspaces` | read | Workspaces you belong to, and your role in each |
+| `list_forms` | read | Forms in a workspace, with an optional title search |
+| `get_form` | read | One form's fields, settings and share URL |
+| `create_form` | write | Create a draft form from a title and field list |
+| `update_form_fields` | write | Replace a form's field list |
+| `update_form_settings` | write | Title, submit button text, close date, max submissions, redirect URL, captcha |
+| `set_form_visibility` | write | Publish, close, or revert a form to draft |
+| `list_submissions` | read | Paginated, filterable submissions for a form |
+| `get_submission` | read | One submission's full answers |
+| `get_submission_stats` | read | Views, completion rate, average time, per-question breakdown |
+| `export_submissions_csv_link` | read | A 10-minute signed CSV download link |
+| `list_integrations` | read | A form's connected integrations and whether each is active (never secrets) |
+| `list_integration_types` | read | Every integration type, with its `data`/`settings` fields and descriptions |
+| `create_integration` | write | Create a webhook, Slack, Discord, Telegram, or automation-platform integration |
+| `update_integration` | write | Patch an integration — a given `data`/`settings` merges into the saved values |
+| `delete_integration` | write | Delete an integration |
+| `test_integration` | write | Send a sample payload through an integration's real handler (SSRF-checked) |
+| `list_email_notifications` | read | A form's email notifications, with full configuration (recipients, subject, body…) |
+| `create_email_notification` | write | Create an email notification (including a respondent confirmation email) |
+| `update_email_notification` | write | Patch an email notification |
+| `delete_email_notification` | write | Delete an email notification |
+| `preview_email_notification` | read | Render a draft/saved notification the same way the Notifications tab's preview does |
+| `send_test_email_notification` | write | Send a real test email for a draft/saved notification |
+| `list_senders` | read | A workspace's configured "From" sender identities |
+
+New forms always start as drafts — an agent must explicitly call `set_form_visibility` to publish one.
+
+## Setting up integrations and email notifications
+
+Call `list_integration_types` first — it documents every type's `data` and `settings` fields (a webhook's URL and auth, an email notification's recipients and body, …) so you know exactly what to send to `create_integration`/`create_email_notification`. `update_integration`/`update_email_notification` *merge* a given `data`/`settings` into what's already saved, so you only need to send the keys you're changing.
+
+A confirmation email back to whoever filled in the form is just an email notification whose `data.send_to` is set to that field's answer, addressed via an `@`-mention placeholder — call `get_form` to find the field's id, then set `data.send_to` to `<span mention="true" mention-field-id="FIELD_ID" mention-field-name="FIELD_NAME">FIELD_NAME</span>`, copied through exactly.
+
+Every write here is checked against the SSRF guard (for any webhook-shaped URL) and against the calling user's "Manage integrations & notifications" permission in that workspace — the same checks the Integrations tab's UI goes through.
+
+## Security
+
+- Every tool call is scoped to the authenticated user's own workspace memberships and roles — an agent can never read or write a workspace you aren't a member of.
+- Personal API tokens are stored as a salted hash; the plaintext is shown once, at creation.
+- OAuth access tokens are short-lived, signed JWTs bound to this server's MCP resource (`aud` claim) — they can't be replayed against another API.
+- The MCP endpoint is rate-limited like the rest of the API.

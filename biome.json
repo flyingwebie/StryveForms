@@ -1,6 +1,10 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": ["ultracite/biome/core", "ultracite/biome/react", "ultracite/biome/tanstack"],
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/tanstack"
+  ],
   "vcs": {
     "enabled": false,
     "clientKind": "git",
@@ -9,8 +13,8 @@
   "files": {
     "ignoreUnknown": false,
     "includes": [
-      "**",
       "!**/.next",
+      "!scripts/marketing/pages",
       "!**/dist",
       "!**/.turbo",
       "!**/.nx",
@@ -27,14 +31,34 @@
       "!**/.svelte-kit",
       "!**/wrangler.jsonc",
       "!**/.source",
-      "!**/convex/_generated"
+      "!**/convex/_generated",
+      "!**/src/env.ts",
+      "!**/src/env.server.ts",
+      "!.agents",
+      "!.claude",
+      "!.codex",
+      "!.cursor",
+      "!.gemini",
+      "!**/migrations",
+      "!**/.tanstack",
+      "!apps/tui",
+      "!apps/fumadocs/src/routeTree.gen.ts",
+      "!apps/fumadocs",
+      "!**/*.svg",
+      "!**/icons/emoji-data.json"
     ]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "tab"
   },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -62,17 +86,45 @@
         "useNumberNamespace": "error",
         "noInferrableTypes": "error",
         "noUselessElse": "error"
+      },
+      "performance": {
+        "noJsxPropsBind": "off"
       }
     }
   },
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
-    }
+    },
+    "globals": ["Bun"]
   },
   "css": {
     "parser": {
       "tailwindDirectives": true
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/emails/src/templates/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noRedundantDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/ui/src/components/*.tsx",
+        "packages/ui/src/hooks/**",
+        "packages/ui/src/lib/**",
+        "!packages/ui/src/components/rich-text-editor.tsx",
+        "!packages/ui/src/components/phone-input.tsx"
+      ],
+      "linter": {
+        "enabled": false
+      }
+    }
+  ]
 }

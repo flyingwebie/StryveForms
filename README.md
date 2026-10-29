@@ -1,143 +1,241 @@
-# StryveForms
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/stryveforms-logo-dark.svg">
+    <img src="apps/web/public/brand/stryveforms-logo.svg" alt="StryveForms" height="48">
+  </picture>
+</p>
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Start, Hono, TRPC, and more.
+<p align="center">
+  <strong>The self-hosted, white-label form builder.</strong><br>
+  Build forms, share or embed them, and collect answers — no submission limits, no paywalls, your infrastructure.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-6d28d9"></a>
+  <a href="apps/fumadocs/content/docs/self-hosting.mdx"><img alt="Self-hostable" src="https://img.shields.io/badge/self--hostable-docker%20compose-8B5CF6"></a>
+  <a href="apps/fumadocs/content/docs/index.mdx"><img alt="Docs" src="https://img.shields.io/badge/docs-fumadocs-4338CA"></a>
+  <a href="#tech-stack"><img alt="Stack: Bun, TypeScript, Postgres" src="https://img.shields.io/badge/stack-bun%20%C2%B7%20typescript%20%C2%B7%20postgres-27272a"></a>
+  <a href="CONTRIBUTING.md"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-18181b"></a>
+</p>
+
+<p align="center">
+  <a href="apps/fumadocs/content/docs/index.mdx">Docs</a> ·
+  <a href="apps/fumadocs/content/docs/self-hosting.mdx">Self-host</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="https://github.com/flyingwebie/stryveforms/discussions">Discussions</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/hero-dark.png">
+    <img src=".github/assets/hero-light.png" alt="StryveForms form editor" width="100%">
+  </picture>
+</p>
+
+## Why StryveForms
+
+Typeform-grade form building shouldn't require a monthly bill per seat, or trust in someone else's
+server for every answer you collect. StryveForms is a complete, TypeScript rebuild of
+[OpnForm](https://github.com/OpnForm/OpnForm) — same data model, so your existing forms migrate
+over — built to be **self-hosted and white-labeled from the first screen**: your name, your logo,
+your colours, running on infrastructure you control.
+
+- **No limits, ever.** Unlimited forms, fields and submissions — it's your database.
+- **White-label by default.** An instance looks like *your* product, not "StryveForms with a logo
+  pasted on" — see [Brand & white-label](apps/fumadocs/content/docs/brand.mdx).
+- **AGPL-3.0, forever.** No "enterprise" fork holding features back behind a paywall.
+- **Built for AI agents too**, not just people — an MCP server and CLI ship in the box.
 
 ## Features
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Start** - SSR framework with TanStack Router
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - Lightweight, performant server framework
-- **tRPC** - End-to-end type-safe APIs
-- **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Biome** - Linting and formatting
-- **Husky** - Git hooks for code quality
-- **Vite+** - Unified Vite toolchain, workspace task runner, linting, and formatting
+### Visual editor
 
-## Getting Started
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/feature-editor-dark.png">
+  <img src=".github/assets/feature-editor-light.png" alt="Drag-and-drop form editor" width="100%">
+</picture>
 
-First, install the dependencies:
+Drag fields onto a live canvas from a palette of 25+ question types (text, email, phone, rich text,
+dates, dropdowns, choices, ratings, matrices, file uploads, signatures, barcode/QR scanning, and
+layout blocks), resize them to sit side by side (full, ¾, ⅔, ½, ⅓, ¼), and reorder with your mouse.
+Conditional logic, formulas (38 functions) and `@`-mention answers live in the same panel. Undo/redo
+and keyboard shortcuts included.
+
+### Classic or Focused
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/feature-public-forms-dark.png">
+  <img src=".github/assets/feature-public-forms-light.png" alt="Classic and Focused public form presentations" width="100%">
+</picture>
+
+Every form can present as **Classic** (every question laid out on the page, like a document) or
+**Focused** (one question at a time, Typeform-style, with a full-bleed cover image). Either way:
+five themes, your own colours and fonts, dark mode, right-to-left layouts and custom CSS. Password
+protection, closing dates, submission limits, captcha (hCaptcha, reCAPTCHA, Turnstile), and editable
+or partial submissions are all built in.
+
+### Submissions & analytics
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/feature-submissions-dark.png">
+  <img src=".github/assets/feature-submissions-light.png" alt="Submissions table and analytics" width="100%">
+</picture>
+
+Search, filter and export every submission to CSV. Built-in analytics track views, completion rate,
+average time and a per-question breakdown — no extra tool to wire up.
+
+### Email notifications with live preview
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/feature-notifications-dark.png">
+  <img src=".github/assets/feature-notifications-light.png" alt="Email notification editor with live preview" width="100%">
+</picture>
+
+Design the notification email with a rich-text editor (TipTap), insert any field as an `@`-mention,
+and watch the live preview re-render as you type — including a respondent confirmation email. Send
+a real test to yourself before it goes near anyone else. Runs on React Email + your own SMTP.
+
+### Integrations & PDF templates
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/feature-integrations-dark.png">
+  <img src=".github/assets/feature-integrations-light.png" alt="Integrations list and PDF template editor" width="100%">
+</picture>
+
+Slack, Discord, Telegram, signed webhooks, n8n, Zapier, Make, Pabbly Connect and Activepieces — plus
+a visual PDF template editor: upload your own PDF or start from scratch, place answer/text/image/
+signature zones, and generate a filled PDF for every submission.
+
+### Built for AI agents
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/feature-ai-agents-dark.png">
+  <img src=".github/assets/feature-ai-agents-light.png" alt="In-app AI assistant and CLI for AI agents" width="100%">
+</picture>
+
+The in-app assistant (bring your own OpenAI, Anthropic, Gemini, OpenRouter or Ollama key) builds and
+edits forms from a plain description, or answers questions about a form's responses. The same
+actions are exposed over an [MCP server](apps/fumadocs/content/docs/mcp-server.mdx) — so Claude
+Code, Cursor, VS Code/Copilot, Codex or Windsurf can list, create, edit and publish forms, scoped to
+real workspace permissions — and a scriptable [`stryveforms` CLI](apps/fumadocs/content/docs/cli.mdx)
+for humans and CI. [Agent skills](apps/fumadocs/content/docs/agent-skills.mdx) add task-specific
+instructions on top:
 
 ```bash
-bun install
+npx skills add flyingwebie/stryveforms
 ```
 
-## Database Setup
+### …and more
 
-This project uses PostgreSQL with Drizzle ORM.
+Coloured folders and bulk actions, custom templates, a share dialog (QR code, pre-fill links, social
+sharing, embed widget), workspaces with admin/editor/read-only members, and an import tool that
+brings forms, submissions, files and integrations over from OpnForm or JotForm with a full review
+before anything is copied.
 
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
+## Self-host in minutes
 
-3. Apply the schema to your database:
+StryveForms is three pieces: a **web** app (TanStack Start, public, port `3002`), a **server** API
+(Hono + tRPC, private, port `3000`) and **PostgreSQL**. The web app proxies `/api` and `/trpc` to the
+server, so only `web` needs a public domain.
+
+**Docker Compose** (the fastest path on your own VPS):
 
 ```bash
-bun run db:push
+git clone https://github.com/flyingwebie/stryveforms.git
+cd stryveforms
+docker compose up -d --build
 ```
 
-Then, run the development server:
+See the [self-hosting guide](apps/fumadocs/content/docs/self-hosting.mdx) for every setting (S3
+storage, SMTP, captcha, reverse proxies).
+
+**One-click-ish platforms** — guides for each, including environment variables and volumes:
+
+| Platform | Guide |
+| --- | --- |
+| Coolify (Docker Compose) | [Coolify — Docker Compose](apps/fumadocs/content/docs/deployment/coolify-docker-compose.mdx) |
+| Coolify (Railpack) | [Coolify — Railpack](apps/fumadocs/content/docs/deployment/coolify-railpack.mdx) |
+| Railway | [Railway](apps/fumadocs/content/docs/deployment/railway.mdx) |
+| Dokploy, CapRover, Render, Fly.io, plain VPS | [Other platforms](apps/fumadocs/content/docs/deployment/other-platforms.mdx) |
+
+Start with the [Deployment overview](apps/fumadocs/content/docs/deployment/overview.mdx) for the
+architecture and the full environment-variable reference shared by every platform guide.
+
+The first visit runs **onboarding**: create the administrator account, set your branding (name,
+logo, colour), and choose whether people can sign up. Without `SMTP_HOST`, emails are printed to the
+API server's log instead of sent.
+
+## Migrate from OpnForm or JotForm
+
+Open **Settings → Import** and pick a source:
+
+- **OpnForm** — create an access token (Settings → Access Tokens) with `forms-read`,
+  `workspaces-read`, `workspace-users-read` and `manage-integrations`, then paste it (Cloud or your
+  own self-hosted address). See [Migrating from OpnForm](apps/fumadocs/content/docs/migrating-from-opnform.mdx).
+- **JotForm** (US, EU, HIPAA, Enterprise) — create an API key (Settings → API, Read access) and
+  paste it; the region is detected automatically. See [Migrating from JotForm](apps/fumadocs/content/docs/migrating-from-jotform.mdx).
+
+Either way, **Review import** shows exactly what will be created or updated — fields, submissions,
+files, integrations — before anything starts, and it's safe to re-run without creating duplicates.
+
+## Tech stack
+
+| Part | Technology |
+| --- | --- |
+| Web app (`apps/web`) | React 19, TanStack Start/Router/Query, Tailwind v4, shadcn/ui (Base UI), TipTap |
+| API (`apps/server`) | Bun, Hono, tRPC, Better Auth |
+| Database (`packages/db`) | PostgreSQL, Drizzle ORM |
+| Shared form logic (`packages/forms`) | Field catalogue, conditional logic, validation, mentions, formulas |
+| Emails (`packages/emails`) | React Email + Nodemailer |
+| Importers (`packages/opnform-import`, `packages/jotform-import`) | OpnForm and JotForm API clients and data mapping |
+| API layer (`packages/api`) | tRPC routers, submission pipeline, integrations, storage (disk or S3) |
+| Docs (`apps/fumadocs`) | Fumadocs |
+
+## Local development
+
+Requirements: [Bun](https://bun.sh) 1.3+ and Docker (for a local PostgreSQL only).
 
 ```bash
-bun run dev
+git clone https://github.com/flyingwebie/stryveforms.git
+cd stryveforms
+bun install                                   # also generates typed env files via Varlock
+cp apps/server/.env.example apps/server/.env  # edit BETTER_AUTH_SECRET at least
+cp apps/web/.env.example apps/web/.env
+bun run db:start                              # PostgreSQL in Docker
+bun run db:push                               # create tables from the current schema
+bun run dev                                   # http://localhost:3002 (API behind it on :3000)
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
+| Command | What it does |
+| --- | --- |
+| `bun run dev` | Run web + server together |
+| `bun run build` | Build all apps |
+| `bun run check` | Lint + type-check the whole workspace |
+| `bunx ultracite check` / `fix` | Lint and format ([Ultracite](https://ultracite.dev), zero-config Biome) |
+| `bun test` (inside a package) | Unit tests — `packages/forms`, `packages/opnform-import`, `packages/jotform-import` |
+| `bun run db:studio` | Drizzle Studio, a GUI for the local database |
+| `bun run docker:up` | Build and start the full Docker Compose stack |
 
-## UI Customization
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full repo map, coding standards and PR checklist.
 
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
+## Roadmap
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
+Nothing here is promised on a date — just where the project is headed:
 
-### Add more shared components
+- Workspace backup & export (in design)
+- A localized UI (translations aren't wired up yet — see [CONTRIBUTING.md](CONTRIBUTING.md))
+- More importers (Google Forms, Typeform) and more integration destinations
+- A published `stryveforms` CLI package and prebuilt binaries
 
-Run this from the project root to add more primitives to the shared UI package:
+## Contributing
 
-```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
-```
+StryveForms is open source and welcomes contributions — code, docs, translations, bug reports. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for getting set up, coding standards, and where help is wanted,
+and please read our [Code of Conduct](CODE_OF_CONDUCT.md). Found a security issue? See
+[SECURITY.md](SECURITY.md) rather than filing a public issue.
 
-Import shared components like this:
+## License
 
-```tsx
-import { Button } from "@StryveForms/ui/components/button";
-```
-
-### Add app-specific blocks
-
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
-
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
-
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node/Bun tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
-
-## Deployment
-
-### Docker Compose
-
-- Target: web + server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: bun run docker:build
-- Start: bun run docker:up
-- Logs: bun run docker:logs
-- Stop: bun run docker:down
-
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
-
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
-
-## Git Hooks and Formatting
-
-- Initialize hooks: `bun run prepare`
-- Run checks: `bun run check`
-
-## Project Structure
-
-```
-StryveForms/
-├── apps/
-│   ├── web/         # Frontend application (React + TanStack Start)
-│   └── server/      # Backend API (Hono, TRPC)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
-```
-
-## Available Scripts
-
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
-- `bun run check`: Run Vite+ format/lint checks and workspace TypeScript checks
-- `bun run lint`: Run Vite+ lint checks
-- `bun run format`: Run Vite+ formatting
-- `bun run staged`: Run Vite+ checks against staged files
-- `bun run docker:build`: Build the Docker Compose images
-- `bun run docker:up`: Build and start the Docker Compose stack
-- `bun run docker:logs`: Tail logs from the Docker Compose stack
-- `bun run docker:down`: Stop the Docker Compose stack
-
-## Better Auth Schema Generation
-
-After changing auth plugins or schema options, run `bun run auth:generate` from the project root. The script runs the Better Auth CLI through `varlock run` from the owning app directory, loading the auth instance from `src/services.ts`. Review the schema changes, then use your ORM's migration workflow to apply them.
+StryveForms is licensed under the [GNU AGPL v3](LICENSE) (see [NOTICE](NOTICE)). It is a TypeScript
+rebuild of [OpnForm](https://github.com/OpnForm/OpnForm) and keeps OpnForm's data model, so existing
+OpnForm forms, submissions, files and integrations migrate over with the built-in import tool.

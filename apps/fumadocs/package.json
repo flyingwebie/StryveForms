@@ -4,10 +4,10 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "dev": "vite dev --port=4000",
-    "build": "vite build",
-    "start": "vite preview",
-    "preview": "vite preview",
+    "dev": "vp dev --port=4000",
+    "build": "vp build",
+    "start": "vp preview",
+    "preview": "vp preview",
     "types:check": "tsc --noEmit",
     "lint": "biome check",
     "format": "biome format --write"

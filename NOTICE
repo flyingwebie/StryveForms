@@ -1,0 +1,13 @@
+StryveForms
+Copyright (C) 2026 Flying Web Solutions and StryveForms contributors
+
+StryveForms is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License version 3 (see LICENSE).
+
+StryveForms is a TypeScript rebuild of OpnForm (https://github.com/OpnForm/OpnForm),
+Copyright (c) OpnForm, licensed under the GNU AGPL v3. StryveForms follows
+OpnForm's data model (form fields, conditional logic, submissions and
+integrations) so forms can be migrated between the two. No code from OpnForm's
+separately licensed "api/app/Enterprise" directory is used.
+
+Third-party components keep their own licenses.

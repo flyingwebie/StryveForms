@@ -1,0 +1,135 @@
+---
+title: CLI
+description: Script forms, submissions and exports from your terminal or CI.
+icon: Terminal
+---
+
+The `stryveforms` command-line tool talks to the same backend as the [MCP server](/docs/mcp-server) — it's a thin, scriptable client over your instance's API, built for both humans and AI coding agents.
+
+## Install & run
+
+From a published package (once available):
+
+```bash
+bunx stryveforms --help
+```
+
+From this repository, during development:
+
+```bash
+bun run --filter cli dev -- --help
+```
+
+Or compile a standalone binary:
+
+```bash
+cd apps/cli && bun run compile
+./stryveforms --help
+```
+
+## Sign in
+
+```bash
+stryveforms login
+```
+
+Opens a browser to approve the CLI (the device authorization flow — no secret ever touches disk). If your instance doesn't have MCP/device login enabled, paste a personal API token instead (create one in **Settings → Developers**):
+
+```bash
+stryveforms login --token sfpat_…
+```
+
+The login is saved to `~/.config/stryveforms/config.json`. `stryveforms logout` forgets it. `stryveforms whoami` confirms who you're signed in as.
+
+`--url <url>`, `STRYVEFORMS_URL`, and `STRYVEFORMS_TOKEN` override the saved config — handy in CI, where you'd typically skip `login` entirely and export `STRYVEFORMS_TOKEN` as a secret.
+
+## Commands
+
+```bash
+stryveforms workspaces list
+
+stryveforms forms list --workspace <id>
+stryveforms forms get <formId>
+stryveforms forms create --workspace <id> --title "Feedback" --file spec.json
+stryveforms forms update <formId> --fields-file fields.json
+stryveforms forms publish <formId>
+stryveforms forms unpublish <formId>
+stryveforms forms close <formId>
+
+stryveforms submissions list --form <formId>
+stryveforms submissions get --form <formId> <submissionId>
+stryveforms submissions export --form <formId>
+
+stryveforms stats <formId>
+
+stryveforms integrations types
+stryveforms integrations list --form <formId>
+stryveforms integrations create --form <formId> --type webhook --file spec.json
+stryveforms integrations update <id> --form <formId> --file patch.json
+stryveforms integrations delete <id> --form <formId>
+stryveforms integrations test --form <formId> --id <id>
+
+stryveforms notifications list --form <formId>
+stryveforms notifications create --form <formId> --file notification.json
+stryveforms notifications update <id> --form <formId> --file notification.json
+stryveforms notifications delete <id> --form <formId>
+stryveforms notifications preview --form <formId> --file data.json
+stryveforms notifications test --form <formId> --file data.json
+
+stryveforms senders list --workspace <id>
+
+stryveforms export --workspace <id> [--no-uploads] [--include-secrets] [--passphrase-env VAR] [--out file]
+stryveforms backup [--destination <id>] [--out file] [--passphrase-env VAR]
+```
+
+An integration spec file (used by `integrations create`/`update`) looks like:
+
+```json
+{
+  "data": { "webhook_url": "https://example.com/hook" },
+  "settings": { "payload_style": "flat" }
+}
+```
+
+Run `stryveforms integrations types` first to see every type's `data`/`settings` fields. `update` *merges* a given `data`/`settings` into what's already saved — only send the keys you're changing.
+
+A notification file (used by `notifications create`/`update`) looks like:
+
+```json
+{ "data": { "send_to": "owner@example.com", "subject": "New submission" } }
+```
+
+`notifications preview`/`test` take a plain data object (no `{ "data": ... }` wrapper) in their `--file`. To send a confirmation back to the respondent's own email field, set `send_to` to that field's mention placeholder — see the `stryveforms-notifications` skill for the exact format.
+
+A form spec file (used by `forms create` and `forms update --fields-file`) looks like:
+
+```json
+{
+  "title": "Feedback",
+  "fields": [
+    { "blockId": "text", "name": "Full name", "required": true },
+    { "blockId": "email", "name": "Email" },
+    { "blockId": "rating", "name": "How did we do?" }
+  ]
+}
+```
+
+`stryveforms export` starts a [workspace export](/docs/workspace-backups), waits for it to finish, and downloads the `.stryve.zip` to `--out` (defaults to the job's own filename in the current directory). `--no-uploads` leaves out submission uploads and signatures; `--include-secrets` bundles integration/SMTP/AI secrets too, encrypted with a passphrase read from the environment variable named by `--passphrase-env` (required together).
+
+`stryveforms backup` starts a full [instance backup](/docs/instance-backups) — instance admin only. `--destination <id>` picks which saved destination to send it to (defaults to the schedule's destination, or the first one configured); `--out` additionally saves a local copy once it finishes. Without `--passphrase-env`, it uses the instance's saved unattended passphrase.
+
+Every command accepts `--json` for stable, machine-readable output on stdout and a non-zero exit code on failure — pass it everywhere when scripting or calling the CLI from an agent. Without it, output is a human-friendly table or summary. `stryveforms <command> --help` and `stryveforms --help` list every option.
+
+IDs can start with a dash (for example `-Y43O4uuCO`). Option values handle that fine (`--form -Y43O4uuCO`), but a bare positional id doesn't, so pass it with `--id` instead: `stryveforms forms get --id -Y43O4uuCO`. (`stats` takes `--form`.)
+
+## For AI agents
+
+```bash
+stryveforms agent-instructions
+```
+
+Prints a short, copy-pasteable snippet describing how an agent should use this CLI (auth, discovery, creating/editing forms, when it's safe to publish). Drop it into your project's `AGENTS.md`. For deeper, task-specific guidance (field types, integrations, email notifications), install the [agent skills](/docs/agent-skills):
+
+```bash
+npx skills add flyingwebie/stryveforms
+```

@@ -1,0 +1,57 @@
+---
+title: Self-hosting
+description: Run StryveForms on your own server with Docker.
+icon: Server
+---
+
+StryveForms has two services — the **web app** (TanStack Start, port 3002) and the **API server** (Hono, port 3000) — plus a **PostgreSQL** database. Only the web app needs a public address: it forwards `/api` and `/trpc` to the API server, so the whole product lives on one domain.
+
+<Callout type="info">
+  Deploying to Coolify, Railway, or another managed platform? The [Deployment](/docs/deployment/overview) section covers each one in detail — Coolify with Docker Compose or Railpack, Railway, and brief notes on Dokploy, CapRover, Render, Fly.io and a plain VPS. This page stays focused on the environment variables and the basic Docker Compose path.
+</Callout>
+
+## Coolify
+
+1. **New Resource → Public/Private Repository**, build pack **Docker Compose**, compose file `docker-compose.coolify.yaml`.
+2. Give the **web** service your domain with the container port, e.g. `https://forms.example.com:3002`.
+3. Optionally fill in the SMTP, S3 and captcha variables.
+4. Deploy, then open your domain to run the onboarding.
+
+Coolify generates the database credentials and `BETTER_AUTH_SECRET`; migrations run when the API container starts.
+
+## Quick start with Docker Compose
+
+```bash
+git clone <your StryveForms repository URL> stryveforms
+cd stryveforms
+cp apps/server/.env.example apps/server/.env   # then edit the values
+cp apps/web/.env.example apps/web/.env
+bun run docker:up
+```
+
+Open `http://localhost:3002`. The first visit starts the onboarding: create the administrator account, add your logo and colours, and choose whether anyone can sign up. Every account gets its own workspace.
+
+## Configuration
+
+Server settings live in `apps/server/.env` (see `apps/server/.env.schema` for the full list):
+
+| Variable | What it does |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `BETTER_AUTH_SECRET` | Random string of at least 32 characters used to sign sessions and file links |
+| `BETTER_AUTH_URL` | Public URL of the web app (the API is served behind it) |
+| `APP_URL` / `CORS_ORIGIN` | Public URL of the web app |
+| `STORAGE_DRIVER` | `local` (files on disk under `STORAGE_PATH`) or `s3` (any S3-compatible storage: AWS, Cloudflare R2, MinIO…) |
+| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | S3 settings |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SECURE`, `MAIL_FROM` | Outgoing email. Without `SMTP_HOST`, emails are printed to the server log |
+| `HCAPTCHA_SECRET_KEY`, `RECAPTCHA_SECRET_KEY`, `TURNSTILE_SECRET_KEY` | Captcha secrets (the matching site keys go in `apps/web/.env` as `VITE_*_SITE_KEY`) |
+| `TELEGRAM_BOT_TOKEN` | Bot used by the Telegram integration |
+| `TRUST_PROXY` | Set to `true` behind a reverse proxy so respondents' IPs are read from `X-Forwarded-For` |
+| `ALLOW_PRIVATE_WEBHOOKS` | Set to `true` to allow webhooks to private network addresses (off by default to block SSRF) |
+| `OPNFORM_IMPORT_RATE_LIMIT` | Requests per minute when importing from OpnForm (default 60; OpnForm allows 100) |
+
+Each workspace can also use its own SMTP server for notification emails (Settings → Email).
+
+## Background tasks
+
+The API server runs maintenance every hour: it deletes submissions older than a form's retention setting and removes uploads that were never submitted.

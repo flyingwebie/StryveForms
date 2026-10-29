@@ -1,0 +1,92 @@
+---
+title: Admin settings
+description: Instance-wide settings for whoever administers this StryveForms installation — registration, users, branding, and outgoing email design.
+icon: ShieldCheck
+---
+
+If your account is an **instance admin**, an **Admin** entry appears at the bottom of the sidebar, below your workspaces — these settings apply to the whole installation, not just one workspace. The first account to ever sign up on a fresh instance becomes its admin automatically; see [Self-hosting](/docs/self-hosting) for the full setup.
+
+## Access
+
+Controls who can create an account:
+
+- **Open** — anyone can sign up, optionally restricted to a list of **allowed email domains**.
+- **Invite-only** — only people with a pending workspace invite can sign up.
+
+A **support email** shown to users who need help is set here too.
+
+<img
+  alt="Admin → Access, with sign-up mode and allowed email domains"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/admin/access-light.png"
+  width={1440}
+/>
+<img
+  alt="Admin → Access, with sign-up mode and allowed email domains"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/admin/access-dark.png"
+  width={1440}
+/>
+
+## Users
+
+Every account on the instance, across every workspace, with who's an administrator. Toggle the **Admin** switch to promote or demote someone, or **Delete** an account entirely. Anyone with two-factor authentication turned on also gets a **Reset 2FA** button — use it if they lose both their authenticator app and their backup codes; see [Account security](/docs/account-security#if-you-lose-access) for the full recovery path.
+
+<img
+  alt="Admin → Users, listing every account with an admin toggle"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/admin/users-light.png"
+  width={1440}
+/>
+<img
+  alt="Admin → Users, listing every account with an admin toggle"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/admin/users-dark.png"
+  width={1440}
+/>
+
+## Branding
+
+The instance's own identity — product name, tagline, logo (incl. a dark-mode variant), favicon, and primary colour — covered in full on the [Brand & white-label](/docs/brand#instance-admin-branding) page.
+
+## Emails
+
+Design every outgoing system email (invites, password resets, submission notifications…) in one place: accent, background, text and muted-text colours for both light and dark mode, with a live preview you can switch between templates, colour scheme, and desktop/mobile. **Send test emails** to check real rendering in your own inbox before relying on it, or **Reset to defaults** to start over.
+
+<img
+  alt="Admin → Emails, with colour pickers and a live email preview"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/admin/emails-light.png"
+  width={1440}
+/>
+<img
+  alt="Admin → Emails, with colour pickers and a live email preview"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/admin/emails-dark.png"
+  width={1440}
+/>
+
+## AI agents & MCP
+
+Controls whether the instance exposes its [MCP server](/docs/mcp-server) and [CLI](/docs/cli) access to AI agents, and manages API tokens and OAuth clients at the instance level. See the MCP server and CLI docs for what agents can do with that access, and [Agent skills](/docs/agent-skills) for task-specific guidance you can hand an agent.
+
+<img
+  alt="Admin → AI agents & MCP settings"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/admin/agents-light.png"
+  width={1440}
+/>
+<img
+  alt="Admin → AI agents & MCP settings"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/admin/agents-dark.png"
+  width={1440}
+/>

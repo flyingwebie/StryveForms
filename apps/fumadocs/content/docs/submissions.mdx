@@ -1,0 +1,81 @@
+---
+title: Submissions
+description: Browse, filter, search, edit and export the answers your forms collect.
+icon: Table
+---
+
+Open a form and its **Submissions** tab shows every response in a table, newest first.
+
+<img
+  alt="The submissions table, with a row selected"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/submissions/table-light.png"
+  width={1440}
+/>
+<img
+  alt="The submissions table, with a row selected"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/submissions/table-dark.png"
+  width={1440}
+/>
+
+## Columns
+
+Click **Columns** to show or hide a field, and drag entries in that menu to reorder them — the table remembers your choice per form. Hidden fields and layout blocks never show up as columns.
+
+<img
+  alt="The Columns menu, with fields toggled on or off and reorderable"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/submissions/column-menu-light.png"
+  width={1440}
+/>
+<img
+  alt="The Columns menu, with fields toggled on or off and reorderable"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/submissions/column-menu-dark.png"
+  width={1440}
+/>
+
+## Filters and search
+
+- The **search box** matches any answer across every visible field.
+- The **status** dropdown filters to completed or partial submissions only.
+- **Date range** narrows the table to submissions received in a window — the same range also drives [Analytics](/docs/analytics)'s traffic chart when you look at that tab next.
+
+## Submission detail
+
+Click a row to open it in a side panel: every answer, formatted for its field type (files as download links, matrices as a small grid, and so on).
+
+<img
+  alt="A submission's detail panel, with its full set of answers"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/submissions/detail-sheet-light.png"
+  width={1440}
+/>
+<img
+  alt="A submission's detail panel, with its full set of answers"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/submissions/detail-sheet-dark.png"
+  width={1440}
+/>
+
+From there you can:
+
+- **Edit answers** — correct a typo or update a value on the respondent's behalf.
+- **Delete** — permanently remove the submission.
+
+## Export
+
+**Export CSV** downloads the submissions currently shown — respecting your search, filters, date range, and selection, and using only the columns currently visible in the table. Values that look like spreadsheet formulas (starting with `=`, `+`, `-`, or `@`) are automatically escaped so opening the file in Excel or Google Sheets can't trigger one.
+
+If the form has a [PDF template](/docs/pdf-templates), you can also bulk-download every matching submission as a ZIP of individually generated PDFs — the **Download as ZIP** button sits alongside Export CSV once a template exists, and offers a template picker if the form has more than one.
+
+## Bulk actions
+
+Select rows with the checkboxes to delete several submissions at once, or to scope an export/ZIP download to just that selection.

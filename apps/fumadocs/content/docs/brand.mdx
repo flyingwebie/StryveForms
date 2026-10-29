@@ -1,0 +1,62 @@
+---
+title: Brand & white-label
+description: Set a look once for the whole workspace, let individual forms override it, and customize the instance itself.
+icon: Paintbrush
+---
+
+Brand settings exist at two levels: a **workspace brand** (shared across every form in that workspace) and the **instance's own branding** (the whole installation's identity — logo, name, colour — set by an instance admin).
+
+## Workspace brand
+
+Open **Settings → Brand**. It has the same options as a form's own [Design tab](/docs/form-styles#the-design-tab) — theme, colour, font, dark mode, size, border radius, width, frame/frameless layout and its background/border/shadow, page background colour, background image, header image, and separate **light-theme** and **dark-theme logos**.
+
+<img
+  alt="The workspace Brand settings, with colour, logo and layout options"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/brand/workspace-brand-light.png"
+  width={1440}
+/>
+<img
+  alt="The workspace Brand settings, with colour, logo and layout options"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/brand/workspace-brand-dark.png"
+  width={1440}
+/>
+
+Each option here is independent: set it and every form that follows the workspace brand inherits that value; leave it unset and each form keeps deciding it on its own, exactly as before. The page shows how many of your forms currently follow the brand, and how many override some of its settings.
+
+### Workspace brand vs. per-form overrides
+
+A form follows the workspace brand by default. From that form's own Design tab, you can override **any individual setting** — say, give one form its own accent colour while it still inherits the workspace's font, logo, and layout. Everything you don't touch keeps following the workspace; everything you do touch becomes that form's own value until you reset it back to "follow workspace."
+
+### Hide StryveForms branding
+
+The small "Powered by StryveForms" badge shown on public forms can be turned off per form (Design tab) or once for the whole workspace from the Brand page — set it there and every form follows it unless an individual form overrides the setting.
+
+## Instance (admin) branding
+
+If you administer the instance itself (see [Admin settings](/docs/admin-settings)), go to **Admin → Branding** to set the whole installation's identity, independent of any one workspace:
+
+- **Product name** and **tagline** — shown on the login/sign-up screens and in email footers.
+- **Logo**, a separate **logo for dark mode**, and a **favicon**.
+- **Primary colour** — the accent colour for the public marketing/auth pages.
+- **Homepage headline** and **subheadline**.
+
+<img
+  alt="The instance admin branding page, with logo, name and colour settings"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/brand/admin-instance-branding-light.png"
+  width={1440}
+/>
+<img
+  alt="The instance admin branding page, with logo, name and colour settings"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/brand/admin-instance-branding-dark.png"
+  width={1440}
+/>
+
+A live preview on the page shows the result as you edit. The default StryveForms mark ships at `apps/web/public/brand/` in the source repo if you ever want to revert to it.

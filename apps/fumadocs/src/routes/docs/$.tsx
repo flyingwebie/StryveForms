@@ -26,7 +26,9 @@ export const Route = createFileRoute("/docs/$")({
     return data;
   },
   head: ({ loaderData }) => ({
-    meta: loaderData ? [{ property: "og:image", content: loaderData.imageUrl }] : [],
+    meta: loaderData
+      ? [{ property: "og:image", content: loaderData.imageUrl }]
+      : [],
   }),
 });
 
@@ -72,7 +74,9 @@ function Content({ path, markdownUrl }: { path: string; markdownUrl: string }) {
 }
 
 function Page() {
-  const { path, pageTree, markdownUrl } = useFumadocsLoader(Route.useLoaderData());
+  const { path, pageTree, markdownUrl } = useFumadocsLoader(
+    Route.useLoaderData(),
+  );
 
   return (
     <DocsLayout {...baseOptions()} tree={pageTree}>

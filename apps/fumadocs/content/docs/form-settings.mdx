@@ -1,0 +1,99 @@
+---
+title: Form settings
+description: Visibility, redirects, passwords, closing a form, limits, and version history.
+icon: SlidersHorizontal
+---
+
+Click **Settings** in the editor's top bar for everything that isn't a question: visibility, what happens after submit, access rules, SEO, analytics, and computed variables.
+
+<img
+  alt="The form settings dialog, General tab"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/forms/editor-form-settings-general-light.png"
+  width={1440}
+/>
+<img
+  alt="The form settings dialog, General tab"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/forms/editor-form-settings-general-dark.png"
+  width={1440}
+/>
+
+## General
+
+- **Title** — shown in your dashboard and as the public page's heading.
+- **Tags** — free-text labels to organize and filter your forms list.
+- **Visibility**:
+
+  | Status | Meaning |
+  | --- | --- |
+  | **Published** | Live — anyone with the link can open and submit it. |
+  | **Draft** | Hidden from respondents. Only you can preview it. |
+  | **Closed** | No longer accepting submissions, but the page still loads (showing a closing message). |
+
+- **Link** — the form's slug, e.g. `yourdomain.com/forms/contact-us-ab12cd`. You can change it, but anyone with the old link gets a broken page afterwards — see [Sharing & embedding](/docs/sharing) for a safer way to swap links (regenerate, which keeps the old one working for a grace period, isn't available here; changing the slug directly is immediate).
+
+## Submissions (what happens after someone submits)
+
+- **Success message** — shown on the thank-you screen. Type "@" to insert an answer and personalize it, e.g. "Thanks, @Name!"
+- **Redirect after submit** — send respondents to another page instead of the thank-you screen. Build a **Base URL** (type "@" to insert an answer into it, e.g. as a path segment) and optionally **pass answers as URL parameters** — each row adds `?name=value` to the URL, filled in with the chosen field's answer at submit time.
+- **Respondent options**:
+  - *Offer a "fill again" button* — lets someone submit another response without reopening the form link.
+  - *Let respondents edit their submission* — adds an "Edit" button that reopens the form pre-filled with their own answers.
+- **Submission behavior**:
+  - *Save partial submissions* — keeps a draft response even if someone leaves before finishing, so you can see where people drop off.
+  - *Auto-save answers as respondents type* — saves progress in the background so nothing is lost on a refresh or lost connection.
+  - *Update existing records matching* — comma-separated field ids used to find and update an existing submission instead of creating a new one (and whether to clear fields left blank on that update).
+  - *Record respondent IP addresses* — stores the submitter's IP with each response. Check your local privacy rules before enabling this.
+- **Retention** — automatically delete submissions after a set number of days/weeks/months/years.
+
+<img
+  alt="The form settings dialog, Access & security tab"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/forms/editor-form-settings-access-light.png"
+  width={1440}
+/>
+<img
+  alt="The form settings dialog, Access & security tab"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/forms/editor-form-settings-access-dark.png"
+  width={1440}
+/>
+
+## Access & security
+
+- **Password protection** — respondents must enter this password before they can see the form at all.
+- **Close the form on** — a date/time after which it stops accepting submissions automatically, with a custom message shown once closed.
+- **Max submissions** — stops accepting submissions once a count is reached, with its own custom message.
+- **Require a captcha** — adds a human-verification challenge before the final submit button. Pick the provider (reCAPTCHA, hCaptcha, or Turnstile) — your instance needs that provider's site key configured first (see [Self-hosting](/docs/self-hosting)).
+- **Allow search engines to index this form** — turn off to add a "noindex" tag, keeping the form out of Google and other search results.
+
+## SEO, Analytics, and Custom code
+
+- **SEO**: a custom page title, description, thumbnail, and favicon used when the link is shared on social media or search engines.
+- **Analytics**: connect a Meta Pixel, Google Analytics, or Google Tag Manager id to track visits and submissions on this specific form.
+- **Custom code**: custom CSS for this form, and custom `<head>` code (for things like a verification meta tag).
+- **Variables**: computed variables — see [the editor's computed variables section](/docs/forms-editor#computed-variables).
+
+## Version history
+
+Click **History** in the editor's top bar to see every past save of the form, newest first, with who made it and when. Pick one to **restore** — this replaces the form's current fields and settings with that version's snapshot (your current state is itself saved as a version first, so restoring is never destructive). The last 20 versions are kept.
+
+<img
+  alt="The version history panel, listing past saves with a restore option"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/forms/editor-version-history-light.png"
+  width={1440}
+/>
+<img
+  alt="The version history panel, listing past saves with a restore option"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/forms/editor-version-history-dark.png"
+  width={1440}
+/>

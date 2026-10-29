@@ -1,0 +1,81 @@
+---
+title: Email notifications
+description: Send yourself, your team, or the respondent an email on every submission, and set up how notifications are sent.
+icon: Mail
+---
+
+Open a form's **Email notifications** tab to see every notification configured for it, and add more with **New notification**. Each one is sent automatically whenever the form is submitted (unless you give it a condition — see below).
+
+<img
+  alt="A form's Email notifications list, with a team notification and a respondent confirmation"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/notifications/list-light.png"
+  width={1440}
+/>
+<img
+  alt="A form's Email notifications list, with a team notification and a respondent confirmation"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/notifications/list-dark.png"
+  width={1440}
+/>
+
+## Setting one up
+
+Click a notification (or **New notification**) to open its editor:
+
+- **Send to** — one or more addresses, comma-separated. Click **Insert respondent's email** (or type "@" and pick an email field) to send the notification *to the person who filled in the form* — a **respondent confirmation email**.
+- **Sender** — pick one of your workspace's configured [senders](#senders--smtp). An **Advanced** toggle lets you override just the sender name or reply-to for this one notification.
+- **Subject** and **Message** — the message is a rich-text editor; type "@" to insert any answer by field, and use the **AI** button in the toolbar to write or rewrite the message for you (needs an AI provider configured for the workspace — see [the AI assistant](/docs/ai-assistant)).
+
+<img
+  alt="The notification editor, with a live preview and a send-test button"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/notifications/editor-light.png"
+  width={1440}
+/>
+<img
+  alt="The notification editor, with a live preview and a send-test button"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/notifications/editor-dark.png"
+  width={1440}
+/>
+
+The right side of the editor always shows a **live preview** of the actual email, with a light/dark toggle. It uses the form's most recent real submission (or sample values if there isn't one yet), so what you see is what people will get.
+
+Click **Send test email to me** at any point — it always goes to your own account's address regardless of what "Send to" is set to, so you can check a real inbox before turning the notification on.
+
+### Only send if…
+
+Give a notification a condition (the same condition builder as [field logic](/docs/forms-editor#logic-conditions)) to only send it when certain answers match — for example, only alert your team by email when a support request is marked "Urgent."
+
+## Senders & SMTP
+
+Go to **Settings → Email sending** to manage where your notification emails come from:
+
+- **Senders** — the workspace's "From" identities: a display name, an address, and a reply-to (defaults to the address itself if left blank). Add as many as you like and mark one **Default** — any notification that doesn't pick a specific sender uses the default. A "From" address only actually works if your mail server allows sending as that address; otherwise most providers reject or silently rewrite it.
+- **Custom SMTP** — send through your own mail server instead of the shared one. Set host, port, username, password, and **encryption**:
+
+  | Encryption | Meaning |
+  | --- | --- |
+  | **None** | Plain, unencrypted connection. |
+  | **SSL/TLS** | Encrypted from the start of the connection (usually port 465). |
+  | **STARTTLS** | Connects plain, then upgrades to encrypted (usually port 587). |
+
+<img
+  alt="Settings → Email sending, with senders and the custom SMTP toggle"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/settings/email-light.png"
+  width={1440}
+/>
+<img
+  alt="Settings → Email sending, with senders and the custom SMTP toggle"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/settings/email-dark.png"
+  width={1440}
+/>

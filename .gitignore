@@ -5,7 +5,14 @@ node_modules
 
 # Build outputs
 dist
-build
+/apps/cli/stryveforms
+/apps/server/server
+# Anchored to the repo root: an unanchored `build` pattern also matches
+# nested source directories named "build" anywhere in the tree (e.g.
+# apps/web/src/components/form-editor/build/, the editor's Build-tab
+# components) and silently hides them from git, Biome, and Tailwind's
+# content scanner.
+/build
 *.tsbuildinfo
 
 # Generated files
@@ -56,3 +63,6 @@ coverage
 .cache
 tmp
 temp
+
+# Uploaded files (local storage driver)
+apps/server/storage

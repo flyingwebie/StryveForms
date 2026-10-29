@@ -12,6 +12,10 @@
     "@StryveForms/db": "workspace:*",
     "@better-auth/core": "1.7.7",
     "@better-auth/drizzle-adapter": "1.7.7",
+    "@better-auth/mcp": "1.7.7",
+    "@better-auth/oauth-provider": "1.7.7",
+    "@better-auth/passkey": "1.7.7",
+    "@better-auth/utils": "0.4.2",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"

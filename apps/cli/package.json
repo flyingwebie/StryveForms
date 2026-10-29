@@ -1,0 +1,27 @@
+{
+  "name": "stryveforms",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "stryveforms": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "compile": "bun build --compile --minify --sourcemap ./src/index.ts --outfile stryveforms",
+    "dev": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@StryveForms/api": "workspace:*",
+    "@trpc/client": "catalog:"
+  },
+  "devDependencies": {
+    "@StryveForms/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  }
+}

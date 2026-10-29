@@ -1,0 +1,52 @@
+---
+title: Workspace export & import
+description: Download one workspace as a file, and load it into this or another StryveForms instance.
+icon: Archive
+---
+
+Anyone with the **Export workspace** permission can download a single workspace — its forms, submissions, files, integrations and more — as one `.stryve.zip` file. Loading that file back in always creates a **new** workspace; it never changes or merges into an existing one.
+
+This is different from a full instance backup (all workspaces, users and instance settings), which an instance admin sets up from **Admin → Backups**.
+
+## Export a workspace
+
+Open **Settings → Backup & export** in the workspace you want to download.
+
+1. **Include files people uploaded with submissions** (on by default) — turn this off to leave out submission uploads and signatures, usually the biggest part of the file. Brand logos, PDF templates and option images are always included.
+2. **Include secrets** (off by default) — webhook signing keys, integration tokens, SMTP passwords and the AI provider key. Turning this on asks for a passphrase (at least 12 characters, typed twice). **If you lose this passphrase, the secrets can't be recovered — not even by an instance admin.** Left off, every integration that needs a secret is still exported, just switched off and marked "Needs reconnecting" after import.
+3. Click **Export workspace**. It runs in the background with a progress bar — you can leave the page.
+4. When it's done you'll get an email with a download link, and the file also appears in the **Export history** list below, with its size and when it'll be deleted.
+
+Finished exports are kept for **7 days** and then deleted automatically.
+
+### What's included
+
+| Included | Not included |
+| --- | --- |
+| Workspace name, icon, brand, settings, role permissions | API tokens and MCP/OAuth connections (they belong to a person, not a workspace) |
+| Folders, forms with version history, submissions | Integration delivery logs and AI chat history |
+| Workspace templates, PDF templates and their source files | Import job history |
+| Integrations (configuration), email notifications | Custom domains — these are listed as "set up again" after import |
+| Form statistics, brand assets, option images, stored files | — |
+| Members' email + role, and pending invites (no passwords, no sessions) | — |
+
+## Import a workspace
+
+Start it from either **Settings → Import → StryveForms file**, or the **Import a workspace** entry in the workspace switcher. Anyone who can create a workspace can import one.
+
+1. **Upload** the `.stryve.zip` file. A real progress bar tracks the upload.
+2. **Overview** — counts, size, the source instance and app version, and any warnings (integrations that will need reconnecting, custom domains that won't carry over, links that will change).
+3. **Passphrase** — only shown if the archive includes secrets. A wrong passphrase shows an inline error so you can try again, or skip and import without secrets (every integration that needed one comes in switched off, marked "Needs reconnecting").
+4. **Members** — the source workspace's members and pending invites, nobody ticked by default. Tick who should come along and set their role; people who already have an account here are added right away, others become a pending invite. Tick **Send invites** to email them, or leave it off to invite them later from Members.
+5. The import runs as a background job with progress, same as exports.
+6. **Summary** — old → new links for any form whose slug had to change, integrations that need reconnecting, custom domains to set up again, and how many members were added or invited. **Open workspace** takes you straight there.
+
+Forms keep their slug when it's free on this instance; otherwise a short suffix is added, and the summary lists every change.
+
+## Reconnecting integrations
+
+An integration imported without its secret shows a **Needs reconnecting** badge on the Integrations page, with a one-line explanation. Open it, re-enter its webhook secret, token or password, and turn it back on.
+
+## Version compatibility
+
+Every archive carries the app version it was made with. A newer StryveForms can always import an older archive; an older StryveForms refuses a newer one with a message telling you which version to upgrade to first.

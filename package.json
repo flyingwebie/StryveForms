@@ -1,6 +1,8 @@
 {
   "name": "StryveForms",
+  "version": "0.1.0",
   "private": true,
+  "type": "module",
   "workspaces": {
     "packages": [
       "apps/*",
@@ -21,35 +23,39 @@
       "drizzle-orm": "1.0.0-rc.4"
     }
   },
-  "type": "module",
   "scripts": {
-    "dev": "vp run -r dev",
+    "auth:generate": "cd apps/server && bun run auth:generate",
     "build": "vp run -r build",
-    "check-types": "vp run -r check-types",
     "check": "vp check && vp run -r check-types",
-    "lint": "vp lint",
-    "format": "vp fmt",
-    "staged": "vp staged",
-    "dev:web": "vp run --filter web dev",
-    "dev:tui": "vp run --filter tui dev",
-    "dev:server": "vp run --filter server dev",
-    "db:push": "vp run --filter @StryveForms/db db:push",
-    "db:studio": "vp run --filter @StryveForms/db db:studio",
+    "check-types": "vp run -r check-types",
+    "db:down": "docker compose down postgres",
     "db:generate": "vp run --filter @StryveForms/db db:generate",
     "db:migrate": "vp run --filter @StryveForms/db db:migrate",
+    "db:push": "vp run --filter @StryveForms/db db:push",
     "db:start": "docker compose up -d postgres",
-    "db:watch": "docker compose up postgres",
     "db:stop": "docker compose stop postgres",
-    "db:down": "docker compose down postgres",
+    "db:studio": "vp run --filter @StryveForms/db db:studio",
+    "db:watch": "docker compose up postgres",
+    "dev": "bun scripts/free-dev-ports.ts && vp run --filter web --filter server --parallel --log labeled dev",
+    "dev:all": "vp run -r dev",
+    "dev:docs": "vp run --filter fumadocs dev",
+    "dev:server": "vp run --filter server dev",
+    "dev:tui": "vp run --filter tui dev",
+    "dev:web": "vp run --filter web dev",
     "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
+    "docker:up": "docker compose up -d --build",
     "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "auth:generate": "cd apps/server && bun run auth:generate",
     "fix": "ultracite fix",
-    "prepare": "husky"
+    "format": "vp fmt",
+    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "lint": "vp lint",
+    "prepare": "husky",
+    "staged": "vp staged"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0"
   },
   "dependencies": {
     "zod": "catalog:"
@@ -65,9 +71,6 @@
     "varlock": "catalog:",
     "vite": "catalog:",
     "vite-plus": "1.1.0"
-  },
-  "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0"
   },
   "packageManager": "bun@1.4.2"
 }

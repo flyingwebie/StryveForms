@@ -1,0 +1,141 @@
+---
+title: Overview
+description: Architecture, environment variables, and the concepts every deployment guide in this section builds on.
+icon: LayoutTemplate
+---
+
+This section covers deploying StryveForms to a server you control: Coolify, Railway, and a handful of similar platforms. Read this page first — the platform-specific pages (Coolify, Railway, others) assume you know the pieces below.
+
+If you just want the fastest path on your own VPS, see [Self-hosting](/docs/self-hosting) instead.
+
+## Architecture
+
+StryveForms is three pieces plus two optional external services:
+
+| Piece | What it is | Public? |
+| --- | --- | --- |
+| **web** (`apps/web`) | TanStack Start app, server-rendered, listens on port `3002` | Yes — this is the only service that needs a domain |
+| **server** (`apps/server`) | Hono + tRPC API, Better Auth, listens on port `3000` | No — stays on the private network |
+| **PostgreSQL** | The database | No |
+| File storage | Local disk volume, or any S3-compatible bucket (AWS S3, Cloudflare R2, MinIO, Backblaze B2…) | No |
+| SMTP | Outgoing email (verification, invites, notifications). Optional — without it, emails are printed to the server log | N/A |
+
+The **web** app proxies `/api` and `/trpc` to the **server** over the private network, so respondents, editors and admins only ever talk to one domain. This is why only `web` needs a public address and TLS certificate.
+
+```
+Browser → web (:3002, public) → server (:3000, private) → PostgreSQL
+                                                          → S3 or local disk
+                                                          → SMTP
+```
+
+## Environment variables
+
+Settings are read with [Varlock](https://varlock.dev); the `.env.schema` file in each app is the source of truth. Copy `.env.example` → `.env` for local work; in production you set these as real environment variables (every platform in this section has its own way to do that).
+
+### Server (`apps/server/.env.schema`)
+
+| Variable | Required | Secret | What it does |
+| --- | --- | --- | --- |
+| `NODE_ENV` | Yes | No | `production` in every deployment |
+| `BETTER_AUTH_SECRET` | Yes | **Yes** | Signs sessions and file links. At least 32 characters. Generate with `openssl rand -base64 48` |
+| `BETTER_AUTH_URL` | Yes | No | Public URL of the **web** app (Better Auth is mounted behind it) |
+| `CORS_ORIGIN` | Yes | No | Same public URL — allows the web app's origin to call the API |
+| `DATABASE_URL` | Yes | **Yes** | PostgreSQL connection string, e.g. `postgresql://user:pass@host:5432/db` |
+| `APP_URL` | Yes | No | Public URL of the web app, used in share links and emails (same value as `BETTER_AUTH_URL`) |
+| `APP_NAME` | No | No | Display name used in emails and the UI. Default `StryveForms` |
+| `STORAGE_DRIVER` | No | No | `local` (disk) or `s3`. Default `local` |
+| `STORAGE_PATH` | No | No | Folder for local storage. In containers this should be a mounted volume, e.g. `/data/storage` |
+| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Only if `STORAGE_DRIVER=s3` | Keys are **secret** | Any S3-compatible bucket. Leave `S3_ENDPOINT` empty for real AWS S3 |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SECURE`, `MAIL_FROM` | No | `SMTP_USER`/`SMTP_PASSWORD` are secret | Outgoing email. Without `SMTP_HOST`, emails are printed to the server log instead of sent |
+| `RECAPTCHA_SECRET_KEY`, `HCAPTCHA_SECRET_KEY`, `TURNSTILE_SECRET_KEY` | No | **Yes** | Only needed for forms that turn on that captcha provider. The matching public *site* keys live in the web app's env |
+| `TELEGRAM_BOT_TOKEN` | No | **Yes** | Only needed for the Telegram notification integration |
+| `OPNFORM_IMPORT_RATE_LIMIT` | No | No | Requests per minute to OpnForm during an import. Default `60` |
+| `TRUST_PROXY` | Not in the schema's default example, but **set it** | No | Set to `true` behind any reverse proxy (Coolify, Railway, Caddy, Traefik, Nginx…) so respondent IPs are read from `X-Forwarded-For` instead of the proxy's own address |
+| `ALLOW_PRIVATE_WEBHOOKS` | No | No | Set to `true` only if you intentionally want outgoing webhooks to be allowed to hit private/internal network addresses. Leave it unset in production — it exists to block SSRF |
+
+### Web (`apps/web/.env.schema`)
+
+| Variable | Required | Secret | What it does |
+| --- | --- | --- | --- |
+| `NODE_ENV` | Yes | No | `production` |
+| `SERVER_URL` | No | No | Internal address of the API server, used by the proxy and SSR. In Docker/Compose this is `http://server:3000` |
+| `VITE_SERVER_URL` | No | No (public) | Leave **empty** unless the API runs on a different public domain than the web app — the recommended setup keeps everything on one domain |
+| `PORT` | No | No | Port the web app listens on. Default `3002` |
+| `VITE_RECAPTCHA_SITE_KEY`, `VITE_HCAPTCHA_SITE_KEY`, `VITE_TURNSTILE_SITE_KEY` | No | No (public) | Public captcha site keys, shipped to the browser. Pair with the matching `*_SECRET_KEY` on the server |
+
+### Generating `BETTER_AUTH_SECRET`
+
+```bash
+openssl rand -base64 48
+```
+
+Any string of 32+ random characters works; `openssl rand -base64 48` is just a convenient way to get one. Treat it like a password — if it leaks, sessions and signed file links can be forged. Coolify and Railway can both generate this for you automatically (see their pages in this section); on a plain VPS, generate it yourself and put it in a `.env` file that is never committed.
+
+## First-run onboarding
+
+The first visit to the web app's URL starts onboarding: create the administrator account, set branding (name, logo, colour), and choose whether sign-up is open, domain-restricted, or invite-only. There is no separate "install wizard" — this *is* it. Nothing else needs seeding.
+
+## Upgrades & migrations
+
+- Pull the new code (or redeploy from the new image/commit) and rebuild.
+- Database migrations run **automatically** when the server container starts — see the `CMD` in `apps/server/Dockerfile`, which runs `bun packages/db/src/migrate.ts` before starting the API. You don't run migrations by hand in production.
+- Because migrations run on every boot, a rolling/zero-downtime deploy that starts a second server instance before stopping the first is safe: migrations are idempotent (`drizzle-orm`'s migrator tracks which ones already ran).
+- Always take a database backup (see below) before a version jump that touches the schema.
+
+## Backups
+
+StryveForms has a built-in backup feature: an instance admin sets up destinations (your own storage, Cloudflare R2, RustFS, MinIO, or another S3-compatible service), a schedule, and restores from **Admin → Backups** — see [Instance backups & restore](/docs/instance-backups). Use that for normal day-to-day backup/restore; it's encrypted, scheduled, and doesn't need shell access to the server.
+
+### Infrastructure backups (pg_dump + storage)
+
+Treat the two commands below as an **extra safety net** underneath the built-in feature — handy before a risky migration, a platform move, or as a second copy outside StryveForms entirely, not as a replacement for it.
+
+1. **Database** — a plain `pg_dump`:
+   ```bash
+   pg_dump "$DATABASE_URL" -Fc -f stryveforms-$(date +%F).dump
+   ```
+   Restore with `pg_restore -d "$DATABASE_URL" stryveforms-2026-01-01.dump`.
+2. **File storage** — if `STORAGE_DRIVER=local`, back up the storage volume/directory (uploaded files, signatures, generated PDFs). If `STORAGE_DRIVER=s3`, your bucket provider's own backup/versioning covers this.
+
+A `pg_dump`/storage-volume pair restores only together, and only onto a matching StryveForms version — unlike a `.stryve-backup` file, it isn't portable between instances. Automate both on a schedule (cron, your platform's backup add-on, or your cloud provider's snapshot feature) if you want this extra layer kept up to date automatically.
+
+## Health checks
+
+Both Docker images ship a `HEALTHCHECK`:
+
+- **server**: `GET http://localhost:3000/` must return `2xx`
+- **web**: `GET http://localhost:<PORT>/` must return `2xx`
+
+Every compose file in this section wires `depends_on: condition: service_healthy` so the web app doesn't start serving traffic before the API (and the API doesn't start before Postgres) is actually ready. If you configure a platform's own healthcheck (Railway, Render…) instead of relying on the Docker `HEALTHCHECK`, point it at `/` on each service.
+
+## Custom domains & HTTPS
+
+Only the **web** service needs a domain. Every platform in this section (Coolify, Railway, Dokploy, CapRover, Render, Fly.io) terminates TLS for you automatically once you attach a domain — you don't need to run Certbot yourself on any of them. On a plain VPS (last page in this section), Caddy or Traefik does it for you from one line of config.
+
+Point your DNS at the platform (usually a CNAME to a hostname the platform gives you, or an A record to your VPS's IP), set `APP_URL` / `BETTER_AUTH_URL` / `CORS_ORIGIN` to the final `https://` URL, and redeploy.
+
+## Reverse proxy
+
+If you're putting your own reverse proxy in front of StryveForms (anything not already covered by a platform's built-in proxy), forward these to the **web** container's port:
+
+- `Host` header untouched
+- `X-Forwarded-For` and `X-Forwarded-Proto` set correctly
+- WebSocket upgrade headers (`Upgrade`, `Connection`) passed through — TanStack Start's dev tooling and some live features rely on them
+
+...and set `TRUST_PROXY=true` on the **server**. See [Other platforms](/docs/deployment/other-platforms) for a ready-to-use Caddy and Traefik example.
+
+## Scaling notes
+
+- **web** and **server** are both stateless (no in-memory session storage, no sticky state) — you can run more than one instance of either behind a load balancer. Scale `web` for request throughput, `server` for API/CPU-heavy work (PDF generation, imports).
+- **PostgreSQL** is the one stateful piece. Use a managed Postgres (Coolify's built-in one, Railway's Postgres plugin, RDS, Neon, Supabase…) once you need backups/HA beyond a single container.
+- If `STORAGE_DRIVER=local`, local-disk file storage does **not** survive multiple server replicas sharing the same volume correctly on most platforms unless the volume is a shared network filesystem — switch to `STORAGE_DRIVER=s3` before scaling `server` horizontally.
+- The server's hourly background task (deleting expired submissions and orphaned uploads) is safe to run on every replica; it's a cheap, idempotent sweep.
+
+## What's next
+
+<Cards>
+  <Card title="Coolify — Docker Compose" href="/docs/deployment/coolify-docker-compose" />
+  <Card title="Coolify — Railpack" href="/docs/deployment/coolify-railpack" />
+  <Card title="Railway" href="/docs/deployment/railway" />
+  <Card title="Other platforms" href="/docs/deployment/other-platforms" />
+</Cards>

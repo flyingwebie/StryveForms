@@ -1,0 +1,56 @@
+---
+title: Analytics & Summary
+description: Views, completion rate, traffic sources, and a per-question breakdown of your answers.
+icon: ChartColumn
+---
+
+Two tabs on a form's page turn raw submissions into something you can actually read.
+
+## Analytics
+
+Four headline numbers — **Views**, **Submissions**, **Completion rate**, and **Average completion time** — followed by a **Traffic over time** chart you can switch between date ranges, and a breakdown of **Traffic sources** (direct, referral, social, email…) and **Countries**.
+
+<img
+  alt="The Analytics tab, with headline numbers, a traffic chart, and sources/countries"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/submissions/analytics-light.png"
+  width={1440}
+/>
+<img
+  alt="The Analytics tab, with headline numbers, a traffic chart, and sources/countries"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/submissions/analytics-dark.png"
+  width={1440}
+/>
+
+A "view" is counted whenever someone loads the public form page; "completion rate" is submissions divided by views for the selected range.
+
+## Summary
+
+The **Summary** tab gives every question its own card, shaped to fit the question type:
+
+- Choice questions (dropdown, single/multiple choice) show a **distribution**: each option with its count and percentage.
+- Number, rating, scale and slider questions show **min / average / max**.
+- Date questions show a date-range summary.
+- Checkboxes show a yes/no split.
+- Matrix questions show their own grid breakdown.
+- Open text questions (text, rich text) list recent answers.
+
+<img
+  alt="The Summary tab, with one card per question"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/submissions/summary-light.png"
+  width={1440}
+/>
+<img
+  alt="The Summary tab, with one card per question"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/submissions/summary-dark.png"
+  width={1440}
+/>
+
+It's a fast way to see how people answered without opening every submission individually — good for a quick NPS or satisfaction read, or to sanity-check a survey before sharing the numbers further.

@@ -1,0 +1,75 @@
+---
+title: Railway
+description: Deploy web, server and Postgres as three Railway services, with variable references and volumes.
+icon: TrainFront
+---
+
+[Railway](https://railway.com) runs each piece of StryveForms as its own service inside one project. This page builds three services — **web**, **server**, **Postgres** — using the repo's existing Dockerfiles (the safe, verified path — see [Coolify — Railpack](/docs/deployment/coolify-railpack) for why Railpack autodetection needs real care on this monorepo, which applies on Railway too).
+
+## 1. Add Postgres
+
+**New → Database → Add PostgreSQL**. Railway provisions it and exposes `${{Postgres.DATABASE_URL}}` (private, for other Railway services) and `${{Postgres.DATABASE_PUBLIC_URL}}` (public — don't use this one; it adds egress cost and isn't needed here).
+
+## 2. Add the server service
+
+**New → GitHub Repo** (or empty service + connect repo), then in **Settings**:
+
+- **Root Directory**: `/` (repo root — required so `bun install` can see the workspace; see [Coolify — Railpack](/docs/deployment/coolify-railpack) for why a sub-folder root breaks Bun workspace resolution)
+- **Builder**: Dockerfile
+- **Dockerfile Path**: `apps/server/Dockerfile`
+- **Healthcheck Path**: `/`
+- **Port**: `3000`
+
+Variables:
+
+```
+NODE_ENV=production
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+BETTER_AUTH_SECRET=<generate: openssl rand -base64 48>
+APP_URL=${{web.RAILWAY_PUBLIC_DOMAIN}}
+BETTER_AUTH_URL=${{web.RAILWAY_PUBLIC_DOMAIN}}
+CORS_ORIGIN=${{web.RAILWAY_PUBLIC_DOMAIN}}
+TRUST_PROXY=true
+STORAGE_PATH=/data/storage
+```
+
+`${{web.RAILWAY_PUBLIC_DOMAIN}}` is Railway's own reference syntax for another service's variable — it resolves to the **web** service's public domain once you've created it (step 3). Add a volume mounted at `/data/storage` if you're using local file storage (`STORAGE_DRIVER=local`, the default) — **Settings → Volumes → New Volume**, mount path `/data/storage`. Fill in the rest of the optional variables from [Overview](/docs/deployment/overview#environment-variables) (S3, SMTP, captcha) as needed.
+
+## 3. Add the web service
+
+Same repo, new service:
+
+- **Root Directory**: `/`
+- **Builder**: Dockerfile
+- **Dockerfile Path**: `apps/web/Dockerfile`
+- **Healthcheck Path**: `/`
+- **Port**: `3002`
+- **Networking**: generate a public domain (this is the only service that needs one)
+
+Variables:
+
+```
+NODE_ENV=production
+PORT=3002
+SERVER_URL=http://${{server.RAILWAY_PRIVATE_DOMAIN}}:3000
+```
+
+Railway's private networking gives every service a `RAILWAY_PRIVATE_DOMAIN` reachable from other services in the same project — that's how `web` reaches `server` without exposing it publicly.
+
+## 4. Deploy
+
+Deploy **Postgres** and **server** first (server needs the database healthy before migrations can run), then **web**. Railway's healthcheck holds traffic until each service's `/` returns `2xx` — matching the `HEALTHCHECK` already baked into both Dockerfiles.
+
+## Config-as-code: use the dashboard, not `railway.json`, for now
+
+Railway supports a `railway.json`/`railway.toml` file per service (fields like `build.dockerfilePath`, `deploy.healthcheckPath`, `deploy.startCommand`). **We deliberately don't ship one in this repo**: as of this writing, Railway's own docs mark that format **deprecated**, with existing files stopping being read on **2026-12-01**, in favor of a project-wide `.railway/railway.ts` ("Infrastructure as Code", TypeScript-only at general availability). Writing a `railway.json` today would need rewriting again within weeks of this doc being published. Configure services from the dashboard settings described above — it isn't going away, and it's what Railway's variable references (`${{service.VAR}}`) are built around regardless of which config system you use.
+
+If you're reading this well after late 2026 and want committed, reviewable config, look at `.railway/railway.ts` instead and adapt the dashboard settings above into it.
+
+## Scaling
+
+`web` and `server` are stateless — Railway's **Replicas** setting under each service's Settings works for either, once `STORAGE_DRIVER=s3` (a local volume isn't shared between replicas). See [Overview → Scaling notes](/docs/deployment/overview#scaling-notes).
+
+## A note on templates
+
+If you maintain a public "Deploy on Railway" template button for this repo, it needs a Railway **template** (not just the services above) — that's a separate artifact Railway generates from a reference deployment via their dashboard "Create Template" flow, not something expressed purely in repo files. We haven't published one; the three-service setup above gets you the same result manually in a few minutes.

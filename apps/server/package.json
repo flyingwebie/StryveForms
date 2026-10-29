@@ -3,21 +3,30 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
+    "auth:generate": "varlock run -- bun x auth@latest generate --config src/services.ts --output ../../packages/db/src/schema/auth.ts --yes",
     "build": "tsdown",
     "check-types": "tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run dist/index.mjs",
     "env:generate": "varlock codegen",
-    "auth:generate": "varlock run -- bun x auth@latest generate --config src/services.ts --output ../../packages/db/src/schema/auth.ts --yes"
+    "start": "bun run dist/index.mjs"
   },
   "dependencies": {
     "@StryveForms/api": "workspace:*",
     "@StryveForms/auth": "workspace:*",
     "@StryveForms/db": "workspace:*",
+    "@StryveForms/emails": "workspace:*",
+    "@StryveForms/forms": "workspace:*",
+    "@better-auth/mcp": "1.7.7",
+    "@better-auth/oauth-provider": "1.7.7",
     "@hono/trpc-server": "^0.4.2",
+    "@modelcontextprotocol/server": "2.3.1",
+    "@resvg/resvg-wasm": "^2.6.2",
+    "@tanstack/ai": "1.0.0",
     "@trpc/server": "catalog:",
     "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "fflate": "^0.8.3",
     "hono": "^4.13.7",
     "varlock": "catalog:",
     "zod": "catalog:"

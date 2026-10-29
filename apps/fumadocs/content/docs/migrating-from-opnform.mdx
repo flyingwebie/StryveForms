@@ -1,0 +1,55 @@
+---
+title: Migrate from OpnForm
+description: Move forms, submissions, files and integrations from OpnForm Cloud or a self-hosted OpnForm.
+icon: ArrowRightLeft
+---
+
+The migration tool copies everything from OpnForm into StryveForms. You choose which forms to bring over, and you can run it again at any time — items that were already imported are updated, not duplicated.
+
+<img
+  alt="Settings → Import, with the OpnForm and JotForm import cards and recent imports"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/import/center-light.png"
+  width={1440}
+/>
+<img
+  alt="Settings → Import, with the OpnForm and JotForm import cards and recent imports"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/import/center-dark.png"
+  width={1440}
+/>
+
+## What gets imported
+
+| From OpnForm | In StryveForms |
+| --- | --- |
+| Workspaces | New workspaces (or an existing one you pick), with members who already have an account |
+| Forms | All questions, layout blocks, logic, custom validation, formulas, design, settings, password and SEO |
+| Form images | Logos, covers and image blocks are copied to your storage |
+| Submissions | Completed and partial submissions with their original dates, completion time and tracking data |
+| Uploaded files and signatures | Copied to your storage |
+| Integrations | Email notifications, webhooks, Slack, Discord and automation webhooks (n8n, Make, Zapier, Pabbly, Activepieces, Albato) |
+| Views | Total view counts, so analytics stay continuous |
+
+Links keep working: forms keep their OpnForm address (`/forms/<slug>`) when it's free, and old "edit your submission" links still open the same submission.
+
+**Not imported:** Google Sheets and Telegram connections (they used OpnForm's own sign-in — reconnect them after the import), payment blocks, PDF templates and form version history.
+
+## Steps
+
+1. In OpnForm, open **Settings → Access Tokens** and create a token with these permissions: `forms-read`, `workspaces-read`, `workspace-users-read` and `manage-integrations`.
+2. In StryveForms, open **Settings → Import** and choose **Import from OpnForm**.
+3. Choose **OpnForm Cloud** or enter the address of your self-hosted OpnForm (for example `https://forms.example.com`), and paste the token.
+4. Pick the workspaces and forms to import, and where each workspace should go.
+5. Click **Review import**. The overview lists every form with what will be created or updated, how each field maps, the integrations that will or won't come over, and an estimated time. Nothing is copied yet.
+6. Start the import. You can follow the progress and leave the page — you'll get an email when it's done.
+
+The token is only kept in memory while the import runs; it is never saved. Delete it in OpnForm once you're done.
+
+## After the import
+
+- Review integrations marked as needing attention in the import log.
+- If you used a custom domain with OpnForm, point it to StryveForms.
+- Members without a StryveForms account are listed in the log — invite them from **Settings → Members**.

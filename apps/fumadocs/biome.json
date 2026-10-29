@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+  "root": false,
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -29,5 +29,6 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "$schema": "../../node_modules/@biomejs/biome/configuration_schema.json"
 }

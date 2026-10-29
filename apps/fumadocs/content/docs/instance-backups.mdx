@@ -1,0 +1,119 @@
+---
+title: Instance backups & restore
+description: Back up every workspace, user and setting on this installation, on a schedule or on demand, and restore the whole thing from a file.
+icon: DatabaseBackup
+---
+
+An **instance backup** is everything on this StryveForms installation — every workspace, every user (with their password), and instance-wide settings — in one encrypted file. It's different from a [workspace export](/docs/workspace-backups), which downloads a single workspace and is available to any workspace admin; instance backups are set up by an **instance admin** from **Admin → Backups**.
+
+## The short version
+
+1. Add at least one **destination** — where backups are sent (your own storage, Cloudflare R2, RustFS, MinIO, or any S3-compatible service).
+2. Set a **passphrase** — required for every instance backup, because it also protects the password hashes inside.
+3. Either turn on a **schedule**, or click **Backup now**.
+4. If you ever need to, **restore** from Admin → Backups (on a running instance) or from the `/setup` screen (on a brand-new one).
+
+## Destinations
+
+Click **Add destination** and choose where backups go:
+
+- **This instance's storage** — wherever `STORAGE_DRIVER` already points (local disk or S3), under a `backups/` prefix.
+- **S3-compatible service** — pick a provider and its fields fill in with sensible defaults, a one-line explanation, and a link to where to create API keys.
+
+<img
+  alt="Admin → Backups, with the destinations list and the schedule card"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/admin/backups-light.png"
+  width={1440}
+/>
+<img
+  alt="Admin → Backups, with the destinations list and the schedule card"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/admin/backups-dark.png"
+  width={1440}
+/>
+
+### Cloudflare R2, step by step
+
+1. In the Cloudflare dashboard, go to **R2** and create a bucket if you don't have one yet.
+2. Go to **R2 → Manage API tokens** (the dialog's "Create access keys" link takes you straight there) and create a token with read/write access to that bucket.
+3. Back in StryveForms, click **Add destination**, choose **S3-compatible service**, and pick **Cloudflare R2** as the provider. The region (`auto`) and endpoint pattern fill in automatically — replace `<ACCOUNT_ID>` in the endpoint with your Cloudflare account id (shown on the R2 overview page).
+4. Fill in the bucket name, access key id and secret access key, then click **Test connection** — it writes, reads and deletes a small file to confirm everything works before you save.
+
+<img
+  alt="Adding a Cloudflare R2 destination, with per-field help and a link to create access keys"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/admin/backups-destination-r2-light.png"
+  width={1440}
+/>
+<img
+  alt="Adding a Cloudflare R2 destination, with per-field help and a link to create access keys"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/admin/backups-destination-r2-dark.png"
+  width={1440}
+/>
+
+R2 has no egress fees, which makes it one of the cheapest places to keep frequent backups.
+
+### RustFS or MinIO, step by step
+
+Both are self-hosted, S3-compatible object stores — a good fit if you want backups to stay on your own infrastructure rather than a third-party cloud.
+
+1. Run the server (for RustFS: `docker run -p 9000:9000 -e RUSTFS_ACCESS_KEY=... -e RUSTFS_SECRET_KEY=... rustfs/rustfs`; MinIO is the equivalent `minio/minio server`), and create a bucket for backups.
+2. In StryveForms, choose **S3-compatible service** and pick **RustFS** or **MinIO** as the provider — both default **path-style addressing** on, which self-hosted services almost always need (unlike AWS S3 or R2).
+3. Set the endpoint to your server's URL (e.g. `https://backups.example.com:9000`), fill in the bucket, access key and secret key from how you started the server, and **Test connection**.
+
+### Other providers
+
+AWS S3, Backblaze B2, Wasabi, Hetzner Object Storage and DigitalOcean Spaces all have their own preset with matching defaults and a link to their key-creation page. Anything else that speaks the S3 API works through **Custom**.
+
+## Schedule, retention and the passphrase
+
+In the **Scheduled backups** card, turn the schedule on, choose **daily** or **weekly** (and a weekday), a time, a timezone (an IANA name like `Europe/Dublin`), and which destination to use. **Keep the last** controls retention — older backups at that destination are deleted automatically after each successful run.
+
+Scheduled and automatic safety backups run unattended, so they need a saved **passphrase** rather than one typed at the moment — set it once below the schedule. It's encrypted at rest the same way as other instance secrets.
+
+<Callout type="warn">
+  If you lose this passphrase, backups made with it can't be opened. There is no recovery — write it down somewhere safe (a password manager, not a sticky note).
+</Callout>
+
+## Backup now
+
+Pick a destination and click **Backup now** for an on-demand backup outside the schedule. It runs in the background; the **History** list below shows every backup and restore — scheduled, manual, safety and CLI-triggered — with its status, size, and a download link while it's still kept.
+
+## Restoring
+
+Restoring **replaces everything** on the instance — every workspace, user and setting — with the contents of a backup file. There's no partial restore and no merging two instances; use [workspace export/import](/docs/workspace-backups) if you just want to move one workspace.
+
+### On a running instance
+
+Go to **Admin → Backups → Restore**, upload a `.stryve-backup` file, enter its passphrase, and type the instance's name to confirm. An automatic **safety backup** is taken first (same passphrase, to a destination you pick), so a restore you didn't mean to do is itself recoverable. Every session, including yours, ends — sign in again afterward.
+
+### On a brand-new instance
+
+The first-run `/setup` screen offers **Restore from a backup** as an alternative to creating a fresh admin account. Upload the file, enter the passphrase, and StryveForms restores everything and sends you to the login page — sign in with an account from the restored instance.
+
+## What's included
+
+An instance backup carries everything a [workspace export](/docs/workspace-backups#whats-included) does, for every workspace, plus:
+
+- every user, with their password and `isAdmin` flag;
+- workspace memberships and pending invites;
+- instance settings, including email design and AI agent settings;
+- global templates and AI provider credentials (re-encrypted with the backup's own passphrase).
+
+Not included, by design: sessions, OAuth clients/tokens/consents, personal API tokens and device codes — so everyone, including API/agent connections, reconnects after a restore. Unlike a workspace export, secrets travel inside the archive without being blanked — the whole file is encrypted, so there's nothing to redact.
+
+Restoring keeps every id exactly as it was (no remapping, unlike a workspace import), since it's putting the same instance back, not merging into another one.
+
+## The CLI
+
+```bash
+stryveforms backup --destination <id> [--out file] [--passphrase-env VAR]
+```
+
+Starts a backup to a saved destination (or the schedule's default if `--destination` is omitted), waits for it to finish, and optionally saves a local copy to `--out`. Needs an instance admin's token. Without `--passphrase-env`, it uses the saved unattended passphrase. See the [CLI docs](/docs/cli) for sign-in and every other command.

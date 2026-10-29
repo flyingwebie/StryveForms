@@ -1,0 +1,58 @@
+---
+title: Migrate from JotForm
+description: Copy forms, submissions, uploaded files, email notifications and webhooks from a JotForm account.
+icon: ArrowRightLeft
+---
+
+The JotForm import reads your account with your own API key and copies the forms you choose into a StryveForms workspace. It never changes anything in JotForm. You can run it again at any time — forms and submissions imported before are updated, not duplicated.
+
+<img
+  alt="Settings → Import, with the OpnForm and JotForm import cards and recent imports"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/import/center-light.png"
+  width={1440}
+/>
+<img
+  alt="Settings → Import, with the OpnForm and JotForm import cards and recent imports"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/import/center-dark.png"
+  width={1440}
+/>
+
+## What gets imported
+
+| From JotForm | In StryveForms |
+| --- | --- |
+| Forms | Questions in order, required and hidden flags, hints and descriptions, page breaks, headings, text and images, submit button text, thank-you message or redirect, classic or card layout |
+| Full name and address | Split into separate fields (first/last name; street, city, state, postal code, country) |
+| Choices | Dropdowns, single and multiple choice (with “Other” answers kept), autocomplete |
+| Other questions | Email, phone, number, spinner, date and birth date, file upload, signature, star rating, scale, slider and single-choice matrices |
+| Submissions | Every answer with its original date, IP address, notes and flag |
+| Uploaded files and signatures | Copied to your storage |
+| Email notifications and autoresponders | Email integrations; JotForm's `{field}` tags become answer mentions |
+| Webhooks | Webhook integrations |
+
+Questions StryveForms doesn't have (time, widgets, appointments, fill-in-the-blank, payment fields, other matrix types) are converted to text fields, and their submitted answers are kept as readable text. Captcha is not copied — turn it on in the form's settings.
+
+**Not imported:** conditional logic, form design (imported forms use your workspace brand from Settings → Brand instead), payments, and JotForm reports, approvals and tables. JotForm links keep pointing to JotForm: share the new StryveForms links when you're ready.
+
+## Steps
+
+1. In JotForm, open **Settings → API**, click **Create new key** and give it **Read access**.
+2. In StryveForms, open **Settings → Import** and choose **Import from JotForm**.
+3. Paste the key. StryveForms finds your account's region (US, EU or HIPAA) automatically; Enterprise accounts enter their own address, for example `https://forms.example.com`.
+4. Pick the forms to import and the workspace they go to, and choose whether to bring submissions, files, and notifications and webhooks.
+5. Click **Review import**. The overview shows, for each form, how every question maps (ready, converted or skipped), the number of submissions and files with their total size, the integrations, and how many JotForm API calls the import needs compared with what your account has left today. Nothing is copied yet.
+6. Start the import and follow its progress. You'll get an email when it's done.
+
+The key is only kept in memory for the import (at most two hours) and is never saved. Delete it in JotForm once you're done.
+
+## API limits
+
+JotForm limits API calls per day (1,000 on free accounts, more on paid plans), resetting at midnight US Eastern time. An import uses two or three calls per form plus one per 1,000 submissions; downloading files doesn't count. If the review shows you don't have enough calls left, import some forms today and the rest tomorrow.
+
+## Uploaded files
+
+Files are downloaded with your API key. If JotForm refuses a download — for example because your account requires signing in to view uploaded files — the import log lists the file. Turn that setting off for the import and run it again; only missing files are copied.

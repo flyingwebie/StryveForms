@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest an idea, improvement, or integration for StryveForms.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please search [existing issues](../../issues) first — someone may have already asked, or be working on it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the problem or limitation you're running into. ("I'm always frustrated when...")
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What you'd like to see happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other ways to solve this, and why you prefer the above.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this touch?
+      multiple: true
+      options:
+        - Form editor
+        - Form renderer / public forms
+        - Integrations (Slack, webhooks, n8n, Zapier…)
+        - Importers (OpnForm, JotForm)
+        - PDF templates
+        - Branding / white-label
+        - Submissions & analytics
+        - Notifications & email
+        - Settings / workspaces / teams
+        - Self-hosting / deployment
+        - Documentation
+        - Other
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, links to similar features elsewhere, or anything else useful.

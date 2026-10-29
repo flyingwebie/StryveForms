@@ -4,24 +4,24 @@
       "type": "local",
       "command": ["bunx", "create-better-t-stack@latest", "mcp"],
       "environment": {},
-      "enabled": true,
+      "enabled": true
     },
     "context7": {
       "type": "local",
       "command": ["npx", "-y", "@upstash/context7-mcp"],
       "environment": {},
-      "enabled": true,
+      "enabled": true
     },
     "shadcn": {
       "type": "local",
       "command": ["npx", "-y", "shadcn@latest", "mcp"],
       "environment": {},
-      "enabled": true,
+      "enabled": true
     },
     "better-auth": {
       "type": "remote",
       "url": "https://mcp.better-auth.com/mcp",
-      "enabled": true,
-    },
-  },
+      "enabled": true
+    }
+  }
 }

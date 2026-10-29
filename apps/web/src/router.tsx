@@ -7,84 +7,74 @@ import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { toast } from "sonner";
 
 import Loader from "./components/loader";
-import { ENV } from "./env";
+import { apiBase } from "./lib/api-url";
 import { routeTree } from "./routeTree.gen";
 import { TRPCProvider } from "./utils/trpc";
 
-function getServerUrl(url: string) {
-  const processEnv = typeof process === "undefined" ? undefined : process.env;
-  if (typeof window === "undefined" && processEnv?.SERVER_URL) {
-    return processEnv.SERVER_URL.endsWith("/")
-      ? processEnv.SERVER_URL.slice(0, -1)
-      : processEnv.SERVER_URL;
-  }
-
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-}
-
 function createQueryClient() {
-  return new QueryClient({
-    queryCache: new QueryCache({
-      onError: (error, query) => {
-        toast.error(error.message, {
-          action: {
-            label: "retry",
-            onClick: () => {
-              query.invalidate();
-            },
-          },
-        });
-      },
-    }),
-    defaultOptions: { queries: { staleTime: 60 * 1000 } },
-  });
+	return new QueryClient({
+		queryCache: new QueryCache({
+			onError: (error, query) => {
+				toast.error(error.message, {
+					action: {
+						label: "retry",
+						onClick: () => {
+							query.invalidate();
+						},
+					},
+				});
+			},
+		}),
+		defaultOptions: { queries: { staleTime: 60 * 1000 } },
+	});
 }
 
 const trpcClient = createTRPCClient<AppRouter>({
-  links: [
-    httpBatchLink({
-      url: `${getServerUrl(ENV.VITE_SERVER_URL)}/trpc`,
-      fetch(url, options) {
-        return fetch(url, {
-          ...options,
-          credentials: "include",
-        });
-      },
-    }),
-  ],
+	links: [
+		httpBatchLink({
+			url: `${apiBase()}/trpc`,
+			// biome-ignore lint/suspicious/noParametersOnlyUsedInRecursion: calls the global fetch, not itself
+			fetch(url, options) {
+				return fetch(url, {
+					...options,
+					credentials: "include",
+				});
+			},
+		}),
+	],
 });
 
 export const getRouter = () => {
-  const queryClient = createQueryClient();
-  const trpc = createTRPCOptionsProxy({
-    client: trpcClient,
-    queryClient,
-  });
+	const queryClient = createQueryClient();
+	const trpc = createTRPCOptionsProxy({
+		client: trpcClient,
+		queryClient,
+	});
 
-  const router = createTanStackRouter({
-    routeTree,
-    scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
-    context: { trpc, queryClient },
-    defaultPendingComponent: () => <Loader />,
-    defaultNotFoundComponent: () => <div>Not Found</div>,
-    Wrap: ({ children }) => (
-      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        {children}
-      </TRPCProvider>
-    ),
-  });
+	const router = createTanStackRouter({
+		routeTree,
+		scrollRestoration: true,
+		defaultPreloadStaleTime: 0,
+		context: { trpc, queryClient },
+		defaultPendingComponent: () => <Loader />,
+		defaultNotFoundComponent: () => <div>Not Found</div>,
+		Wrap: ({ children }) => (
+			<TRPCProvider queryClient={queryClient} trpcClient={trpcClient}>
+				{children}
+			</TRPCProvider>
+		),
+	});
 
-  setupRouterSsrQueryIntegration({
-    router,
-    queryClient,
-  });
+	setupRouterSsrQueryIntegration({
+		router,
+		queryClient,
+	});
 
-  return router;
+	return router;
 };
 
 declare module "@tanstack/react-router" {
-  interface Register {
-    router: ReturnType<typeof getRouter>;
-  }
+	interface Register {
+		router: ReturnType<typeof getRouter>;
+	}
 }

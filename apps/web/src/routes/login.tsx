@@ -1,19 +1,38 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { z } from "zod";
 
-import SignInForm from "@/components/sign-in-form";
-import SignUpForm from "@/components/sign-up-form";
+import AuthCard from "@/components/app/auth/auth-card";
+import AuthShell from "@/components/app/auth/auth-shell";
+import { authClient } from "@/lib/auth-client";
+import { useInstance } from "@/lib/instance";
+
+const searchSchema = z.object({
+	redirect: z.string().optional(),
+});
 
 export const Route = createFileRoute("/login")({
-  component: RouteComponent,
+	ssr: false,
+	component: RouteComponent,
+	validateSearch: searchSchema,
+	beforeLoad: async ({ search }) => {
+		const session = await authClient.getSession();
+		if (session.data) {
+			throw redirect({ to: search.redirect ?? "/dashboard" });
+		}
+	},
 });
 
 function RouteComponent() {
-  const [showSignIn, setShowSignIn] = useState(false);
+	const { redirect: redirectTo } = Route.useSearch();
+	const instance = useInstance();
 
-  return showSignIn ? (
-    <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
-  ) : (
-    <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
-  );
+	return (
+		<AuthShell>
+			<AuthCard
+				defaultTab="sign-in"
+				redirectTo={redirectTo}
+				registrationOpen={instance?.registrationOpen ?? true}
+			/>
+		</AuthShell>
+	);
 }

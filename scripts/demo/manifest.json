@@ -1,0 +1,42 @@
+{
+  "workspaceId": "o9qyoigbMPBN0aEOH5FQx",
+  "workspaceName": "Acme Studio",
+  "testerEmail": "tester@example.com",
+  "forms": {
+    "contactUs": {
+      "id": "Z_PbQHEFk0_ZkzCvNA-z5",
+      "slug": "contact-us-z_pbqh"
+    },
+    "eventRegistration": {
+      "id": "oWnnstIRf-upBXD-uaBAh",
+      "slug": "event-registration-ownnst"
+    },
+    "npsSurvey": {
+      "id": "5PFkIvScQ_vC0WrRr_1pn",
+      "slug": "customer-nps-survey-5pfkiv"
+    },
+    "jobApplication": {
+      "id": "aNW0gjet3p_6D7xzns-ws",
+      "slug": "job-application-anw0gj"
+    },
+    "bookingRequest": {
+      "id": "ysFNmY0HrAL9uuVzDBbjo",
+      "slug": "booking-request-ysfnmy"
+    },
+    "productFeedback": {
+      "id": "RUDZ5Mv-m0cS7fkxmPEH7",
+      "slug": "product-feedback-rudz5m"
+    }
+  },
+  "pdfTemplateId": "VRQWFVKMzj8eBUrrIj3pU",
+  "members": {
+    "maya": {
+      "email": "maya@acme.example",
+      "role": "user"
+    },
+    "ravi": {
+      "email": "ravi@acme.example",
+      "role": "readonly"
+    }
+  }
+}

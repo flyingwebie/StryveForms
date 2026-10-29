@@ -1,0 +1,72 @@
+---
+title: Integrations
+description: Post submissions to Slack, Discord, Telegram, or any webhook-based automation tool.
+icon: Plug
+---
+
+A form's **Integrations** tab sends every submission somewhere else automatically. (Looking for plain email alerts? Those moved to their own [Email notifications](/docs/email-notifications) tab — this page covers chat and automation integrations.)
+
+<img
+  alt="A form's Integrations page, with active integrations and the catalogue to add more"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/integrations/list-light.png"
+  width={1440}
+/>
+<img
+  alt="A form's Integrations page, with active integrations and the catalogue to add more"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/integrations/list-dark.png"
+  width={1440}
+/>
+
+## What's available
+
+**Notifications** — post a formatted message about the submission:
+
+- **Slack**, **Discord** — a webhook URL you copy from that app's own settings.
+- **Telegram** — a bot token plus a chat id.
+
+**Automation** — a plain JSON `POST` to any URL you control, for connecting to a no-code tool: **Webhook** (generic), **n8n**, **Zapier**, **Make**, **Pabbly Connect**, **Activepieces**, **Albato**.
+
+## Setting one up
+
+Click a tile under **Add an integration**. Every integration's dialog opens with short **Setup** steps specific to that service (where to find its webhook URL in its own settings, and anything it needs a test call for before it'll map fields). For example, webhook-style integrations:
+
+1. Paste any URL you control — it receives a JSON `POST` on every submission.
+2. If your receiver can verify a signature, set a signing secret under **Security**; otherwise use a bearer token, basic auth, or an API-key header.
+3. Use **Send test** to confirm the receiver accepts the payload before relying on it.
+
+<img
+  alt="The Webhook integration dialog, with setup steps and Security/Payload/Advanced sections"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/integrations/webhook-detail-light.png"
+  width={1440}
+/>
+<img
+  alt="The Webhook integration dialog, with setup steps and Security/Payload/Advanced sections"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/integrations/webhook-detail-dark.png"
+  width={1440}
+/>
+
+### Security, Payload & Advanced settings
+
+Webhook-style integrations (Webhook, n8n, Zapier, Make, Pabbly, Activepieces, Albato) share the same three collapsible sections:
+
+- **Security** — lets the receiving end verify a request really came from this form:
+  - *Auth* — none, a bearer token, basic auth (username/password), or a custom API-key header.
+  - *Signing* — an HMAC signature (SHA-1 or SHA-256) over the request body, sent in a header you name, optionally with a timestamp included.
+- **Payload** — controls the shape of the JSON body: *classic* (OpnForm-compatible, the default for a plain Webhook, kept for existing automations), *nested* (`{ id: { name, type, value } }`, the default for n8n/Zapier/etc.), or *flat* (`{ id: value }`, the simplest shape to map in a no-code tool). You can also choose whether to include extra metadata (submission id, timestamps…) and add custom headers.
+- **Advanced** — delivery timing: request timeout, and whether to retry automatically on failure. Rarely needs changing.
+
+### Only send if…
+
+Every integration can have a condition, same as [email notifications](/docs/email-notifications#only-send-if) — for example, only post to Slack when a "Priority" field is set to "Urgent".
+
+### Test send & delivery log
+
+**Send test** fires the integration right now with the form's most recent submission (or sample data), using the exact same code path as a real delivery — so if the test succeeds, a real submission will too. The small clock-like icon on each integration opens its **Delivery log**: every past run, whether it succeeded, and the error if it didn't — useful for debugging a receiver that stopped accepting requests.

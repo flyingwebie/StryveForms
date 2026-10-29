@@ -1,0 +1,79 @@
+---
+title: AI assistant
+description: Connect your own AI provider, then build and edit forms by chatting with the assistant.
+icon: Sparkles
+---
+
+The AI assistant builds forms, edits existing ones, and answers questions about your submissions — through a normal chat, on its own dashboard page or right inside the editor. It needs a workspace AI provider connected first.
+
+## Connecting a provider
+
+Go to **Settings → AI assistant**. Pick a **Provider** — OpenAI, Anthropic, Gemini, OpenRouter, an OpenAI-compatible endpoint, or Ollama (for a locally-hosted model, no key needed) — paste an **API key**, and **Save**.
+
+<img
+  alt="Settings → AI assistant, with provider, model, and API key fields"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/ai/settings-provider-light.png"
+  width={1440}
+/>
+<img
+  alt="Settings → AI assistant, with provider, model, and API key fields"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/ai/settings-provider-dark.png"
+  width={1440}
+/>
+
+A sensible default **model** is pre-filled for each provider. Once a key (and, for a custom gateway, a base URL) is entered, StryveForms fetches that provider's actual list of available models for the dropdown — or you can type any other model name it supports. **Test connection** confirms the key works before you save.
+
+This is a **bring-your-own-key** setup, per workspace — one key covers every form in that workspace, and no usage is shared across workspaces or with other instances.
+
+## The Assistant page
+
+Open **Assistant** in the sidebar for a full chat: past conversations are listed on the left (grouped by the form they're about, if any), and **New chat** starts a fresh one.
+
+<img
+  alt="The Assistant page, with chat history on the left"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/ai/assistant-light.png"
+  width={1440}
+/>
+<img
+  alt="The Assistant page, with chat history on the left"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/ai/assistant-dark.png"
+  width={1440}
+/>
+
+## The editor's AI tab
+
+Inside the form editor, the **AI** tab (next to Build and Design) gives you the same assistant scoped to the form you're editing, with quick-start suggestions like "Add a phone field" or "Make this form shorter."
+
+<img
+  alt="The editor's AI tab, with suggested prompts and a chat composer"
+  className="rounded-xl border dark:hidden"
+  height={900}
+  src="/screenshots/forms/editor-ai-tab-light.png"
+  width={1440}
+/>
+<img
+  alt="The editor's AI tab, with suggested prompts and a chat composer"
+  className="rounded-xl border hidden dark:block"
+  height={900}
+  src="/screenshots/forms/editor-ai-tab-dark.png"
+  width={1440}
+/>
+
+## What it can do
+
+- **Build a form from a description** — "Create a feedback form with a 1–5 rating and a comment box" — or edit an existing one's fields, keeping anything you didn't ask it to change.
+- **Answer questions about responses** — counts, trends, searching for a specific answer — without inventing numbers it can't see.
+- **Explain a form's logic** — what conditions are set on a field and what they do.
+- **Set up integrations and email notifications** — it can create, edit, test-send, or delete a webhook/Slack/Discord/etc. integration or an email notification on your behalf, but always asks you to confirm in plain language before it does anything that sends a real email, fires a webhook, or changes a live form — unless you already explicitly asked for that exact action.
+
+## Privacy
+
+Your API key is **encrypted at rest** and is never sent back to the browser once saved — the settings page shows it was set, not what it is. Conversations are stored per workspace so they're only visible to people in that workspace.

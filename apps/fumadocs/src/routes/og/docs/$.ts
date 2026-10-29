@@ -8,7 +8,9 @@ export const Route = createFileRoute("/og/docs/$")({
   server: {
     handlers: {
       GET: ({ params }) => {
-        const slugs = (params._splat?.split("/") ?? []).filter((v) => v.length > 0).slice(0, -1);
+        const slugs = (params._splat?.split("/") ?? [])
+          .filter((v) => v.length > 0)
+          .slice(0, -1);
         const page = source.getPage(slugs);
         if (!page) return new Response(undefined, { status: 404 });
 
