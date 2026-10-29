@@ -53,6 +53,7 @@ import {
 	type ImportPreview,
 	mapConcurrent,
 	type PreviewField,
+	type PreviewReporter,
 } from "./preview";
 
 const CONNECTION_TTL_MS = 2 * 60 * 60 * 1000;
@@ -845,7 +846,8 @@ export async function previewOpnformImport(
 	services: Services,
 	connection: Connection,
 	selections: ImportSelection[],
-	options: ImportOptions
+	options: ImportOptions,
+	reporter?: PreviewReporter
 ): Promise<ImportPreview> {
 	const client = clientFor(connection, services);
 	const nameFor = await targetNames(db, connection, selections);
@@ -863,22 +865,35 @@ export async function previewOpnformImport(
 	const summaries = new Map(
 		[...connection.formsByWorkspace.values()].flat().map((f) => [f.id, f])
 	);
-	const forms = await mapConcurrent(items, PREVIEW_CONCURRENCY, (item) => {
-		const summary = summaries.get(item.formId);
-		return previewOneForm(client, item.formId, options, {
-			action: imported.has(String(item.formId)) ? "update" : "create",
-			fields: [],
-			files: null,
-			filesSize: null,
-			importedFormId: imported.get(String(item.formId)) ?? null,
-			integrations: [],
-			sourceId: String(item.formId),
-			submissions: options.submissions ? (summary?.submissions_count ?? 0) : 0,
-			targetWorkspace: nameFor(item.sourceWorkspaceId),
-			title: summary?.title ?? `Form #${item.formId}`,
-			warnings: [],
-		});
-	});
+	reporter?.add(
+		"info",
+		`Analysing ${items.length} ${items.length === 1 ? "form" : "forms"} from OpnForm…`
+	);
+	const forms = await mapConcurrent(
+		items,
+		PREVIEW_CONCURRENCY,
+		async (item) => {
+			reporter?.throwIfCancelled();
+			const summary = summaries.get(item.formId);
+			const preview = await previewOneForm(client, item.formId, options, {
+				action: imported.has(String(item.formId)) ? "update" : "create",
+				fields: [],
+				files: null,
+				filesSize: null,
+				importedFormId: imported.get(String(item.formId)) ?? null,
+				integrations: [],
+				sourceId: String(item.formId),
+				submissions: options.submissions
+					? (summary?.submissions_count ?? 0)
+					: 0,
+				targetWorkspace: nameFor(item.sourceWorkspaceId),
+				title: summary?.title ?? `Form #${item.formId}`,
+				warnings: [],
+			});
+			reporter?.formDone(preview);
+			return preview;
+		}
+	);
 
 	const notes: string[] = [];
 	if (options.keepSlugs) {

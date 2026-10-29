@@ -20,6 +20,11 @@ import {
 	previewOpnformImport,
 	startImport,
 } from "../services/import/opnform";
+import {
+	cancelPreviewTask,
+	getPreviewTask,
+	startPreviewTask,
+} from "../services/import/preview";
 
 function requireOpnform(connectionId: string, userId: string) {
 	const connection = getConnection(connectionId, userId);
@@ -152,7 +157,7 @@ const opnformRouter = router({
 			)
 		),
 
-	/** Overview of what `start` will do. Read-only. */
+	/** Starts analysing what `start` will do. Poll `previewStatus`. Read-only. */
 	preview: protectedProcedure
 		.input(
 			z.object({
@@ -161,17 +166,24 @@ const opnformRouter = router({
 				selections: opnformSelections,
 			})
 		)
-		.mutation(({ ctx, input }) =>
-			guard(() =>
+		.mutation(({ ctx, input }) => {
+			const connection = requireOpnform(
+				input.connectionId,
+				ctx.session.user.id
+			);
+			const total = input.selections.reduce((n, s) => n + s.formIds.length, 0);
+			const taskId = startPreviewTask(ctx.session.user.id, total, (reporter) =>
 				previewOpnformImport(
 					ctx.db,
 					ctx.services,
-					requireOpnform(input.connectionId, ctx.session.user.id),
+					connection,
 					input.selections,
-					input.options
+					input.options,
+					reporter
 				)
-			)
-		),
+			);
+			return { taskId };
+		}),
 
 	start: protectedProcedure
 		.input(
@@ -227,18 +239,21 @@ const jotformRouter = router({
 			)
 		),
 
-	/** Overview of what `start` will do. Read-only. */
+	/** Starts analysing what `start` will do. Poll `previewStatus`. Read-only. */
 	preview: protectedProcedure
 		.input(jotformSelection)
-		.mutation(({ ctx, input }) =>
-			guard(() =>
-				previewJotformImport(
-					ctx.db,
-					requireJotform(input.connectionId, ctx.session.user.id),
-					input
-				)
-			)
-		),
+		.mutation(({ ctx, input }) => {
+			const connection = requireJotform(
+				input.connectionId,
+				ctx.session.user.id
+			);
+			const taskId = startPreviewTask(
+				ctx.session.user.id,
+				input.formIds.length,
+				(reporter) => previewJotformImport(ctx.db, connection, input, reporter)
+			);
+			return { taskId };
+		}),
 
 	start: protectedProcedure
 		.input(jotformSelection)
@@ -259,6 +274,26 @@ const jotformRouter = router({
 export const importerRouter = router({
 	jotform: jotformRouter,
 	opnform: opnformRouter,
+
+	/** Progress, log and (once done) the result of an import analysis. */
+	previewStatus: protectedProcedure
+		.input(z.object({ taskId: z.string() }))
+		.query(({ ctx, input }) => {
+			const task = getPreviewTask(input.taskId, ctx.session.user.id);
+			if (!task) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "This analysis expired. Review the import again.",
+				});
+			}
+			return task;
+		}),
+
+	cancelPreview: protectedProcedure
+		.input(z.object({ taskId: z.string() }))
+		.mutation(({ ctx, input }) => ({
+			cancelled: cancelPreviewTask(input.taskId, ctx.session.user.id),
+		})),
 
 	job: protectedProcedure
 		.input(z.object({ jobId: z.string() }))

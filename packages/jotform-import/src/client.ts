@@ -109,6 +109,8 @@ export class JotformClient {
 	readonly baseUrl: string;
 	/** Daily API calls left, as last reported by JotForm. */
 	limitLeft: number | null = null;
+	/** Called before a throttled or failed request is retried. */
+	onRetry: ((message: string, delayMs: number) => void) | null = null;
 	private readonly apiKey: string;
 	private readonly fetchFn: typeof fetch;
 	private readonly gate = new Gate(MAX_IN_FLIGHT);
@@ -202,6 +204,10 @@ export class JotformClient {
 			);
 		} catch (error) {
 			if (attempt < MAX_RETRIES) {
+				this.onRetry?.(
+					`Couldn't reach JotForm (${(error as Error).message})`,
+					2 ** attempt * 1000
+				);
 				await Bun.sleep(2 ** attempt * 1000);
 				return this.request(path, params, attempt + 1);
 			}
@@ -211,6 +217,10 @@ export class JotformClient {
 			);
 		}
 		if (response.status >= 500 && attempt < MAX_RETRIES) {
+			this.onRetry?.(
+				`JotForm returned an error (${response.status})`,
+				2 ** attempt * 1000
+			);
 			await Bun.sleep(2 ** attempt * 1000);
 			return this.request(path, params, attempt + 1);
 		}
@@ -219,7 +229,9 @@ export class JotformClient {
 		const isJson = response.headers.get("content-type")?.includes("json");
 		if (response.status === 429 && !isJson && attempt < MAX_RETRIES) {
 			await response.body?.cancel();
-			await Bun.sleep(retryDelayMs(response, attempt));
+			const delay = retryDelayMs(response, attempt);
+			this.onRetry?.("JotForm asked us to slow down", delay);
+			await Bun.sleep(delay);
 			return this.request(path, params, attempt + 1);
 		}
 		let body: JotformEnvelope<T>;

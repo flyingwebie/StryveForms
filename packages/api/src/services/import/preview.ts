@@ -130,3 +130,159 @@ export async function mapConcurrent<T, R>(
 	);
 	return results;
 }
+
+/* ------------------------------ Analysis tasks --------------------------- */
+
+/*
+ * Analysing many forms takes minutes (JotForm allows only a few API calls at a
+ * time), longer than a proxy keeps a request open. So the analysis runs in the
+ * background and the browser polls for progress and the result.
+ */
+
+const TASK_TTL_MS = 30 * 60 * 1000;
+const MAX_LOG_ENTRIES = 500;
+
+export interface PreviewLogEntry {
+	at: string;
+	level: "info" | "warn" | "error";
+	message: string;
+}
+
+export class PreviewCancelled extends Error {
+	constructor() {
+		super("Analysis cancelled");
+	}
+}
+
+/** Collects progress and log lines while forms are analysed. */
+export class PreviewReporter {
+	private readonly controller = new AbortController();
+	done = 0;
+	readonly log: PreviewLogEntry[] = [];
+	total: number;
+
+	constructor(total: number) {
+		this.total = total;
+	}
+
+	add(level: PreviewLogEntry["level"], message: string) {
+		this.log.push({ at: new Date().toISOString(), level, message });
+		if (this.log.length > MAX_LOG_ENTRIES) {
+			this.log.splice(0, this.log.length - MAX_LOG_ENTRIES);
+		}
+	}
+
+	formDone(form: FormPreview) {
+		this.done += 1;
+		if (form.error) {
+			this.add("warn", `Couldn't analyse “${form.title}”: ${form.error}`);
+			return;
+		}
+		const parts = [`${form.fields.length} fields`];
+		if (form.submissions > 0) {
+			parts.push(`${form.submissions.toLocaleString("en")} submissions`);
+		}
+		if (form.files) {
+			parts.push(`${form.files.toLocaleString("en")} files`);
+		}
+		this.add("info", `Analysed “${form.title}” (${parts.join(", ")})`);
+	}
+
+	cancel() {
+		this.controller.abort();
+	}
+
+	throwIfCancelled() {
+		if (this.controller.signal.aborted) {
+			throw new PreviewCancelled();
+		}
+	}
+}
+
+interface PreviewTask {
+	createdAt: number;
+	error: string | null;
+	reporter: PreviewReporter;
+	result: ImportPreview | null;
+	status: "running" | "done" | "failed" | "cancelled";
+	userId: string;
+}
+
+const tasks = new Map<string, PreviewTask>();
+
+function cleanupTasks() {
+	const now = Date.now();
+	for (const [id, task] of tasks) {
+		if (now - task.createdAt > TASK_TTL_MS) {
+			tasks.delete(id);
+		}
+	}
+}
+
+/** Starts an analysis in the background and returns its id right away. */
+export function startPreviewTask(
+	userId: string,
+	total: number,
+	run: (reporter: PreviewReporter) => Promise<ImportPreview>
+): string {
+	cleanupTasks();
+	const id = crypto.randomUUID();
+	const task: PreviewTask = {
+		createdAt: Date.now(),
+		error: null,
+		reporter: new PreviewReporter(total),
+		result: null,
+		status: "running",
+		userId,
+	};
+	tasks.set(id, task);
+	run(task.reporter)
+		.then((result) => {
+			if (task.status !== "running") {
+				return;
+			}
+			task.result = result;
+			task.status = "done";
+			task.reporter.add("info", "Analysis complete");
+		})
+		.catch((error: unknown) => {
+			if (task.status !== "running") {
+				return;
+			}
+			if (error instanceof PreviewCancelled) {
+				task.status = "cancelled";
+				return;
+			}
+			task.status = "failed";
+			task.error = (error as Error).message || "The analysis failed.";
+			task.reporter.add("error", task.error);
+		});
+	return id;
+}
+
+export function getPreviewTask(id: string, userId: string) {
+	const task = tasks.get(id);
+	if (!task || task.userId !== userId) {
+		return null;
+	}
+	return {
+		done: task.reporter.done,
+		error: task.error,
+		log: task.reporter.log,
+		result: task.result,
+		status: task.status,
+		total: task.reporter.total,
+	};
+}
+
+export function cancelPreviewTask(id: string, userId: string) {
+	const task = tasks.get(id);
+	if (!task || task.userId !== userId) {
+		return false;
+	}
+	task.reporter.cancel();
+	if (task.status === "running") {
+		task.status = "cancelled";
+	}
+	return true;
+}
