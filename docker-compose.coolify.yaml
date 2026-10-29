@@ -8,12 +8,12 @@
 # 1. In Coolify: New Resource → Docker Compose Empty, paste this file (or
 #    Public Repository → Build Pack "Docker Compose", Docker Compose Location:
 #    /docker-compose.coolify.yaml).
-# 2. Set a domain for the "web" service (e.g. https://forms.example.com:3002 — the
-#    port suffix tells Coolify which container port to route to). Coolify fills
-#    SERVICE_URL_WEB_3002 from it. The "server" and "postgres" services stay private.
-#    (Every service that needs this URL must reference the EXACT same variable
-#    name, including the "_3002" port suffix — Coolify keys generated values on
-#    the full name, so a bare ${SERVICE_URL_WEB} elsewhere would resolve empty.)
+# 2. Domains: Coolify gives the "web" service a domain automatically (from your
+#    server's wildcard domain), routed to container port 3002. Change it any time
+#    under Domains (e.g. https://forms.example.com:3002 — the ":3002" only picks
+#    the container port). "server" and "postgres" stay private.
+#    The server reads the URL from SERVICE_URL_WEB, which Coolify keeps in sync
+#    with that domain (scheme + host, no port) on every deploy.
 # 3. Fill in the optional SMTP / storage / captcha variables, then Deploy.
 # 4. Open your domain: the first visit starts the onboarding (create the admin account).
 #
@@ -47,11 +47,12 @@ services:
       NODE_ENV: production
       APP_NAME: ${APP_NAME:-StryveForms}
       # Everything is served from the web domain (the web app proxies the API).
-      # Must match the exact variable name declared on "web" (including the
-      # "_3002" port suffix) for Coolify to resolve it to the same value.
-      APP_URL: ${SERVICE_URL_WEB_3002}
-      BETTER_AUTH_URL: ${SERVICE_URL_WEB_3002}
-      CORS_ORIGIN: ${SERVICE_URL_WEB_3002}
+      # SERVICE_URL_WEB is the web service's domain from Coolify's Domains
+      # table, kept in sync on each deploy. Don't use SERVICE_URL_WEB_3002 here:
+      # Coolify appends ":3002" to it, which breaks sign-in and CORS.
+      APP_URL: ${SERVICE_URL_WEB}
+      BETTER_AUTH_URL: ${SERVICE_URL_WEB}
+      CORS_ORIGIN: ${SERVICE_URL_WEB}
       BETTER_AUTH_SECRET: ${SERVICE_BASE64_64_AUTH}
       DATABASE_URL: postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-stryveforms}
       # Respondent IPs arrive through Coolify's proxy and the web app.
