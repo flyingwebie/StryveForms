@@ -126,7 +126,7 @@ export function buildMcpServerFactory(options: McpServerFactoryOptions) {
 		const { allowWriteTools } = resolveAgentSettings(
 			instanceSettings.agentSettings
 		);
-		const server = new McpServer({ name: "stryveforms", version: "1.0.0" });
+		const server = new McpServer({ name: "stryveforms", version: "1.0.1" });
 
 		function registerRead<Input extends z.ZodTypeAny>(
 			name: string,

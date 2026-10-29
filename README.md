@@ -274,8 +274,8 @@ storage, SMTP, captcha, reverse proxies).
 multi-arch (amd64 + arm64) images to GitHub Container Registry, so you don't have to build anything:
 
 ```
-ghcr.io/flyingwebie/stryveforms-web:1.0.0
-ghcr.io/flyingwebie/stryveforms-server:1.0.0
+ghcr.io/flyingwebie/stryveforms-web:1.0.1
+ghcr.io/flyingwebie/stryveforms-server:1.0.1
 ```
 
 [`docker-compose.coolify.yaml`](docker-compose.coolify.yaml) pulls them (set `STRYVEFORMS_VERSION`
