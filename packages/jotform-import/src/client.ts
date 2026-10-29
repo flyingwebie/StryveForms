@@ -21,13 +21,17 @@ const AUTO_REGIONS: JotformRegion[] = ["us", "eu", "hipaa"];
 
 /** JotForm's maximum page size. */
 export const PAGE_SIZE = 1000;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 5;
+/** Requests in flight at once; more trips JotForm's burst limit (HTTP 429). */
+const MAX_IN_FLIGHT = 3;
 const REQUEST_TIMEOUT_MS = 60_000;
 const DOWNLOAD_TIMEOUT_MS = 120_000;
 const TRAILING_SLASHES = /\/+$/;
 const API_SUFFIX = /\/api$/i;
 const WHITESPACE = /\s/g;
 const NOT_DELETED = JSON.stringify({ "status:ne": "DELETED" });
+/** JotForm names the right regional endpoint when the key belongs elsewhere ("EU Safe mode"). */
+const REGION_HINT = /(eu|hipaa)-api\.jotform\.com/i;
 
 export class JotformError extends Error {
 	readonly status: number;
@@ -54,6 +58,40 @@ export function normalizeApiUrl(input: string): string {
 	return API_SUFFIX.test(base) ? base : `${base}/API`;
 }
 
+/** Caps how many requests run at once; the rest wait their turn. */
+class Gate {
+	private active = 0;
+	private readonly waiting: (() => void)[] = [];
+	private readonly limit: number;
+
+	constructor(limit: number) {
+		this.limit = limit;
+	}
+
+	async run<T>(task: () => Promise<T>): Promise<T> {
+		if (this.active >= this.limit) {
+			await new Promise<void>((resolve) => this.waiting.push(resolve));
+		}
+		this.active += 1;
+		try {
+			return await task();
+		} finally {
+			this.active -= 1;
+			this.waiting.shift()?.();
+		}
+	}
+}
+
+/** Wait before retrying a throttled request: Retry-After, else a growing backoff. */
+function retryDelayMs(response: Response, attempt: number): number {
+	const header = response.headers.get("retry-after");
+	const seconds = Number(header);
+	if (header !== null && Number.isFinite(seconds) && seconds >= 0) {
+		return seconds * 1000;
+	}
+	return 2 ** attempt * 2000;
+}
+
 export interface JotformClientOptions {
 	apiKey: string;
 	baseUrl: string;
@@ -73,6 +111,7 @@ export class JotformClient {
 	limitLeft: number | null = null;
 	private readonly apiKey: string;
 	private readonly fetchFn: typeof fetch;
+	private readonly gate = new Gate(MAX_IN_FLIGHT);
 
 	constructor({ apiKey, baseUrl, fetch: fetchFn }: JotformClientOptions) {
 		this.apiKey = apiKey;
@@ -115,6 +154,22 @@ export class JotformClient {
 				const authError =
 					error instanceof JotformError &&
 					(error.status === 401 || error.status === 403);
+				const hint =
+					endpoint === "auto" && error instanceof Error
+						? REGION_HINT.exec(error.message)
+						: null;
+				const hinted = hint?.[1]?.toLowerCase() as JotformRegion | undefined;
+				if (hinted && hinted !== candidate.region) {
+					// "Your account is in EU Safe mode. Please use eu-api.jotform.com":
+					// go straight to the region JotForm names.
+					const regional = new JotformClient({
+						apiKey: options.apiKey,
+						baseUrl: REGION_URLS[hinted],
+						fetch: options.fetch,
+					});
+					const user = await regional.getUser();
+					return { client: regional, region: hinted, user };
+				}
 				if (!authError) {
 					throw error;
 				}
@@ -139,10 +194,12 @@ export class JotformClient {
 		}
 		let response: Response;
 		try {
-			response = await this.fetchFn(url, {
-				headers: { Accept: "application/json", APIKEY: this.apiKey },
-				signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-			});
+			response = await this.gate.run(() =>
+				this.fetchFn(url, {
+					headers: { Accept: "application/json", APIKEY: this.apiKey },
+					signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+				})
+			);
 		} catch (error) {
 			if (attempt < MAX_RETRIES) {
 				await Bun.sleep(2 ** attempt * 1000);
@@ -155,6 +212,14 @@ export class JotformClient {
 		}
 		if (response.status >= 500 && attempt < MAX_RETRIES) {
 			await Bun.sleep(2 ** attempt * 1000);
+			return this.request(path, params, attempt + 1);
+		}
+		// HTTP 429 without a JSON body is JotForm's short-term burst limit, not
+		// the daily quota (that one comes back as JSON): wait and try again.
+		const isJson = response.headers.get("content-type")?.includes("json");
+		if (response.status === 429 && !isJson && attempt < MAX_RETRIES) {
+			await response.body?.cancel();
+			await Bun.sleep(retryDelayMs(response, attempt));
 			return this.request(path, params, attempt + 1);
 		}
 		let body: JotformEnvelope<T>;

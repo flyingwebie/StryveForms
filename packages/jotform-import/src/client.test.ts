@@ -47,6 +47,46 @@ describe("JotformClient", () => {
 		expect(hosts).toEqual(["api.jotform.com", "eu-api.jotform.com"]);
 	});
 
+	test("follows JotForm's EU Safe mode hint to the EU region", async () => {
+		const hosts: string[] = [];
+		const { region } = await JotformClient.connect({
+			apiKey: "key",
+			endpoint: "auto",
+			fetch: fakeFetch((url) => {
+				hosts.push(url.hostname);
+				return url.hostname === "eu-api.jotform.com"
+					? ok({ email: "ada@example.com", username: "ada" })
+					: Response.json({
+							content: "",
+							message:
+								'Your account is in EU Safe mode. Please use "eu-api.jotform.com" endpoint to get your results.',
+							responseCode: 301,
+						});
+			}),
+		});
+		expect(region).toBe("eu");
+		expect(hosts).toEqual(["api.jotform.com", "eu-api.jotform.com"]);
+	});
+
+	test("waits and retries when JotForm throttles a burst (HTTP 429)", async () => {
+		let calls = 0;
+		const client = new JotformClient({
+			apiKey: "key",
+			baseUrl: "https://api.jotform.com",
+			fetch: fakeFetch(() => {
+				calls += 1;
+				return calls === 1
+					? new Response("Too Many Requests", {
+							headers: { "retry-after": "0" },
+							status: 429,
+						})
+					: ok([]);
+			}),
+		});
+		expect(await client.listFiles("1")).toEqual([]);
+		expect(calls).toBe(2);
+	});
+
 	test("explains a rejected key", async () => {
 		const attempt = JotformClient.connect({
 			apiKey: "bad",
