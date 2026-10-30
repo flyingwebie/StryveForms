@@ -1,11 +1,12 @@
 import type { ImportPreview } from "@StryveForms/api/services/import/preview";
 import { useMutation } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "@/utils/trpc";
 
+import AnalyseStep from "./analyse-step";
 import ConnectStep, { type OpnformConnection } from "./connect-step";
 import type { ImportTarget } from "./progress-step";
 import ReviewStep from "./review-step";
@@ -48,6 +49,11 @@ export default function OpnformFlow({
 	);
 	const [options, setOptions] = useState<ImportOptions>(DEFAULT_OPTIONS);
 	const [preview, setPreview] = useState<ImportPreview | null>(null);
+	const [analysisId, setAnalysisId] = useState<string | null>(null);
+	const showPreview = useCallback((result: ImportPreview) => {
+		setAnalysisId(null);
+		setPreview(result);
+	}, []);
 	const effective = {
 		...options,
 		files: options.submissions && options.files,
@@ -60,7 +66,7 @@ export default function OpnformFlow({
 	const review = useMutation(
 		trpc.importer.opnform.preview.mutationOptions({
 			onError: (error) => toast.error(error.message),
-			onSuccess: setPreview,
+			onSuccess: (data) => setAnalysisId(data.taskId),
 		})
 	);
 	const start = useMutation(
@@ -89,6 +95,16 @@ export default function OpnformFlow({
 				options={optionSummary(effective)}
 				preview={preview}
 				starting={start.isPending}
+			/>
+		);
+	} else if (analysisId) {
+		step = 2;
+		content = (
+			<AnalyseStep
+				onBack={() => setAnalysisId(null)}
+				onDone={showPreview}
+				sourceName="OpnForm"
+				taskId={analysisId}
 			/>
 		);
 	} else {

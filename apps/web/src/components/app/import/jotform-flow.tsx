@@ -1,11 +1,12 @@
 import type { ImportPreview } from "@StryveForms/api/services/import/preview";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "@/utils/trpc";
 
+import AnalyseStep from "./analyse-step";
 import JotformConnectStep, {
 	type JotformConnection,
 } from "./jotform-connect-step";
@@ -43,6 +44,11 @@ export default function JotformFlow({
 	const [connection, setConnection] = useState<JotformConnection | null>(null);
 	const [choice, setChoice] = useState<JotformChoice>(DEFAULT_CHOICE);
 	const [preview, setPreview] = useState<ImportPreview | null>(null);
+	const [analysisId, setAnalysisId] = useState<string | null>(null);
+	const showPreview = useCallback((result: ImportPreview) => {
+		setAnalysisId(null);
+		setPreview(result);
+	}, []);
 
 	const payload = connection
 		? {
@@ -59,7 +65,7 @@ export default function JotformFlow({
 	const review = useMutation(
 		trpc.importer.jotform.preview.mutationOptions({
 			onError: (error) => toast.error(error.message),
-			onSuccess: setPreview,
+			onSuccess: (data) => setAnalysisId(data.taskId),
 		})
 	);
 	const start = useMutation(
@@ -99,6 +105,16 @@ export default function JotformFlow({
 				options={optionSummary(payload.options)}
 				preview={preview}
 				starting={start.isPending}
+			/>
+		);
+	} else if (analysisId) {
+		step = 2;
+		content = (
+			<AnalyseStep
+				onBack={() => setAnalysisId(null)}
+				onDone={showPreview}
+				sourceName="JotForm"
+				taskId={analysisId}
 			/>
 		);
 	} else {

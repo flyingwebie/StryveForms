@@ -51,6 +51,7 @@ import {
 	type ImportPreview,
 	mapConcurrent,
 	type PreviewIntegration,
+	type PreviewReporter,
 } from "./preview";
 
 const CONNECTION_TTL_MS = 2 * 60 * 60 * 1000;
@@ -276,22 +277,41 @@ async function previewForm(
 export async function previewJotformImport(
 	db: Database,
 	connection: Connection,
-	selection: JotformSelection
+	selection: JotformSelection,
+	reporter?: PreviewReporter
 ): Promise<ImportPreview> {
 	const client = clientFor(connection);
+	if (reporter) {
+		client.onRetry = (message, delayMs) =>
+			reporter.add(
+				"warn",
+				`${message}. Retrying in ${Math.ceil(delayMs / 1000)}s…`
+			);
+	}
 	const { options } = selection;
 	const forms = selectedForms(connection, selection.formIds);
+	reporter?.add(
+		"info",
+		`Analysing ${forms.length} ${forms.length === 1 ? "form" : "forms"} from JotForm…`
+	);
 	const [imported, workspaceName] = await Promise.all([
 		mappingsFor(db, connection).importedForms(selection.formIds),
 		targetWorkspaceName(db, connection, selection.targetWorkspaceId),
 	]);
 
-	const previews = await mapConcurrent(forms, PREVIEW_CONCURRENCY, (summary) =>
-		previewForm(client, summary, options, {
-			action: imported.has(summary.id) ? "update" : "create",
-			importedFormId: imported.get(summary.id) ?? null,
-			targetWorkspace: workspaceName,
-		})
+	const previews = await mapConcurrent(
+		forms,
+		PREVIEW_CONCURRENCY,
+		async (summary) => {
+			reporter?.throwIfCancelled();
+			const preview = await previewForm(client, summary, options, {
+				action: imported.has(summary.id) ? "update" : "create",
+				importedFormId: imported.get(summary.id) ?? null,
+				targetWorkspace: workspaceName,
+			});
+			reporter?.formDone(preview);
+			return preview;
+		}
 	);
 
 	const needed = forms.reduce((n, f) => {
