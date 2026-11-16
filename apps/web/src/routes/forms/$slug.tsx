@@ -533,6 +533,7 @@ function PublicFormPage() {
 						);
 					}
 				}}
+				password={password}
 				submissionId={submissionQuery.data?.submissionId}
 				tracking={urlState.tracking}
 			/>

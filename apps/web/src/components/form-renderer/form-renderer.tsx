@@ -10,6 +10,7 @@ import { BrandingBadge } from "./branding-badge";
 import { CaptchaWidget } from "./captcha-widget";
 import { ClassicPresentation } from "./classic-presentation";
 import { FocusedPresentation, type SplitImage } from "./focused-presentation";
+import { FormPasswordContext } from "./form-password";
 import { type FormDictionary, getDictionary } from "./i18n";
 import { ImageCredit } from "./image-credit";
 import { SuccessScreen } from "./success-screen";
@@ -528,6 +529,7 @@ export function FormRenderer({
 	mode,
 	onPartialSaved,
 	onSubmitted,
+	password,
 	submissionId: editingSubmissionId,
 	tracking,
 }: FormRendererProps) {
@@ -616,6 +618,7 @@ export function FormRenderer({
 				.mutateAsync({
 					data: engine.values,
 					isPartial: true,
+					password,
 					slug: form.slug,
 					submissionId: partialSubmissionIdRef.current,
 					tracking,
@@ -714,6 +717,7 @@ export function FormRenderer({
 				captchaToken,
 				completionTime,
 				data: validation.data,
+				password,
 				slug: form.slug,
 				submissionId: partialSubmissionIdRef.current,
 				tracking,
@@ -843,21 +847,23 @@ export function FormRenderer({
 	const notInteractive = mode === "live" && !mounted;
 
 	const interactiveContent = (
-		<FormInteractiveContent
-			captchaSiteKey={captchaSiteKey}
-			dict={dict}
-			engine={engine}
-			form={form}
-			handleSubmit={handleSubmit}
-			isFocused={isFocused}
-			mode={mode}
-			notInteractive={notInteractive}
-			onCaptchaToken={setCaptchaToken}
-			onProgressChange={setFocusedProgress}
-			onSplitImageChange={setSplitImage}
-			submitError={submitError}
-			submitting={submitting}
-		/>
+		<FormPasswordContext value={password}>
+			<FormInteractiveContent
+				captchaSiteKey={captchaSiteKey}
+				dict={dict}
+				engine={engine}
+				form={form}
+				handleSubmit={handleSubmit}
+				isFocused={isFocused}
+				mode={mode}
+				notInteractive={notInteractive}
+				onCaptchaToken={setCaptchaToken}
+				onProgressChange={setFocusedProgress}
+				onSplitImageChange={setSplitImage}
+				submitError={submitError}
+				submitting={submitting}
+			/>
+		</FormPasswordContext>
 	);
 
 	return (

@@ -54,9 +54,9 @@ const DANGEROUS_EXTENSIONS = new Set([
 ]);
 
 export class UploadError extends Error {
-	readonly status: 400 | 404 | 413;
+	readonly status: 400 | 401 | 404 | 413;
 
-	constructor(message: string, status: 400 | 404 | 413 = 400) {
+	constructor(message: string, status: 400 | 401 | 404 | 413 = 400) {
 		super(message);
 		this.status = status;
 	}
@@ -68,24 +68,35 @@ function extensionOf(name: string): string {
 }
 
 /**
- * Whether this person can currently see the form's questions, and so upload
- * files for them — the same rule the public page uses. Workspace members can
- * while previewing a draft or closed form; respondents only while it's open.
+ * Checks this person may upload to the form — the same rules the public page
+ * and `public.submit` apply. They must be able to see the questions (workspace
+ * members can while previewing a draft or closed form; respondents only while
+ * it's open), and on a password-protected form a respondent must send the
+ * right password.
  */
-async function canUploadTo(
+async function requireUploadAccess(
 	db: Database,
 	row: typeof form.$inferSelect,
-	userId: string | null | undefined
-): Promise<boolean> {
-	const isMember = userId
-		? (await getMembership(db, row.workspaceId, userId)) !== null
+	viewer: { password?: string | null | undefined; userId?: string | null }
+): Promise<void> {
+	const isMember = viewer.userId
+		? (await getMembership(db, row.workspaceId, viewer.userId)) !== null
 		: false;
 	const completed =
 		row.maxSubmissionsCount === null ? 0 : await completedCount(db, row.id);
-	return showsFormFields(
-		formAvailability({ ...row, completedCount: completed }),
-		isMember
-	);
+	const availability = formAvailability({ ...row, completedCount: completed });
+	if (!showsFormFields(availability, isMember)) {
+		throw new UploadError("Form not found", 404);
+	}
+	if (!row.passwordHash || isMember) {
+		return;
+	}
+	const unlocked = viewer.password
+		? await Bun.password.verify(viewer.password, row.passwordHash)
+		: false;
+	if (!unlocked) {
+		throw new UploadError("This form is protected by a password.", 401);
+	}
 }
 
 /** Stores a respondent's file temporarily until the submission is sent. */
@@ -95,6 +106,8 @@ export async function uploadSubmissionFile(
 	input: {
 		fieldId: string;
 		file: File;
+		/** The form's password, required from respondents when the form has one. */
+		password?: string | null;
 		slug: string;
 		/** The signed-in uploader, if any — lets workspace members upload while previewing. */
 		userId?: string | null;
@@ -111,9 +124,10 @@ export async function uploadSubmissionFile(
 			)
 		)
 		.limit(1);
-	if (!(row && (await canUploadTo(db, row.form, input.userId)))) {
+	if (!row) {
 		throw new UploadError("Form not found", 404);
 	}
+	await requireUploadAccess(db, row.form, input);
 	const field = (row.form.properties as FormField[]).find(
 		(f) => f.id === input.fieldId
 	);

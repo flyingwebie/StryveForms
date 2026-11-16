@@ -344,6 +344,7 @@ app.post("/api/uploads", async (c) => {
 			await uploadSubmissionFile(db, services, {
 				fieldId,
 				file,
+				password: typeof body.password === "string" ? body.password : null,
 				slug,
 				userId: session?.user.id ?? null,
 			})

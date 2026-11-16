@@ -11,7 +11,9 @@ export async function uploadFile(
 	file: File,
 	slug: string,
 	fieldId: string,
-	onProgress?: (fraction: number) => void
+	onProgress?: (fraction: number) => void,
+	/** The form's password, when the respondent unlocked a protected form. */
+	password?: string
 ): Promise<UploadedFile> {
 	return await new Promise<UploadedFile>((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
@@ -19,6 +21,9 @@ export async function uploadFile(
 		form.append("file", file);
 		form.append("slug", slug);
 		form.append("fieldId", fieldId);
+		if (password) {
+			form.append("password", password);
+		}
 
 		xhr.upload.addEventListener("progress", (event) => {
 			if (event.lengthComputable && onProgress) {

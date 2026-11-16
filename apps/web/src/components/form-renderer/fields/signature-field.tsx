@@ -10,6 +10,7 @@ function DrawnSignature({
 	disabled,
 	error,
 	field,
+	formSlug,
 	id,
 	onChange,
 	size,
@@ -52,7 +53,7 @@ function DrawnSignature({
 					disabled={disabled}
 					error={error}
 					field={{ ...field, multiple: false }}
-					formSlug={field.id}
+					formSlug={formSlug}
 					id={id}
 					onChange={onChange}
 					presentation="classic"
