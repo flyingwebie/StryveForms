@@ -1,6 +1,10 @@
+import {
+	type FormAvailability,
+	showsFormFields,
+} from "@StryveForms/forms/availability";
 import { resolveMentions } from "@StryveForms/forms/mentions";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import {
 	CalendarClockIcon,
 	EyeOffIcon,
@@ -16,7 +20,7 @@ import { PasswordGate } from "@/components/form-renderer/password-gate";
 import Loader from "@/components/loader";
 import { googleFontCssUrl } from "@/lib/google-fonts";
 import type { RouterAppContext } from "@/routes/__root";
-import { useTRPC } from "@/utils/trpc";
+import { useTRPC, useTRPCClient } from "@/utils/trpc";
 
 /** Named + explicitly-typed so `head` can cast `loaderData` without relying on this router version's broken inference. */
 async function fetchPublicForm(context: RouterAppContext, slug: string) {
@@ -25,6 +29,17 @@ async function fetchPublicForm(context: RouterAppContext, slug: string) {
 	);
 }
 type LoaderData = Awaited<ReturnType<typeof fetchPublicForm>>;
+
+/** Shown to workspace members, who can still open a form respondents can't fill in. */
+const MEMBER_PREVIEW_NOTICES: Record<
+	Exclude<FormAvailability, "open">,
+	string
+> = {
+	closed:
+		"This form is closed — respondents see your closed message. You can still test it.",
+	draft: "This form is a draft — only you can see it.",
+	full: "This form has reached its submission limit — respondents see your limit message, and new submissions are refused.",
+};
 
 const TRACKING_PARAMS = [
 	"utm_source",
@@ -161,15 +176,7 @@ export const Route = createFileRoute("/forms/$slug")({
 			].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
 		};
 	},
-	notFoundComponent: () => (
-		<main className="flex min-h-svh items-center justify-center bg-app">
-			<ClosedOrFullScreen
-				eyebrow="404"
-				html="<p>This form could not be found. The link may be broken, or the form may have been moved or deleted.</p>"
-				icon={SearchXIcon}
-			/>
-		</main>
-	),
+	notFoundComponent: FormNotFound,
 	loader: async ({ context, params }) => {
 		try {
 			return await fetchPublicForm(context, params.slug);
@@ -178,6 +185,49 @@ export const Route = createFileRoute("/forms/$slug")({
 		}
 	},
 });
+
+/**
+ * The "not found" page. The first render happens on the server, which can't
+ * see who is signed in — so a draft looks missing even to its own workspace.
+ * Once in the browser we ask again with the viewer's session; if they are a
+ * member the form loads, otherwise this page simply stays.
+ */
+function FormNotFound() {
+	const { slug } = Route.useParams();
+	const trpc = useTRPC();
+	const client = useTRPCClient();
+	const queryClient = useQueryClient();
+	const router = useRouter();
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: one attempt per form; the clients are stable for the page's lifetime
+	useEffect(() => {
+		let stale = false;
+		client.public.form
+			.query({ slug })
+			.then(async (data) => {
+				if (stale) {
+					return;
+				}
+				queryClient.setQueryData(trpc.public.form.queryKey({ slug }), data);
+				await router.invalidate();
+			})
+			// Still not found for this viewer: keep showing this page.
+			.catch(() => undefined);
+		return () => {
+			stale = true;
+		};
+	}, [slug]);
+
+	return (
+		<main className="flex min-h-svh items-center justify-center bg-app">
+			<ClosedOrFullScreen
+				eyebrow="404"
+				html="<p>This form could not be found. The link may be broken, or the form may have been moved or deleted.</p>"
+				icon={SearchXIcon}
+			/>
+		</main>
+	);
+}
 
 function ClosedOrFullScreen({
 	eyebrow,
@@ -346,6 +396,25 @@ function PublicFormPage() {
 		}
 	}, [query.data, slug]);
 
+	// The first render happens on the server, which can't see who is signed
+	// in, so it answers as a stranger. If that answer hid the questions, ask
+	// once more from the browser: a workspace member then gets their preview.
+	const recheckedRef = useRef(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: one re-check per page load, keyed on the first answer
+	useEffect(() => {
+		const first = query.data;
+		if (
+			!first ||
+			recheckedRef.current ||
+			first.isOwner ||
+			first.availability === "open"
+		) {
+			return;
+		}
+		recheckedRef.current = true;
+		query.refetch();
+	}, [query.data]);
+
 	const { data } = query;
 	const dict = getDictionary(data?.form.language);
 
@@ -399,7 +468,8 @@ function PublicFormPage() {
 		);
 	}
 
-	if (data.isClosed && !data.isOwner) {
+	const showFields = showsFormFields(data.availability, data.isOwner);
+	if (data.availability === "closed" && !showFields) {
 		return (
 			<main
 				className={embedAwareMainClass(
@@ -417,7 +487,7 @@ function PublicFormPage() {
 			</main>
 		);
 	}
-	if (data.maxSubmissionsReached && !data.isOwner) {
+	if (data.availability === "full" && !showFields) {
 		return (
 			<main
 				className={embedAwareMainClass(
@@ -443,10 +513,10 @@ function PublicFormPage() {
 
 	return (
 		<main ref={embedRef}>
-			{data.isOwner && data.form.visibility === "draft" ? (
+			{data.isOwner && data.availability !== "open" ? (
 				<div className="flex items-center justify-center gap-2 border-warning/30 border-b bg-warning-soft px-4 py-2 text-center font-medium text-sm text-warning">
 					<EyeOffIcon aria-hidden="true" className="size-4 shrink-0" />
-					This form is a draft — only you can see it.
+					{MEMBER_PREVIEW_NOTICES[data.availability]}
 				</div>
 			) : null}
 			<FormRenderer

@@ -1,9 +1,14 @@
 import type { Database } from "@StryveForms/db";
 import { form, storedFile, workspace } from "@StryveForms/db/schema/forms";
+import {
+	formAvailability,
+	showsFormFields,
+} from "@StryveForms/forms/availability";
 import type { FormField } from "@StryveForms/forms/types";
 import { and, eq, isNull, or } from "drizzle-orm";
 
 import type { Services } from "../context";
+import { getMembership } from "../lib/access";
 import {
 	assetKey,
 	assetUrl,
@@ -11,6 +16,7 @@ import {
 	tempUploadKey,
 } from "../lib/files";
 import { newId } from "../lib/ids";
+import { completedCount } from "./submissions";
 
 const MB = 1024 * 1024;
 const LEADING_DOT = /^\./;
@@ -61,11 +67,38 @@ function extensionOf(name: string): string {
 	return dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
 }
 
+/**
+ * Whether this person can currently see the form's questions, and so upload
+ * files for them — the same rule the public page uses. Workspace members can
+ * while previewing a draft or closed form; respondents only while it's open.
+ */
+async function canUploadTo(
+	db: Database,
+	row: typeof form.$inferSelect,
+	userId: string | null | undefined
+): Promise<boolean> {
+	const isMember = userId
+		? (await getMembership(db, row.workspaceId, userId)) !== null
+		: false;
+	const completed =
+		row.maxSubmissionsCount === null ? 0 : await completedCount(db, row.id);
+	return showsFormFields(
+		formAvailability({ ...row, completedCount: completed }),
+		isMember
+	);
+}
+
 /** Stores a respondent's file temporarily until the submission is sent. */
 export async function uploadSubmissionFile(
 	db: Database,
 	services: Services,
-	input: { fieldId: string; file: File; slug: string }
+	input: {
+		fieldId: string;
+		file: File;
+		slug: string;
+		/** The signed-in uploader, if any — lets workspace members upload while previewing. */
+		userId?: string | null;
+	}
 ) {
 	const [row] = await db
 		.select({ form, maxFileSize: workspace.maxFileSize })
@@ -78,7 +111,7 @@ export async function uploadSubmissionFile(
 			)
 		)
 		.limit(1);
-	if (row?.form.visibility !== "public") {
+	if (!(row && (await canUploadTo(db, row.form, input.userId)))) {
 		throw new UploadError("Form not found", 404);
 	}
 	const field = (row.form.properties as FormField[]).find(

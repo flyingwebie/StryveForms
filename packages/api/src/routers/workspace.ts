@@ -372,13 +372,16 @@ export const workspaceRouter = router({
 				"manage",
 				"manage_members"
 			);
+			// Only a pending invite can be cancelled: an accepted one is history,
+			// and rewriting it would lose the record of who joined through it.
 			await ctx.db
 				.update(workspaceInvite)
 				.set({ status: "cancelled" })
 				.where(
 					and(
 						eq(workspaceInvite.id, input.inviteId),
-						eq(workspaceInvite.workspaceId, input.workspaceId)
+						eq(workspaceInvite.workspaceId, input.workspaceId),
+						eq(workspaceInvite.status, "pending")
 					)
 				);
 			return { ok: true };
@@ -421,7 +424,12 @@ export const workspaceRouter = router({
 				await tx
 					.update(workspaceInvite)
 					.set({ status: "accepted" })
-					.where(eq(workspaceInvite.id, invite.id));
+					.where(
+						and(
+							eq(workspaceInvite.id, invite.id),
+							eq(workspaceInvite.status, "pending")
+						)
+					);
 			});
 			return { workspaceId: invite.workspaceId };
 		}),

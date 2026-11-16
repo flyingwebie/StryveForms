@@ -499,6 +499,26 @@ function FormInteractiveContent({
 	);
 }
 
+interface SubmitOutcome {
+	data: Record<string, unknown>;
+	redirectUrl?: string | null;
+	submissionId?: string;
+}
+
+/**
+ * Where the respondent is with this form. One value instead of separate
+ * "submitting", "error" and "result" flags, so impossible mixes (an error on
+ * the thank-you screen, a result while still sending) can't happen.
+ *
+ *   filling ──submit──▶ submitting ──ok──▶ submitted ──"fill again"──▶ filling
+ *                            │
+ *                            └──error──▶ filling (with the error shown)
+ */
+type SubmissionState =
+	| { error?: string; phase: "filling" }
+	| { phase: "submitting" }
+	| { phase: "submitted"; result: SubmitOutcome };
+
 export function FormRenderer({
 	autoSubmit,
 	className,
@@ -524,13 +544,19 @@ export function FormRenderer({
 		setMounted(true);
 	}, []);
 	const [captchaToken, setCaptchaToken] = useState<string | undefined>();
-	const [submitting, setSubmitting] = useState(false);
-	const [submitError, setSubmitError] = useState<string | undefined>();
-	const [result, setResult] = useState<{
-		data: Record<string, unknown>;
-		redirectUrl?: string | null;
-		submissionId?: string;
-	} | null>(null);
+	const [submission, setSubmission] = useState<SubmissionState>({
+		phase: "filling",
+	});
+	const submitting = submission.phase === "submitting";
+	const submitError =
+		submission.phase === "filling" ? submission.error : undefined;
+	const result = submission.phase === "submitted" ? submission.result : null;
+	// Set the moment a final submit starts, before React re-renders, so a
+	// second Enter press or click can't send the form twice.
+	const submitLockRef = useRef<boolean>(false);
+	// The background save in flight, if any. The final submit waits for it so
+	// both use the same submission instead of creating two.
+	const partialSaveRef = useRef<Promise<unknown> | null>(null);
 	const partialSubmissionIdRef = useRef<string | undefined>(
 		editingSubmissionId ?? undefined
 	);
@@ -552,9 +578,16 @@ export function FormRenderer({
 
 	const submitMutation = useMutation(trpc.public.submit.mutationOptions());
 
-	// Local autosave of in-progress answers.
+	// Local autosave of in-progress answers. Only while filling in: a save
+	// still pending when the form is sent would otherwise land after the
+	// submit cleared it, and the old answers would reappear on the next visit.
 	useEffect(() => {
-		if (mode !== "live" || !form.autoSave || typeof window === "undefined") {
+		if (
+			mode !== "live" ||
+			!form.autoSave ||
+			typeof window === "undefined" ||
+			submission.phase !== "filling"
+		) {
 			return;
 		}
 		const timer = setTimeout(() => {
@@ -564,35 +597,52 @@ export function FormRenderer({
 			);
 		}, AUTOSAVE_DEBOUNCE_MS);
 		return () => clearTimeout(timer);
-	}, [engine.values, form.autoSave, form.id, mode]);
+	}, [engine.values, form.autoSave, form.id, mode, submission.phase]);
 
 	// Debounced partial submission, so an incomplete form is still saved server-side.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `submitMutation`/`tracking`/`onPartialSaved` are stable for the component's lifetime; only re-debounce on answer changes
 	useEffect(() => {
-		if (mode !== "live" || !form.enablePartialSubmissions || result) {
+		// Only while the respondent is still filling in: once the final submit
+		// starts, a late background save could leave a stray partial behind.
+		if (
+			mode !== "live" ||
+			!form.enablePartialSubmissions ||
+			submission.phase !== "filling"
+		) {
 			return;
 		}
 		const timer = setTimeout(() => {
-			submitMutation.mutate(
-				{
+			const save = submitMutation
+				.mutateAsync({
 					data: engine.values,
 					isPartial: true,
 					slug: form.slug,
 					submissionId: partialSubmissionIdRef.current,
 					tracking,
-				},
-				{
-					onSuccess: (res) => {
-						if (res.submissionId) {
-							partialSubmissionIdRef.current = res.submissionId;
-							onPartialSaved?.(res.submissionId);
-						}
-					},
-				}
-			);
+				})
+				.then((res) => {
+					if (res.submissionId) {
+						partialSubmissionIdRef.current = res.submissionId;
+						onPartialSaved?.(res.submissionId);
+					}
+				})
+				// A failed background save is retried on the next change.
+				.catch(() => undefined)
+				.finally(() => {
+					if (partialSaveRef.current === save) {
+						partialSaveRef.current = null;
+					}
+				});
+			partialSaveRef.current = save;
 		}, PARTIAL_SUBMIT_DEBOUNCE_MS);
 		return () => clearTimeout(timer);
-	}, [engine.values, form.enablePartialSubmissions, form.slug, mode, result]);
+	}, [
+		engine.values,
+		form.enablePartialSubmissions,
+		form.slug,
+		mode,
+		submission.phase,
+	]);
 
 	function focusFirstError(errors: Record<string, string>) {
 		const firstId = form.properties.find((f) => errors[f.id])?.id;
@@ -620,32 +670,43 @@ export function FormRenderer({
 		if (serverFieldErrors) {
 			applyFieldErrors(serverFieldErrors);
 		} else {
-			setSubmitError(
-				"Something went wrong submitting the form. Please try again."
-			);
+			setSubmission({
+				error: "Something went wrong submitting the form. Please try again.",
+				phase: "filling",
+			});
 		}
 	}
 
 	async function handleSubmit() {
+		if (submitLockRef.current) {
+			return;
+		}
 		const validation = engine.validateAll();
 		if (!validation.valid) {
 			applyFieldErrors(validation.errors);
 			return;
 		}
 		if (form.useCaptcha && !captchaToken) {
-			setSubmitError("Please complete the captcha.");
+			setSubmission({
+				error: "Please complete the captcha.",
+				phase: "filling",
+			});
 			return;
 		}
-		setSubmitError(undefined);
 
 		if (mode === "preview") {
-			setResult({ data: validation.data });
+			setSubmission({
+				phase: "submitted",
+				result: { data: validation.data },
+			});
 			onSubmitted?.({ data: validation.data });
 			return;
 		}
 
-		setSubmitting(true);
+		submitLockRef.current = true;
+		setSubmission({ phase: "submitting" });
 		try {
+			await partialSaveRef.current;
 			const completionTime = Math.round(
 				(Date.now() - startedAtRef.current) / 1000
 			);
@@ -666,12 +727,15 @@ export function FormRenderer({
 				redirectUrl: response.redirectUrl,
 				submissionId: response.submissionId,
 			};
-			setResult(outcome);
+			setSubmission({ phase: "submitted", result: outcome });
 			onSubmitted?.(outcome);
 		} catch (error) {
+			// Field errors are shown next to their questions; either way the
+			// respondent is back to filling in.
+			setSubmission({ phase: "filling" });
 			handleSubmitFailure(error);
 		} finally {
-			setSubmitting(false);
+			submitLockRef.current = false;
 		}
 	}
 
@@ -757,7 +821,7 @@ export function FormRenderer({
 						dict={dict}
 						form={form}
 						onRefill={() => {
-							setResult(null);
+							setSubmission({ phase: "filling" });
 							engine.reset();
 							partialSubmissionIdRef.current = undefined;
 						}}

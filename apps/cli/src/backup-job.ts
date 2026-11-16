@@ -3,6 +3,8 @@
  * and downloads the finished file through the authenticated
  * `GET /api/backups/jobs/:id/download` route (apps/server/src/index.ts).
  */
+import { isJobUnsuccessful } from "@StryveForms/api/lib/job-lifecycle";
+
 const POLL_MS = 1500;
 
 export interface BackupJobRow {
@@ -31,7 +33,7 @@ export async function waitForBackupJob(
 		if (job.status === "completed") {
 			return job;
 		}
-		if (job.status === "failed" || job.status === "cancelled") {
+		if (isJobUnsuccessful(job.status)) {
 			throw new BackupJobFailedError(job.error || `Job ${job.status}`);
 		}
 		await new Promise((resolve) => setTimeout(resolve, POLL_MS));

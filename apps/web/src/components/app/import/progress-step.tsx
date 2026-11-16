@@ -1,3 +1,4 @@
+import { isJobActive } from "@StryveForms/api/lib/job-lifecycle";
 import { Button } from "@StryveForms/ui/components/button";
 import { Progress } from "@StryveForms/ui/components/progress";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +17,6 @@ import { toast } from "sonner";
 import { useWorkspaces } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
 
-const RUNNING_STATUSES = new Set(["pending", "running"]);
 const LOG_COLORS: Record<"info" | "warn" | "error", string> = {
 	error: "text-destructive",
 	info: "text-muted-foreground",
@@ -179,7 +179,7 @@ function RunningPanel({
 	onStartAnother: () => void;
 	sourceName?: string;
 }) {
-	const isRunning = RUNNING_STATUSES.has(job.status);
+	const isRunning = isJobActive(job.status);
 	const progress = (job.progress ?? {}) as JobProgress;
 	const forms = progress.forms ?? { done: 0, total: 0 };
 	const submissions = progress.submissions ?? { done: 0, total: 0 };
@@ -267,7 +267,7 @@ export default function ProgressStep({
 		...trpc.importer.job.queryOptions({ jobId }),
 		refetchInterval: (query) => {
 			const status = query.state.data?.status;
-			return status && RUNNING_STATUSES.has(status) ? 2000 : false;
+			return isJobActive(status) ? 2000 : false;
 		},
 	});
 

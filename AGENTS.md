@@ -124,3 +124,13 @@ Biome will catch most mechanical issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Biome. Run `bunx ultracite fix` before committing to ensure compliance.
+
+---
+
+## Shared state rules
+
+Some questions have exactly one answer in this codebase. Use these modules instead of comparing status strings or re-deriving the rule:
+
+- **Is a form taking responses?** `@StryveForms/forms/availability` — `formAvailability()` returns `draft`, `open`, `closed` or `full`. A form's `visibility` alone is not enough: a public form can be past its closing date or at its submission limit. `canViewForm()` and `showsFormFields()` say what a viewer may do.
+- **Is a background job still going?** `@StryveForms/api/lib/job-lifecycle` — `isJobActive()`, `isJobSettled()` and `isJobUnsuccessful()` cover backup, export, restore and import jobs. "Cancelled" is a settled state; don't forget it.
+- **Where is a respondent in the public form?** `SubmissionState` in `apps/web/src/components/form-renderer/form-renderer.tsx` — one `phase` (`filling`, `submitting`, `submitted`) rather than separate flags.

@@ -22,6 +22,10 @@ import {
 	workspace,
 	workspaceMember,
 } from "@StryveForms/db/schema/forms";
+import {
+	type FormAvailability,
+	formAvailability,
+} from "@StryveForms/forms/availability";
 import { defaultFormSettings, VISIBILITIES } from "@StryveForms/forms/settings";
 import { type FormField, fieldOptions } from "@StryveForms/forms/types";
 import { TRPCError } from "@trpc/server";
@@ -58,6 +62,7 @@ import {
 } from "../notifications";
 import { listSenders as listWorkspaceSenders } from "../senders";
 import { buildFormOverview, buildFormSummary } from "../stats";
+import { completedCount } from "../submissions";
 
 export interface AgentContext {
 	db: Database;
@@ -123,6 +128,8 @@ export async function listForms(
 			title: form.title,
 			updatedAt: form.updatedAt,
 			visibility: form.visibility,
+			closesAt: form.closesAt,
+			maxSubmissionsCount: form.maxSubmissionsCount,
 		})
 		.from(form)
 		.where(and(...filters))
@@ -130,9 +137,30 @@ export async function listForms(
 		.limit(input.limit);
 	return rows.map((r) => ({
 		...r,
+		availability: formAvailability({
+			...r,
+			completedCount: r.submissionsCount,
+		}),
+		closesAt: r.closesAt?.toISOString() ?? null,
 		shareUrl: shareUrl(ctx.services.config, r.slug),
 		updatedAt: r.updatedAt.toISOString(),
 	}));
+}
+
+/**
+ * Whether the form is actually taking responses right now: "draft", "open",
+ * "closed" (by its owner or closing date) or "full" (submission limit hit).
+ */
+async function availabilityOf(
+	db: Database,
+	row: Pick<
+		typeof form.$inferSelect,
+		"closesAt" | "id" | "maxSubmissionsCount" | "visibility"
+	>
+): Promise<FormAvailability> {
+	const completed =
+		row.maxSubmissionsCount === null ? 0 : await completedCount(db, row.id);
+	return formAvailability({ ...row, completedCount: completed });
 }
 
 export const getFormInput = z.object({ formId: z.string().min(1) });
@@ -144,6 +172,7 @@ export async function getForm(
 	const { form: row } = await requireFormForAgent(ctx, input.formId, "view");
 	const properties = row.properties as FormField[];
 	return {
+		availability: await availabilityOf(ctx.db, row),
 		closesAt: row.closesAt?.toISOString() ?? null,
 		fields: properties.map((field) => ({
 			help: field.help ?? null,
@@ -307,12 +336,21 @@ export async function setFormVisibility(
 	ctx: AgentContext,
 	input: z.infer<typeof setFormVisibilityInput>
 ) {
-	await requireFormForAgent(ctx, input.formId, "edit");
+	const { form: row } = await requireFormForAgent(ctx, input.formId, "edit");
 	await ctx.db
 		.update(form)
 		.set({ visibility: input.visibility })
 		.where(eq(form.id, input.formId));
-	return { formId: input.formId, visibility: input.visibility };
+	return {
+		// "public" doesn't always mean "open": the closing date or submission
+		// limit can still keep the form shut, and the agent should know.
+		availability: await availabilityOf(ctx.db, {
+			...row,
+			visibility: input.visibility,
+		}),
+		formId: input.formId,
+		visibility: input.visibility,
+	};
 }
 
 /* -------------------------------------------------------------------------- */

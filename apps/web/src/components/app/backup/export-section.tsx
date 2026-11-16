@@ -1,3 +1,4 @@
+import { isJobActive } from "@StryveForms/api/lib/job-lifecycle";
 import {
 	Alert,
 	AlertDescription,
@@ -119,10 +120,7 @@ export default function BackupExportSection({
 		);
 	};
 
-	const jobRunning =
-		activeJob.data &&
-		(activeJob.data.status === "pending" ||
-			activeJob.data.status === "running");
+	const jobRunning = isJobActive(activeJob.data?.status);
 
 	return (
 		<div className="max-w-3xl space-y-8">

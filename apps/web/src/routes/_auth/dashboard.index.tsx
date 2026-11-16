@@ -178,10 +178,7 @@ function FormsTable({
 									</Link>
 								</TableCell>
 								<TableCell>
-									<StatusBadge
-										isClosed={form.isClosed}
-										visibility={form.visibility}
-									/>
+									<StatusBadge availability={form.availability} />
 								</TableCell>
 								<TableCell className="text-muted-foreground">
 									{folder?.name ?? "No folder"}

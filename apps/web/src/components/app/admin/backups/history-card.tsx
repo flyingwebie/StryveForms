@@ -1,3 +1,4 @@
+import { isJobActive } from "@StryveForms/api/lib/job-lifecycle";
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Button } from "@StryveForms/ui/components/button";
 import {
@@ -145,9 +146,7 @@ export default function HistoryCard() {
 		refetchInterval: (query) => {
 			const { data } = query.state;
 			const anyRunning = Array.isArray(data)
-				? data.some(
-						(job) => job.status === "running" || job.status === "pending"
-					)
+				? data.some((job) => isJobActive(job.status))
 				: false;
 			return anyRunning ? POLL_MS : false;
 		},

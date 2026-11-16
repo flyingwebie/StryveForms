@@ -1,5 +1,6 @@
 import type { Database } from "@StryveForms/db";
 import { form, formSubmission, storedFile } from "@StryveForms/db/schema/forms";
+import { isAtSubmissionLimit } from "@StryveForms/forms/availability";
 import { evaluateComputedVariables } from "@StryveForms/forms/computed";
 import { referencedFieldIds } from "@StryveForms/forms/logic";
 import { resolveRedirectUrl } from "@StryveForms/forms/redirect";
@@ -84,13 +85,6 @@ export interface SubmitResult {
 	redirectUrl: string | null;
 	status: "completed" | "partial";
 	submissionId: string;
-}
-
-export function isFormClosed(row: FormRow): boolean {
-	return (
-		row.visibility === "closed" ||
-		(row.closesAt !== null && row.closesAt < new Date())
-	);
 }
 
 export async function completedCount(
@@ -596,7 +590,10 @@ export async function submitForm(
 	const limitReached =
 		!target &&
 		row.maxSubmissionsCount !== null &&
-		(await completedCount(db, row.id)) >= row.maxSubmissionsCount;
+		isAtSubmissionLimit(
+			row.maxSubmissionsCount,
+			await completedCount(db, row.id)
+		);
 	if (limitReached) {
 		throw new TRPCError({
 			code: "FORBIDDEN",
