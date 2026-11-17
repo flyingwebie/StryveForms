@@ -91,7 +91,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { stream } from "hono/streaming";
 
-import { createContext } from "./context";
+import { clientIp, createContext } from "./context";
 import { ENV } from "./env.server";
 import { rateLimit } from "./rate-limit";
 import { auth, db, services } from "./services";
@@ -344,6 +344,7 @@ app.post("/api/uploads", async (c) => {
 			await uploadSubmissionFile(db, services, {
 				fieldId,
 				file,
+				ip: clientIp(c),
 				password: typeof body.password === "string" ? body.password : null,
 				slug,
 				userId: session?.user.id ?? null,

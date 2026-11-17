@@ -1,3 +1,7 @@
+import {
+	AVAILABILITY_LABELS,
+	type FormAvailability,
+} from "@StryveForms/forms/availability";
 import { Button } from "@StryveForms/ui/components/button";
 import { Checkbox } from "@StryveForms/ui/components/checkbox";
 import {
@@ -55,19 +59,19 @@ import StatusBadge from "@/components/app/status-badge";
 import { useWorkspaces } from "@/lib/workspace";
 import { useTRPC } from "@/utils/trpc";
 
+const FORM_AVAILABILITY_TABS: FormAvailability[] = [
+	"open",
+	"draft",
+	"closed",
+	"full",
+];
 const SKELETON_IDS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"];
 const VIEW_STORAGE_KEY = "stryveforms.formsView";
 
-type StatusFilter = "all" | "public" | "draft" | "closed";
+/** "all" or one of the form availabilities, so the filter matches each card's badge. */
+type StatusFilter = "all" | FormAvailability;
 type SortKey = "created" | "submissions" | "title" | "updated";
 type ViewMode = "grid" | "table";
-
-function statusKey(form: FormCardSummary): StatusFilter {
-	if (form.isClosed) {
-		return "closed";
-	}
-	return form.visibility === "draft" ? "draft" : "public";
-}
 
 function sortForms(forms: FormCardSummary[], sortBy: SortKey) {
 	const sorted = [...forms];
@@ -254,9 +258,11 @@ function FormsToolbar({
 			>
 				<TabsList>
 					<TabsTrigger value="all">All</TabsTrigger>
-					<TabsTrigger value="public">Live</TabsTrigger>
-					<TabsTrigger value="draft">Draft</TabsTrigger>
-					<TabsTrigger value="closed">Closed</TabsTrigger>
+					{FORM_AVAILABILITY_TABS.map((value) => (
+						<TabsTrigger key={value} value={value}>
+							{AVAILABILITY_LABELS[value]}
+						</TabsTrigger>
+					))}
 				</TabsList>
 			</Tabs>
 			<Select
@@ -506,7 +512,7 @@ function RouteComponent() {
 	const allForms = (formsQuery.data ?? []) as FormCardSummary[];
 	const folders = foldersQuery.data ?? [];
 	const forms = sortForms(
-		allForms.filter((form) => status === "all" || statusKey(form) === status),
+		allForms.filter((form) => status === "all" || form.availability === status),
 		sortBy
 	);
 	const { allSelected, clear, selectedIds, toggle, toggleAll } =

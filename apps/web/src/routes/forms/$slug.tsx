@@ -460,6 +460,7 @@ function PublicFormPage() {
 						setPassword(value);
 						setPasswordSubmitting(false);
 					}}
+					passwordLocked={data.passwordLocked}
 					submitting={passwordSubmitting || query.isFetching}
 					title={data.form.title}
 					wrongPassword={data.wrongPassword}
