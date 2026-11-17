@@ -457,7 +457,13 @@ function PublicFormPage() {
 					dict={dict}
 					onSubmit={(value) => {
 						setPasswordSubmitting(true);
-						setPassword(value);
+						// Same value again (e.g. after a lockout ends): the query key
+						// doesn't change, so ask the server again explicitly.
+						if (value === password) {
+							query.refetch();
+						} else {
+							setPassword(value);
+						}
 						setPasswordSubmitting(false);
 					}}
 					passwordLocked={data.passwordLocked}

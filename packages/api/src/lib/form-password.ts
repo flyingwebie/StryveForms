@@ -49,13 +49,27 @@ function isLocked(key: string, now: number): boolean {
 	);
 }
 
-function recordFailure(key: string, now: number) {
+/**
+ * Counts this attempt as a failure before the (slow) hash check runs, so
+ * concurrent guesses can't all slip past the limit while they're being checked.
+ * Returns the window it was counted in, so a right password can take it back.
+ */
+function reserveAttempt(key: string, now: number): FailureWindow {
 	const window = failures.get(key);
 	if (!window || window.resetAt <= now) {
-		failures.set(key, { count: 1, resetAt: now + PASSWORD_LOCKOUT_MS });
-		return;
+		const fresh = { count: 1, resetAt: now + PASSWORD_LOCKOUT_MS };
+		failures.set(key, fresh);
+		return fresh;
 	}
 	window.count += 1;
+	return window;
+}
+
+function refundAttempt(key: string, window: FailureWindow) {
+	// Only if the window hasn't been replaced by a newer one in the meantime.
+	if (failures.get(key) === window) {
+		window.count = Math.max(0, window.count - 1);
+	}
 }
 
 /**
@@ -77,13 +91,16 @@ export async function checkFormPassword(
 	}
 	sweep(now);
 	const key = `${row.id}:${ip ?? "unknown"}`;
+	// The lock check and the reservation run without an await between them,
+	// so no other check for this key can run in between.
 	if (isLocked(key, now)) {
 		return "locked";
 	}
+	const window = reserveAttempt(key, now);
 	if (await Bun.password.verify(password, row.passwordHash)) {
+		refundAttempt(key, window);
 		return "ok";
 	}
-	recordFailure(key, now);
 	return "wrong";
 }
 

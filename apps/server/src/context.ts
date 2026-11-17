@@ -12,7 +12,13 @@ export interface CreateContextOptions {
 /** Client IP, honouring a reverse proxy when TRUST_PROXY=true. */
 export function clientIp(c: HonoContext): string | null {
 	if (process.env.TRUST_PROXY === "true") {
-		const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
+		// The right-most entry is the one our own proxy (the web app) added;
+		// anything to its left could have been sent by the client.
+		const forwarded = c.req
+			.header("x-forwarded-for")
+			?.split(",")
+			.map((entry) => entry.trim())
+			.findLast(Boolean);
 		if (forwarded) {
 			return forwarded;
 		}

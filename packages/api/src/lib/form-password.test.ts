@@ -82,6 +82,48 @@ describe("checkFormPassword", () => {
 		).toBe("ok");
 	});
 
+	it("admits at most the limit when many guesses arrive at once", async () => {
+		const now = 2_000_000;
+		const attempts = Array.from({ length: 100 }, (_, i) =>
+			i === 50 ? "open-sesame" : `guess-${i}`
+		);
+		const results = await Promise.all(
+			attempts.map((password) =>
+				checkFormPassword({ ip, isMember: false, password, row }, now)
+			)
+		);
+		// Only the first MAX_PASSWORD_FAILURES were checked at all; the right
+		// password arrived after the limit, so it was refused too.
+		expect(results.filter((r) => r !== "locked")).toHaveLength(
+			MAX_PASSWORD_FAILURES
+		);
+		expect(results[50]).toBe("locked");
+	});
+
+	it("doesn't count a right password against the limit", async () => {
+		const now = 3_000_000;
+		await Promise.all(
+			Array.from({ length: MAX_PASSWORD_FAILURES - 1 }, (_, i) =>
+				checkFormPassword(
+					{ ip, isMember: false, password: `guess-${i}`, row },
+					now
+				)
+			)
+		);
+		expect(
+			await checkFormPassword(
+				{ ip, isMember: false, password: "open-sesame", row },
+				now
+			)
+		).toBe("ok");
+		expect(
+			await checkFormPassword(
+				{ ip, isMember: false, password: "open-sesame", row },
+				now
+			)
+		).toBe("ok");
+	});
+
 	it("doesn't count a page load with no password as a guess", async () => {
 		await Promise.all(
 			Array.from({ length: MAX_PASSWORD_FAILURES * 2 }, () =>

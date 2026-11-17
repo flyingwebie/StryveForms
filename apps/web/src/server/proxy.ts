@@ -1,5 +1,7 @@
 import { getRequestIP } from "@tanstack/react-start/server";
 
+import { resolveClientIp, trustedProxyHops } from "./client-ip";
+
 const DEFAULT_INTERNAL_API = "http://localhost:3000";
 const REQUEST_HOP_HEADERS = [
 	"host",
@@ -32,7 +34,15 @@ export async function proxyToApi(request: Request): Promise<Response> {
 	}
 	headers.set("x-forwarded-host", url.host);
 	headers.set("x-forwarded-proto", url.protocol.replace(":", ""));
-	const ip = getRequestIP({ xForwardedFor: true });
+	// Always replace the header with one address we worked out ourselves, so a
+	// value the client sent can never reach the API's per-client limits.
+	headers.delete("x-forwarded-for");
+	headers.delete("x-real-ip");
+	const ip = resolveClientIp({
+		forwardedFor: request.headers.get("x-forwarded-for"),
+		hops: trustedProxyHops(),
+		socketIp: getRequestIP(),
+	});
 	if (ip) {
 		headers.set("x-forwarded-for", ip);
 	}
