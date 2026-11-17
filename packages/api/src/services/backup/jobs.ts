@@ -6,9 +6,10 @@
  */
 import type { Database } from "@StryveForms/db";
 import { backupJob } from "@StryveForms/db/schema/backup";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { newId } from "../../lib/ids";
+import { ACTIVE_JOB_STATUSES, type JobStatus } from "../../lib/job-lifecycle";
 
 export type BackupJobKind =
 	| "workspace_export"
@@ -16,12 +17,8 @@ export type BackupJobKind =
 	| "instance_backup"
 	| "instance_restore";
 
-export type BackupJobStatus =
-	| "pending"
-	| "running"
-	| "completed"
-	| "failed"
-	| "cancelled";
+/** One lifecycle for every background job — see lib/job-lifecycle.ts. */
+export type BackupJobStatus = JobStatus;
 
 export type BackupJobTrigger = "manual" | "scheduled" | "safety" | "cli";
 
@@ -239,7 +236,7 @@ export async function cancelBackupJob(db: Database, jobId: string) {
 	return true;
 }
 
-/** Marks jobs left "running" by a server restart as failed, like import's `failInterruptedJobs`. */
+/** Marks jobs left unfinished by a server restart as failed, like import's `failInterruptedJobs`. */
 export async function failInterruptedBackupJobs(db: Database) {
 	await db
 		.update(backupJob)
@@ -248,5 +245,5 @@ export async function failInterruptedBackupJobs(db: Database) {
 			finishedAt: new Date(),
 			status: "failed",
 		})
-		.where(eq(backupJob.status, "running"));
+		.where(inArray(backupJob.status, [...ACTIVE_JOB_STATUSES]));
 }

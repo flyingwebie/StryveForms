@@ -1,3 +1,4 @@
+import type { FormAvailability } from "@StryveForms/forms/availability";
 import type { FormField } from "@StryveForms/forms/types";
 import { Badge } from "@StryveForms/ui/components/badge";
 import { Checkbox } from "@StryveForms/ui/components/checkbox";
@@ -13,6 +14,7 @@ import { FormThumbnail } from "./form-thumbnail";
 import { formatRelativeTime } from "./format";
 
 export interface FormCardSummary extends FormMenuTarget {
+	availability: FormAvailability;
 	closesAt: Date | string | null;
 	color: string;
 	coverPicture?: string | null;
@@ -113,7 +115,7 @@ export default function FormCard({
 				</div>
 
 				<div className="flex flex-wrap items-center gap-1.5">
-					<StatusBadge isClosed={form.isClosed} visibility={form.visibility} />
+					<StatusBadge availability={form.availability} />
 					{folder ? (
 						<Badge className="gap-1" variant="outline">
 							<FolderMark color={folder.color} icon={folder.icon} />

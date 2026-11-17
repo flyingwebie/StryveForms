@@ -3,6 +3,7 @@ import { Button } from "@StryveForms/ui/components/button";
 import { Spinner } from "@StryveForms/ui/components/spinner";
 import { Paperclip, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { useFormPassword } from "../form-password";
 import type { FieldComponentProps } from "../types";
 import { uploadFile } from "../upload";
 import { toStringArray } from "../value-utils";
@@ -24,6 +25,7 @@ export function FilesField({
 	value,
 }: FieldComponentProps) {
 	const names = toStringArray(value);
+	const password = useFormPassword();
 	const [pending, setPending] = useState<PendingUpload[]>([]);
 	const [dragOver, setDragOver] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -46,7 +48,8 @@ export function FilesField({
 					setPending((prev) =>
 						prev.map((p) => (p.name === file.name ? { ...p, fraction } : p))
 					);
-				}
+				},
+				password
 			);
 			setPending((prev) => prev.filter((p) => p.name !== file.name));
 			const current = toStringArray(value);

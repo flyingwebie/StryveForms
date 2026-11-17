@@ -6,18 +6,16 @@
  * router's inferred output in a shape worth re-deriving by hand.
  */
 
+import type { JobStatus } from "@StryveForms/api/lib/job-lifecycle";
+
 export type BackupJobKind =
 	| "workspace_export"
 	| "workspace_import"
 	| "instance_backup"
 	| "instance_restore";
 
-export type BackupJobStatus =
-	| "pending"
-	| "running"
-	| "completed"
-	| "failed"
-	| "cancelled";
+/** One lifecycle for every background job — see `@StryveForms/api/lib/job-lifecycle`. */
+export type BackupJobStatus = JobStatus;
 
 export interface BackupJobLogEntry {
 	at: string;

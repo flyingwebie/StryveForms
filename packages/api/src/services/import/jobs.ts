@@ -16,6 +16,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Services } from "../../context";
 import { assetKey, assetUrl, submissionFileKey } from "../../lib/files";
 import { newId } from "../../lib/ids";
+import { ACTIVE_JOB_STATUSES } from "../../lib/job-lifecycle";
 import { emailBranding } from "../instance";
 
 const MAX_LOG_ENTRIES = 500;
@@ -374,7 +375,7 @@ export function runJob(
 	});
 }
 
-/** Marks jobs left "running" by a server restart as failed. */
+/** Marks jobs left unfinished by a server restart as failed. */
 export async function failInterruptedJobs(db: Database) {
 	await db
 		.update(importJob)
@@ -384,5 +385,5 @@ export async function failInterruptedJobs(db: Database) {
 			finishedAt: new Date(),
 			status: "failed",
 		})
-		.where(eq(importJob.status, "running"));
+		.where(inArray(importJob.status, [...ACTIVE_JOB_STATUSES]));
 }

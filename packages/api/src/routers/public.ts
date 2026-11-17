@@ -4,6 +4,12 @@ import {
 	formView,
 	workspace,
 } from "@StryveForms/db/schema/forms";
+import {
+	canViewForm,
+	formAvailability,
+	isAtSubmissionLimit,
+	isPastClosing,
+} from "@StryveForms/forms/availability";
 import type { WorkspaceBrand } from "@StryveForms/forms/brand";
 import type { FormField } from "@StryveForms/forms/types";
 import { fileList, isFileField } from "@StryveForms/forms/values";
@@ -16,11 +22,7 @@ import { getMembership } from "../lib/access";
 import { submissionFileUrl } from "../lib/files";
 import { type FormRow, toPublicFormDto } from "../lib/serialize";
 import { verifyCaptcha } from "../services/captcha";
-import {
-	completedCount,
-	isFormClosed,
-	submitForm,
-} from "../services/submissions";
+import { completedCount, submitForm } from "../services/submissions";
 
 const BOT_AGENTS = /bot|crawler|spider|preview|facebookexternalhit|slurp/i;
 const WWW_PREFIX = /^www\./;
@@ -66,25 +68,33 @@ async function isOwnerViewing(ctx: Context, row: FormRow): Promise<boolean> {
 }
 
 async function checkPassword(
-	ctx: Context,
 	row: FormRow,
+	isMember: boolean,
 	password: string | undefined
 ) {
-	if (!row.passwordHash || (await isOwnerViewing(ctx, row))) {
+	if (!row.passwordHash || isMember) {
 		return true;
 	}
-	return password ? Bun.password.verify(password, row.passwordHash) : false;
+	return password
+		? await Bun.password.verify(password, row.passwordHash)
+		: false;
 }
 
+/**
+ * Loads a form this viewer is allowed to open, and whether they are a member
+ * of its workspace (members can preview drafts and closed forms). What the
+ * viewer may then do is decided by `@StryveForms/forms/availability`.
+ */
 async function loadAvailableForm(ctx: Context, slug: string) {
 	const row = await findPublicForm(ctx.db, slug);
 	if (!row) {
 		throw new TRPCError({ code: "NOT_FOUND", message: "Form not found" });
 	}
-	if (row.visibility === "draft" && !(await isOwnerViewing(ctx, row))) {
+	const isMember = await isOwnerViewing(ctx, row);
+	if (!canViewForm(formAvailability(row), isMember)) {
 		throw new TRPCError({ code: "NOT_FOUND", message: "Form not found" });
 	}
-	return row;
+	return { isMember, row };
 }
 
 /** Turns stored file names into short-lived links so respondents can see their uploads. */
@@ -115,22 +125,28 @@ export const publicRouter = router({
 			})
 		)
 		.query(async ({ ctx, input }) => {
-			const row = await loadAvailableForm(ctx, input.slug);
-			const unlocked = await checkPassword(ctx, row, input.password);
+			const { isMember, row } = await loadAvailableForm(ctx, input.slug);
+			const unlocked = await checkPassword(row, isMember, input.password);
 			const brand = row.useWorkspaceBrand
 				? await loadWorkspaceBrand(ctx.db, row.workspaceId)
 				: null;
 			const dto = toPublicFormDto(row, ctx.services.config, brand);
-			const maxReached =
-				row.maxSubmissionsCount !== null &&
-				(await completedCount(ctx.db, row.id)) >= row.maxSubmissionsCount;
+			const completed =
+				row.maxSubmissionsCount === null
+					? 0
+					: await completedCount(ctx.db, row.id);
 			return {
+				/** The single answer to "is this form taking responses?" — prefer it over the two flags below. */
+				availability: formAvailability({ ...row, completedCount: completed }),
 				form: unlocked
 					? dto
 					: { ...dto, properties: [], computedVariables: [] },
-				isClosed: isFormClosed(row),
-				isOwner: await isOwnerViewing(ctx, row),
-				maxSubmissionsReached: maxReached,
+				isClosed: isPastClosing(row),
+				isOwner: isMember,
+				maxSubmissionsReached: isAtSubmissionLimit(
+					row.maxSubmissionsCount,
+					completed
+				),
 				passwordRequired: !unlocked,
 				wrongPassword: Boolean(input.password) && !unlocked,
 			};
@@ -187,14 +203,14 @@ export const publicRouter = router({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const row = await loadAvailableForm(ctx, input.slug);
-			if (!(await checkPassword(ctx, row, input.password))) {
+			const { isMember, row } = await loadAvailableForm(ctx, input.slug);
+			if (!(await checkPassword(row, isMember, input.password))) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "This form is protected by a password.",
 				});
 			}
-			if (isFormClosed(row) && !(await isOwnerViewing(ctx, row))) {
+			if (isPastClosing(row) && !isMember) {
 				throw new TRPCError({
 					code: "FORBIDDEN",
 					message: "This form is closed.",
@@ -240,14 +256,14 @@ export const publicRouter = router({
 			})
 		)
 		.query(async ({ ctx, input }) => {
-			const row = await loadAvailableForm(ctx, input.slug);
+			const { isMember, row } = await loadAvailableForm(ctx, input.slug);
 			if (!(row.editableSubmissions || row.enablePartialSubmissions)) {
 				throw new TRPCError({
 					code: "FORBIDDEN",
 					message: "This form doesn't allow editing answers.",
 				});
 			}
-			if (!(await checkPassword(ctx, row, input.password))) {
+			if (!(await checkPassword(row, isMember, input.password))) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "This form is protected by a password.",

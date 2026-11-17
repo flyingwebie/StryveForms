@@ -1,10 +1,13 @@
+import {
+	isJobActive,
+	isJobUnsuccessful,
+} from "@StryveForms/api/lib/job-lifecycle";
 import { Button } from "@StryveForms/ui/components/button";
 import { Progress } from "@StryveForms/ui/components/progress";
 import { CheckCircle2Icon, Loader2Icon, XCircleIcon } from "lucide-react";
 
 import type { BackupJob } from "./contract";
 
-const RUNNING_STATUSES = new Set(["pending", "running"]);
 const LOG_COLORS: Record<"info" | "warn" | "error", string> = {
 	error: "text-destructive",
 	info: "text-muted-foreground",
@@ -41,7 +44,7 @@ export default function JobProgressCard({
 	job: BackupJob;
 	onCancel?: () => void;
 }) {
-	const isRunning = RUNNING_STATUSES.has(job.status);
+	const isRunning = isJobActive(job.status);
 	const counters = Object.entries(job.progress.entities ?? {});
 
 	return (
@@ -53,7 +56,7 @@ export default function JobProgressCard({
 				{job.status === "completed" ? (
 					<CheckCircle2Icon className="size-5 text-green-600" />
 				) : null}
-				{job.status === "failed" || job.status === "cancelled" ? (
+				{isJobUnsuccessful(job.status) ? (
 					<XCircleIcon className="size-5 text-destructive" />
 				) : null}
 				<h2 className="font-medium text-lg">

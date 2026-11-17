@@ -1,4 +1,9 @@
 import {
+	isJobActive,
+	isJobSettled,
+	isJobUnsuccessful,
+} from "@StryveForms/api/lib/job-lifecycle";
+import {
 	Alert,
 	AlertDescription,
 	AlertTitle,
@@ -230,6 +235,9 @@ function runningMessage(status: string | undefined): string {
 	if (status === "failed") {
 		return "The restore failed.";
 	}
+	if (status === "cancelled") {
+		return "The restore was cancelled.";
+	}
 	return "Restoring… this can take a while for a large instance.";
 }
 
@@ -240,7 +248,7 @@ function RunningStep({
 	error: string | null | undefined;
 	status: string | undefined;
 }) {
-	const isRunning = status !== "completed" && status !== "failed";
+	const isRunning = !isJobSettled(status);
 	return (
 		<div className="flex items-start gap-2.5 text-sm">
 			{isRunning ? (
@@ -249,7 +257,7 @@ function RunningStep({
 			{status === "completed" ? (
 				<CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-success" />
 			) : null}
-			{status === "failed" ? (
+			{isJobUnsuccessful(status) ? (
 				<XCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
 			) : null}
 			<div className="space-y-1">
@@ -308,7 +316,7 @@ export default function RestoreDialog({
 		...trpc.backupAdmin.job.queryOptions({ id: jobId ?? "" }),
 		enabled: Boolean(jobId),
 		refetchInterval: (query) =>
-			query.state.data?.status === "running" ? 2000 : false,
+			isJobActive(query.state.data?.status) ? 2000 : false,
 	});
 
 	const restore = useMutation(
@@ -364,7 +372,7 @@ export default function RestoreDialog({
 	}
 
 	const jobStatus = job.data?.status;
-	const jobSettled = jobStatus === "completed" || jobStatus === "failed";
+	const jobSettled = isJobSettled(jobStatus);
 
 	return (
 		<Dialog

@@ -29,6 +29,8 @@ export interface FormRendererProps {
 	onPartialSaved?: (submissionId: string) => void;
 	/** Called after a successful final (non-partial) submission. */
 	onSubmitted?: (outcome: SubmitOutcome) => void;
+	/** The password the respondent unlocked the form with; sent with every submit and upload. */
+	password?: string | undefined;
 	/** The submission being edited, when arriving via `?submission_id=`. */
 	submissionId?: string | null;
 	/** UTM / click-id params collected by the page, forwarded to `public.submit`. */

@@ -7,6 +7,10 @@ import {
 	template as templateTable,
 } from "@StryveForms/db/schema/forms";
 import {
+	formAvailability,
+	isPastClosing,
+} from "@StryveForms/forms/availability";
+import {
 	defaultFormSettings,
 	formUpdateSchema,
 	VISIBILITIES,
@@ -187,6 +191,7 @@ export const formRouter = router({
 					visibility: form.visibility,
 					tags: form.tags,
 					closesAt: form.closesAt,
+					maxSubmissionsCount: form.maxSubmissionsCount,
 					color: form.color,
 					folderId: form.folderId,
 					/** For the card's mini field-skeleton preview. */
@@ -203,9 +208,11 @@ export const formRouter = router({
 				.orderBy(desc(form.updatedAt));
 			return rows.map((r) => ({
 				...r,
-				isClosed:
-					r.visibility === "closed" ||
-					(r.closesAt !== null && r.closesAt < new Date()),
+				availability: formAvailability({
+					...r,
+					completedCount: r.submissionsCount,
+				}),
+				isClosed: isPastClosing(r),
 			}));
 		}),
 
@@ -243,10 +250,15 @@ export const formRouter = router({
 						eq(formSubmission.status, "completed")
 					)
 				);
+			const submissionsCount = submissionCountRows[0]?.submissionsCount ?? 0;
 			return {
 				...toFormDto(row, ctx.services.config),
+				availability: formAvailability({
+					...row,
+					completedCount: submissionsCount,
+				}),
 				role: membership.role,
-				submissionsCount: submissionCountRows[0]?.submissionsCount ?? 0,
+				submissionsCount,
 			};
 		}),
 

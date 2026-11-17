@@ -337,9 +337,17 @@ app.post("/api/uploads", async (c) => {
 	) {
 		return c.json({ message: "Missing file" }, 400);
 	}
+	// Signed-in workspace members may upload while previewing a draft or closed form.
+	const session = await auth.api.getSession({ headers: c.req.raw.headers });
 	try {
 		return c.json(
-			await uploadSubmissionFile(db, services, { fieldId, file, slug })
+			await uploadSubmissionFile(db, services, {
+				fieldId,
+				file,
+				password: typeof body.password === "string" ? body.password : null,
+				slug,
+				userId: session?.user.id ?? null,
+			})
 		);
 	} catch (error) {
 		return uploadErrorResponse(error);

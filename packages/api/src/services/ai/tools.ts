@@ -12,6 +12,7 @@ import {
 	formVersion,
 	workspace,
 } from "@StryveForms/db/schema/forms";
+import { formAvailability } from "@StryveForms/forms/availability";
 import { defaultFormSettings } from "@StryveForms/forms/settings";
 import { type FormField, fieldOptions } from "@StryveForms/forms/types";
 import { toolDefinition } from "@tanstack/ai";
@@ -39,6 +40,7 @@ import {
 } from "../agent/tools";
 import { listSenders as listWorkspaceSenders } from "../senders";
 import { buildFormOverview, buildFormSummary } from "../stats";
+import { completedCount } from "../submissions";
 import { buildFields, formSpecSchema } from "./form-spec";
 import {
 	createEmailNotificationToolInputSchema,
@@ -171,12 +173,25 @@ export function buildAgentTools(ctx: AiToolContext) {
 				title: form.title,
 				updatedAt: form.updatedAt,
 				visibility: form.visibility,
+				closesAt: form.closesAt,
+				maxSubmissionsCount: form.maxSubmissionsCount,
 			})
 			.from(form)
 			.where(and(...filters))
 			.orderBy(desc(form.updatedAt))
 			.limit(limit ?? 20);
-		return rows.map((r) => ({ ...r, updatedAt: r.updatedAt.toISOString() }));
+		return rows.map(({ closesAt, maxSubmissionsCount, ...r }) => ({
+			...r,
+			// Whether the form is taking responses right now: draft, open,
+			// closed (by its owner or closing date) or full (limit reached).
+			availability: formAvailability({
+				closesAt,
+				completedCount: r.submissionsCount,
+				maxSubmissionsCount,
+				visibility: r.visibility,
+			}),
+			updatedAt: r.updatedAt.toISOString(),
+		}));
 	});
 
 	const getForm = toolDefinition({
@@ -187,7 +202,12 @@ export function buildAgentTools(ctx: AiToolContext) {
 	}).server(async ({ formId }) => {
 		const { form: row } = await requireFormInWorkspace(ctx, formId, "view");
 		const properties = row.properties as FormField[];
+		const completed =
+			row.maxSubmissionsCount === null
+				? 0
+				: await completedCount(ctx.db, row.id);
 		return {
+			availability: formAvailability({ ...row, completedCount: completed }),
 			fields: properties.map((field) => ({
 				id: field.id,
 				name: field.name,

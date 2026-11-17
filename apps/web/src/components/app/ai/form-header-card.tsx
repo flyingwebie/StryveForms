@@ -1,3 +1,4 @@
+import type { FormAvailability } from "@StryveForms/forms/availability";
 import type { FormField } from "@StryveForms/forms/types";
 import { Button } from "@StryveForms/ui/components/button";
 import { Link } from "@tanstack/react-router";
@@ -14,6 +15,7 @@ import StatusBadge from "@/components/app/status-badge";
 import { FormContextPicker } from "./form-context-picker";
 
 export interface ChatFormSummary {
+	availability: FormAvailability;
 	closesAt: string | null;
 	color: string;
 	coverPicture: string | null;
@@ -39,9 +41,6 @@ export function FormHeaderCard({
 	onFormChange: (formId: string | null) => void;
 	workspaceId: string;
 }) {
-	const isClosed =
-		form.visibility === "closed" ||
-		(form.closesAt !== null && new Date(form.closesAt) < new Date());
 	const fieldsCount = form.properties.length;
 
 	return (
@@ -62,7 +61,7 @@ export function FormHeaderCard({
 				<p className="text-subtle-foreground text-xs">Form context</p>
 				<div className="flex flex-wrap items-center gap-2">
 					<span className="truncate font-semibold text-sm">{form.title}</span>
-					<StatusBadge isClosed={isClosed} visibility={form.visibility} />
+					<StatusBadge availability={form.availability} />
 				</div>
 				<p className="text-muted-foreground text-xs">
 					{fieldsCount} field{fieldsCount === 1 ? "" : "s"} ·{" "}

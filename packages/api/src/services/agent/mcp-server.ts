@@ -215,14 +215,14 @@ export function buildMcpServerFactory(options: McpServerFactoryOptions) {
 
 		registerRead(
 			"list_forms",
-			"List forms in a workspace, optionally filtered by a title search.",
+			"List forms in a workspace, optionally filtered by a title search. Each form's `availability` says whether it is taking responses right now: draft, open, closed (by its owner or closing date) or full (submission limit reached).",
 			listFormsInput,
 			(ctx, input) => listForms(ctx, input)
 		);
 
 		registerRead(
 			"get_form",
-			"Get one form's fields, settings and share URL by id.",
+			"Get one form's fields, settings and share URL by id. `availability` says whether it is taking responses right now (draft, open, closed or full) — `visibility` alone doesn't, because a public form can be past its closing date or at its submission limit.",
 			getFormInput,
 			(ctx, input) => getForm(ctx, input)
 		);

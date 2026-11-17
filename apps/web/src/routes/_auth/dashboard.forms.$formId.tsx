@@ -107,10 +107,7 @@ function RouteComponent() {
 								<h1 className="truncate font-semibold text-2xl tracking-tight">
 									{form.title}
 								</h1>
-								<StatusBadge
-									isClosed={form.visibility === "closed"}
-									visibility={form.visibility}
-								/>
+								<StatusBadge availability={form.availability} />
 							</div>
 						) : (
 							<Skeleton className="h-8 w-56" />
