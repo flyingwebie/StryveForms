@@ -12,6 +12,7 @@ export interface FormDictionary {
 	next: string;
 	optional: string;
 	pageOf: string;
+	passwordLocked: string;
 	poweredBy: string;
 	pressEnter: string;
 	previous: string;
@@ -56,6 +57,8 @@ const EN: FormDictionary = {
 	uploadFile: "Upload a file",
 	uploading: "Uploading…",
 	wrongPassword: "Incorrect password, please try again.",
+	passwordLocked:
+		"Too many wrong passwords. Please wait a few minutes and try again.",
 };
 
 const DICTIONARIES: Partial<Record<string, Partial<FormDictionary>>> = {

@@ -556,9 +556,13 @@ export function FormRenderer({
 	// Set the moment a final submit starts, before React re-renders, so a
 	// second Enter press or click can't send the form twice.
 	const submitLockRef = useRef<boolean>(false);
-	// The background save in flight, if any. The final submit waits for it so
-	// both use the same submission instead of creating two.
-	const partialSaveRef = useRef<Promise<unknown> | null>(null);
+	// The queue of background saves. Each save waits for the one before it, so
+	// two saves never run at once and every save after the first reuses the
+	// submission id the first one got. The final submit waits for the whole
+	// queue, so it completes that same submission instead of creating another.
+	const partialSaveRef = useRef<Promise<void>>(Promise.resolve());
+	// Counts queued saves; a queued save is skipped when a newer one is behind it.
+	const partialSaveSeqRef = useRef(0);
 	const partialSubmissionIdRef = useRef<string | undefined>(
 		editingSubmissionId ?? undefined
 	);
@@ -613,30 +617,37 @@ export function FormRenderer({
 		) {
 			return;
 		}
+		const { values } = engine;
 		const timer = setTimeout(() => {
-			const save = submitMutation
-				.mutateAsync({
-					data: engine.values,
-					isPartial: true,
-					password,
-					slug: form.slug,
-					submissionId: partialSubmissionIdRef.current,
-					tracking,
-				})
-				.then((res) => {
+			// The final submit has started; it sends these answers itself.
+			if (submitLockRef.current) {
+				return;
+			}
+			partialSaveSeqRef.current += 1;
+			const seq = partialSaveSeqRef.current;
+			partialSaveRef.current = partialSaveRef.current.then(async () => {
+				// A newer save is queued with fresher answers; let it do the work.
+				if (seq !== partialSaveSeqRef.current) {
+					return;
+				}
+				try {
+					const res = await submitMutation.mutateAsync({
+						data: values,
+						isPartial: true,
+						password,
+						slug: form.slug,
+						// Read when this save runs, so it picks up the id an earlier save got.
+						submissionId: partialSubmissionIdRef.current,
+						tracking,
+					});
 					if (res.submissionId) {
 						partialSubmissionIdRef.current = res.submissionId;
 						onPartialSaved?.(res.submissionId);
 					}
-				})
-				// A failed background save is retried on the next change.
-				.catch(() => undefined)
-				.finally(() => {
-					if (partialSaveRef.current === save) {
-						partialSaveRef.current = null;
-					}
-				});
-			partialSaveRef.current = save;
+				} catch {
+					// A failed background save is retried on the next change.
+				}
+			});
 		}, PARTIAL_SUBMIT_DEBOUNCE_MS);
 		return () => clearTimeout(timer);
 	}, [

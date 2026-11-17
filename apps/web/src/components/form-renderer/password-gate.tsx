@@ -8,6 +8,8 @@ import type { FormDictionary } from "./i18n";
 export interface PasswordGateProps {
 	dict: FormDictionary;
 	onSubmit: (password: string) => void;
+	/** Too many wrong guesses; the server refuses every attempt for a while. */
+	passwordLocked?: boolean;
 	submitting: boolean;
 	title: string;
 	wrongPassword: boolean;
@@ -17,6 +19,7 @@ export interface PasswordGateProps {
 export function PasswordGate({
 	dict,
 	onSubmit,
+	passwordLocked = false,
 	submitting,
 	title,
 	wrongPassword,
@@ -54,7 +57,10 @@ export function PasswordGate({
 					type="password"
 					value={password}
 				/>
-				{wrongPassword ? (
+				{passwordLocked ? (
+					<p className="text-red-500 text-sm">{dict.passwordLocked}</p>
+				) : null}
+				{wrongPassword && !passwordLocked ? (
 					<p className="text-red-500 text-sm">{dict.wrongPassword}</p>
 				) : null}
 			</div>

@@ -30,6 +30,9 @@ services:
       HOST: 0.0.0.0
       # The web app forwards /api and /trpc to the API over the private network.
       SERVER_URL: http://server:3000
+      # Coolify's Traefik is the one proxy in front of this container. Raise to 2
+      # if you add another (e.g. Cloudflare proxying your domain).
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
     depends_on:
       server:
         condition: service_healthy

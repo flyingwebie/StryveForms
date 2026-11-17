@@ -15,6 +15,7 @@ import {
 	canonicalFileName,
 	tempUploadKey,
 } from "../lib/files";
+import { checkFormPassword } from "../lib/form-password";
 import { newId } from "../lib/ids";
 import { completedCount } from "./submissions";
 
@@ -54,9 +55,9 @@ const DANGEROUS_EXTENSIONS = new Set([
 ]);
 
 export class UploadError extends Error {
-	readonly status: 400 | 401 | 404 | 413;
+	readonly status: 400 | 401 | 404 | 413 | 429;
 
-	constructor(message: string, status: 400 | 401 | 404 | 413 = 400) {
+	constructor(message: string, status: 400 | 401 | 404 | 413 | 429 = 400) {
 		super(message);
 		this.status = status;
 	}
@@ -77,7 +78,11 @@ function extensionOf(name: string): string {
 async function requireUploadAccess(
 	db: Database,
 	row: typeof form.$inferSelect,
-	viewer: { password?: string | null | undefined; userId?: string | null }
+	viewer: {
+		ip?: string | null;
+		password?: string | null | undefined;
+		userId?: string | null;
+	}
 ): Promise<void> {
 	const isMember = viewer.userId
 		? (await getMembership(db, row.workspaceId, viewer.userId)) !== null
@@ -88,13 +93,19 @@ async function requireUploadAccess(
 	if (!showsFormFields(availability, isMember)) {
 		throw new UploadError("Form not found", 404);
 	}
-	if (!row.passwordHash || isMember) {
-		return;
+	const passwordCheck = await checkFormPassword({
+		ip: viewer.ip ?? null,
+		isMember,
+		password: viewer.password,
+		row,
+	});
+	if (passwordCheck === "locked") {
+		throw new UploadError(
+			"Too many wrong passwords. Try again in a few minutes.",
+			429
+		);
 	}
-	const unlocked = viewer.password
-		? await Bun.password.verify(viewer.password, row.passwordHash)
-		: false;
-	if (!unlocked) {
+	if (passwordCheck === "wrong") {
 		throw new UploadError("This form is protected by a password.", 401);
 	}
 }
@@ -106,6 +117,8 @@ export async function uploadSubmissionFile(
 	input: {
 		fieldId: string;
 		file: File;
+		/** The uploader's IP, so wrong password guesses can be limited. */
+		ip?: string | null;
 		/** The form's password, required from respondents when the form has one. */
 		password?: string | null;
 		slug: string;

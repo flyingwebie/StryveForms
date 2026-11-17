@@ -15,6 +15,9 @@ services:
     environment:
       PORT: 3002
       SERVER_URL: http://server:3000
+      # 0: this container faces the internet directly. Set to 1 when you put a
+      # reverse proxy (nginx, Caddy, Traefik) in front of it.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}
     depends_on:
       server:
         condition: service_healthy

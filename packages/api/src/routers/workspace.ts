@@ -8,7 +8,7 @@ import {
 import { emails } from "@StryveForms/emails/messages";
 import { workspaceBrandSchema } from "@StryveForms/forms/brand";
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -412,7 +412,26 @@ export const workspaceRouter = router({
 					message: `This invite was sent to ${invite.email}. Sign in with that email to accept it.`,
 				});
 			}
+			// Claim the invite first: if it was cancelled (or accepted elsewhere)
+			// since the lookup above, nothing matches and no membership is added.
 			await ctx.db.transaction(async (tx) => {
+				const [claimed] = await tx
+					.update(workspaceInvite)
+					.set({ status: "accepted" })
+					.where(
+						and(
+							eq(workspaceInvite.id, invite.id),
+							eq(workspaceInvite.status, "pending"),
+							gt(workspaceInvite.expiresAt, new Date())
+						)
+					)
+					.returning({ id: workspaceInvite.id });
+				if (!claimed) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "This invite is invalid or expired",
+					});
+				}
 				await tx
 					.insert(workspaceMember)
 					.values({
@@ -421,15 +440,6 @@ export const workspaceRouter = router({
 						role: invite.role,
 					})
 					.onConflictDoNothing();
-				await tx
-					.update(workspaceInvite)
-					.set({ status: "accepted" })
-					.where(
-						and(
-							eq(workspaceInvite.id, invite.id),
-							eq(workspaceInvite.status, "pending")
-						)
-					);
 			});
 			return { workspaceId: invite.workspaceId };
 		}),

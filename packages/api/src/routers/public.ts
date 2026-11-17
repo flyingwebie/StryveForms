@@ -20,6 +20,7 @@ import type { Context } from "../context";
 import { publicProcedure, router } from "../index";
 import { getMembership } from "../lib/access";
 import { submissionFileUrl } from "../lib/files";
+import { checkFormPassword } from "../lib/form-password";
 import { type FormRow, toPublicFormDto } from "../lib/serialize";
 import { verifyCaptcha } from "../services/captcha";
 import { completedCount, submitForm } from "../services/submissions";
@@ -67,17 +68,31 @@ async function isOwnerViewing(ctx: Context, row: FormRow): Promise<boolean> {
 	);
 }
 
-async function checkPassword(
+/** Throws unless this viewer may use the form, given its password. */
+async function requirePassword(
+	ctx: Context,
 	row: FormRow,
 	isMember: boolean,
 	password: string | undefined
 ) {
-	if (!row.passwordHash || isMember) {
-		return true;
+	const result = await checkFormPassword({
+		ip: ctx.request.ip,
+		isMember,
+		password,
+		row,
+	});
+	if (result === "locked") {
+		throw new TRPCError({
+			code: "TOO_MANY_REQUESTS",
+			message: "Too many wrong passwords. Try again in a few minutes.",
+		});
 	}
-	return password
-		? await Bun.password.verify(password, row.passwordHash)
-		: false;
+	if (result === "wrong") {
+		throw new TRPCError({
+			code: "UNAUTHORIZED",
+			message: "This form is protected by a password.",
+		});
+	}
 }
 
 /**
@@ -126,7 +141,13 @@ export const publicRouter = router({
 		)
 		.query(async ({ ctx, input }) => {
 			const { isMember, row } = await loadAvailableForm(ctx, input.slug);
-			const unlocked = await checkPassword(row, isMember, input.password);
+			const passwordCheck = await checkFormPassword({
+				ip: ctx.request.ip,
+				isMember,
+				password: input.password,
+				row,
+			});
+			const unlocked = passwordCheck === "ok";
 			const brand = row.useWorkspaceBrand
 				? await loadWorkspaceBrand(ctx.db, row.workspaceId)
 				: null;
@@ -147,8 +168,10 @@ export const publicRouter = router({
 					row.maxSubmissionsCount,
 					completed
 				),
+				/** Too many wrong guesses from this client; the password screen says to wait. */
+				passwordLocked: passwordCheck === "locked",
 				passwordRequired: !unlocked,
-				wrongPassword: Boolean(input.password) && !unlocked,
+				wrongPassword: passwordCheck === "wrong" && Boolean(input.password),
 			};
 		}),
 
@@ -204,12 +227,7 @@ export const publicRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { isMember, row } = await loadAvailableForm(ctx, input.slug);
-			if (!(await checkPassword(row, isMember, input.password))) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "This form is protected by a password.",
-				});
-			}
+			await requirePassword(ctx, row, isMember, input.password);
 			if (isPastClosing(row) && !isMember) {
 				throw new TRPCError({
 					code: "FORBIDDEN",
@@ -263,12 +281,7 @@ export const publicRouter = router({
 					message: "This form doesn't allow editing answers.",
 				});
 			}
-			if (!(await checkPassword(row, isMember, input.password))) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "This form is protected by a password.",
-				});
-			}
+			await requirePassword(ctx, row, isMember, input.password);
 			const [submission] = await ctx.db
 				.select()
 				.from(formSubmission)
